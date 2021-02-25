@@ -1,6 +1,6 @@
 import SwiftIO
 
-final public class MadMCP4725 {
+final public class MCP4725 {
     enum WriteType: UInt8 {
         case writeDAC = 0x40
         case writeBothDACEEROM = 0x60

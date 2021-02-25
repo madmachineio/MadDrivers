@@ -2,7 +2,7 @@
 /// It supports I2C protocol. Refer to the datasheet for more detailed information.
 import SwiftIO
 
-final public class MadSHT3x {
+final public class SHT3x {
 	// Some common command with 16-bit data used to communicate with the sensor.
     private enum Command {
         static let readStatus: UInt16 = 0xF32D

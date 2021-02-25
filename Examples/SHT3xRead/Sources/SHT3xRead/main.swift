@@ -1,11 +1,11 @@
 /// Read the current temperature and humidity.
 import SwiftIO
 import SwiftIOBoard
-import MadSHT3x
+import MadDriver.SHT3x
 
 /// Initialize the I2C bus and the sensor for the communication.
 let i2c = I2C(Id.I2C0)
-let sht = MadSHT3x(i2c)
+let sht = SHT3x(i2c)
 
 /// Send the command to the sensor to obtain the value and print it every sencond.
 while true {

@@ -1,0 +1,34 @@
+{
+  "object": {
+    "pins": [
+      {
+        "package": "Board",
+        "repositoryURL": "https://github.com/madmachineio/Board.git",
+        "state": {
+          "branch": "main",
+          "revision": "6917c657602a32bb553416bbb6a354ee1a82ca13",
+          "version": null
+        }
+      },
+      {
+        "package": "MadDriver",
+        "repositoryURL": "https://github.com/madmachineio/MadDriver.git",
+        "state": {
+          "branch": "main",
+          "revision": "bc0e070f84f99361a0cec1f2780382de8255befa",
+          "version": null
+        }
+      },
+      {
+        "package": "SwiftIO",
+        "repositoryURL": "https://github.com/madmachineio/SwiftIO.git",
+        "state": {
+          "branch": "release/v0.2",
+          "revision": "248f5a65db60a01662e9700e6056a7a37ed1d53c",
+          "version": null
+        }
+      }
+    ]
+  },
+  "version": 1
+}
