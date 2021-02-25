@@ -19,7 +19,7 @@ let package = Package(
             name: "SHT3xRead",
             dependencies: ["SwiftIO",
                           "Board",
-			  "SHT3x"]),
+			  "MadDriver"]),
         .testTarget(
             name: "SHT3xReadTests",
             dependencies: ["SHT3xRead"]),

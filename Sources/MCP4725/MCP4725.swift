@@ -87,7 +87,7 @@ final public class MCP4725 {
 }
 
 
-extension MadMCP4725 {
+extension MCP4725 {
     func getEEROMValue() -> UInt16 {
         let data = i2c.read(count: 5, from: address)
         let high = UInt16(data[3] & 0x0F) << 8
