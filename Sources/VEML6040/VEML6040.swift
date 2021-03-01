@@ -57,7 +57,7 @@ final public class VEML6040 {
     func readRegister(_ reg: Reg) -> UInt16 {
         //i2c.write(reg.rawValue, to: address)
         //let data = i2c.read(count: 2, from: address)
-        let data = i2c.writeRead(reg.rawValue, readCount: 2, from: address)
+        let data = i2c.writeRead(reg.rawValue, readCount: 2, address: address)
 
         return (UInt16(data[1]) << 8) | UInt16(data[0])
     }
