@@ -9,7 +9,11 @@ let package = Package(
         // Products define the executables and libraries a package produces, and make them visible to other packages.
         .library(
             name: "MadDrivers",
-            targets: ["MCP4725", "SHT3x"]),
+            targets: [
+                "MCP4725",
+                "SHT3x",
+                "STS3x",
+                "VEML6040"]),
     ],
     dependencies: [
         // Dependencies declare other packages that this package depends on.
@@ -24,6 +28,12 @@ let package = Package(
             dependencies: ["SwiftIO"]),
         .target(
             name: "SHT3x",
+            dependencies: ["SwiftIO"]),
+        .target(
+            name: "STS3x",
+            dependencies: ["SwiftIO"]),
+        .target(
+            name: "VEML6040",
             dependencies: ["SwiftIO"]),
     ]
 )

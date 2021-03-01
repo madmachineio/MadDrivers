@@ -1,8 +1,8 @@
-/// This is the library for SHT3x digital humidity and temperature Sensor. 
+/// This is the library for STS3x digital humidity and temperature Sensor. 
 /// It supports I2C protocol. Refer to the datasheet for more detailed information.
 import SwiftIO
 
-final public class SHT3x {
+final public class STS3x {
 	// Some common command with 16-bit data used to communicate with the sensor.
     private enum Command {
         static let readStatus: UInt16 = 0xF32D
@@ -19,10 +19,9 @@ final public class SHT3x {
 	public let i2c: I2C
     
     // Initialize the I2C bus and reset the sensor to prepare for the following commands.
-    public init(_ i2c: I2C, address: UInt8 = 0x44) {
+    public init(_ i2c: I2C, address: UInt8 = 0x4A) {
         self.i2c = i2c
         self.address = address
-
         writeCommand(Command.softReset)
         sleep(ms: 10)
     }
@@ -57,5 +56,4 @@ final public class SHT3x {
         let humidity: Float = 100.0 * Float(value) / 65535.0
         return humidity
     }
-
 }
