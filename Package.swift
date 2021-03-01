@@ -4,11 +4,11 @@
 import PackageDescription
 
 let package = Package(
-    name: "MadDriver",
+    name: "MadDrivers",
     products: [
         // Products define the executables and libraries a package produces, and make them visible to other packages.
         .library(
-            name: "MadDriver",
+            name: "MadDrivers",
             targets: ["MCP4725", "SHT3x"]),
     ],
     dependencies: [
