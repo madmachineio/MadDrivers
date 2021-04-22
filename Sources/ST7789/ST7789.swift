@@ -65,7 +65,7 @@ public final class MadST7789 {
             writeConfig(config)
         }
 
-        bl.low()
+        bl.high()
         setRoation(rotation)
         clearScreen()
     }
@@ -250,18 +250,24 @@ extension MadST7789 {
 
     func writeCommand(_ command: Command) {
         dc.write(false)
+        cs.low()
         spi.write(command.rawValue)
+        cs.high()
     }
 
     func writeData(_ data: UInt16) {
         let array = [UInt8(data >> 8), UInt8(data & 0xFF)]
         dc.write(true)
+        cs.low()
         spi.write(array)
+        cs.high()
     }
 
     func writeData(_ data: [UInt8]) {
         dc.write(true)
+        cs.low()
         spi.write(data)
+        cs.high()
     }
 
 }
