@@ -12,6 +12,7 @@ let package = Package(
             targets: [
                 "MCP4725",
                 "SHT3x",
+                "ST7789",
                 "VEML6040"]),
     ],
     dependencies: [
@@ -29,7 +30,7 @@ let package = Package(
             name: "SHT3x",
             dependencies: ["SwiftIO"]),
         .target(
-            name: "STS3x",
+            name: "ST7789",
             dependencies: ["SwiftIO"]),
         .target(
             name: "VEML6040",
