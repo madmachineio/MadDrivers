@@ -65,7 +65,7 @@ public final class MadST7789 {
             writeConfig(config)
         }
 
-        bl.high()
+        bl.low()
         setRoation(rotation)
         clearScreen()
     }
