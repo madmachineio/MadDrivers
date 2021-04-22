@@ -1,9 +1,7 @@
 import SwiftIO
 
 #if canImport(MadDisplay)
-
 import struct MadDisplay.ColorSpace
-
 #endif
 
 public final class MadST7789 {
@@ -65,9 +63,9 @@ public final class MadST7789 {
             writeConfig(config)
         }
 
-        bl.low()
         setRoation(rotation)
         clearScreen()
+        bl.high()
     }
 
     public func setRoation(_ angle: Rotation) {
@@ -161,9 +159,10 @@ public final class MadST7789 {
     }
 
     public func reset() {
-        rst.write(false)
+        cs.high()
+        rst.low()
         sleep(ms: 20)
-        rst.write(true)
+        rst.high()
         sleep(ms: 20)
 
         wakeUp()
@@ -249,7 +248,7 @@ extension MadST7789 {
     }
 
     func writeCommand(_ command: Command) {
-        dc.write(false)
+        dc.low()
         cs.low()
         spi.write(command.rawValue)
         cs.high()
@@ -257,14 +256,14 @@ extension MadST7789 {
 
     func writeData(_ data: UInt16) {
         let array = [UInt8(data >> 8), UInt8(data & 0xFF)]
-        dc.write(true)
+        dc.high()
         cs.low()
         spi.write(array)
         cs.high()
     }
 
     func writeData(_ data: [UInt8]) {
-        dc.write(true)
+        dc.high()
         cs.low()
         spi.write(data)
         cs.high()
