@@ -10,12 +10,32 @@ public final class MadST7789 {
         case angle0, angle90, angle180, angle270
     }
 
-    private let initConfig: [Config] = [
+    private let initConfigs: [(address: Command, data: [UInt8]?)] = [
         (.COLMOD, [0x55]),
-        (.INVON, []),
-        (.DISPON, [])
+        (.INVON, nil),
+        (.DISPON, nil)
     ]
 
+
+/*
+    private let initConfigs: [(address: Command, data: [UInt8]?)] = [
+        (.COLMOD, [0x05]),
+
+        (.PORCTRL, [0x0C, 0x0C, 0x00, 0x33, 0x33]),
+        (.GCTRL, [0x35]),
+        (.VCOMS, [0x32]),
+        (.VDVVRHEN, [0x01]),
+        (.VRHS, [0x15]),
+        (.VDVSET, [0x20]),
+        (.FRCTR2, [0x0F]),
+        (.PWCTRL1, [0xA4, 0xA1]),
+        (.PVGAMCTRL, [0xD0, 0x04, 0x0A, 0x08, 0x07, 0x05, 0x32, 0x32, 0x48, 0x38, 0x15, 0x15, 0x2A, 0x2E]),
+        (.NVGAMCTRL, [0xD0, 0x07, 0x0D, 0x09, 0x09, 0x16, 0x30, 0x44, 0x49, 0x39, 0x16, 0x16, 0x2B, 0x2F]),
+
+        (.INVON, nil),
+        (.DISPON, nil)
+    ]
+*/
 	let spi: SPI
     let cs, dc, rst, bl: DigitalOut
 
@@ -58,12 +78,12 @@ public final class MadST7789 {
 #endif
 
         reset()
+        setRoation(rotation)
 
-        initConfig.forEach { config in
-            writeConfig(config)
+        initConfigs.forEach { config in
+            writeConfig(config.data, to: config.address)
         }
 
-        setRoation(rotation)
         clearScreen()
         bl.high()
     }
@@ -123,7 +143,7 @@ public final class MadST7789 {
             }
         }
 
-        writeConfig((.MADCTL, [madctlConfig.rawValue]))
+        writeConfig([madctlConfig.rawValue], to: .MADCTL)
     }
 
     @inline(__always)
@@ -163,10 +183,10 @@ public final class MadST7789 {
         rst.low()
         sleep(ms: 20)
         rst.high()
-        sleep(ms: 20)
+        sleep(ms: 120)
 
         wakeUp()
-        sleep(ms: 5)
+        sleep(ms: 120)
     }
 
     public func setAddrWindow(x: Int, y: Int, width w: Int, height h: Int) {
@@ -180,15 +200,13 @@ public final class MadST7789 {
         let yEndHigh = UInt8( (y + h + yOffset - 1) >> 8 )
         let yEndLow = UInt8( (y + h + yOffset - 1) & 0xFF )
 
-        writeConfig((.CASET, [xStartHigh, xStartLow, xEndHigh, xEndLow]))
-        writeConfig((.RASET, [yStartHigh, yStartLow, yEndHigh, yEndLow]))
+        writeConfig([xStartHigh, xStartLow, xEndHigh, xEndLow], to: .CASET)
+        writeConfig([yStartHigh, yStartLow, yEndHigh, yEndLow], to: .RASET)
         writeCommand(.RAMWR)
     }
 }
 
 extension MadST7789 {
-    typealias Config = (Command, [UInt8])
-
     enum Command: UInt8 {
         case NOP        = 0x00
         case SWRESET    = 0x01
@@ -214,24 +232,55 @@ extension MadST7789 {
         case TEON       = 0x35
         case MADCTL     = 0x36
         case COLMOD     = 0x3A
+
+        case RAMCTRL    = 0xB0
+        case RGBCTRL    = 0xB1
+        case PORCTRL    = 0xB2
+        case FRCTRL1    = 0xB3
+        case PARCTRL    = 0xB5
+        case GCTRL      = 0xB7
+        case GTADJ      = 0xB8
+        case DGMEN      = 0xBA
+        case VCOMS      = 0xBB
+        case POWSAVE    = 0xBC
+        case DLPOFFSAVE = 0xBD
+
+        case LCMCTRL    = 0xC0
+        case IDSET      = 0xC1
+        case VDVVRHEN   = 0xC2
+        case VRHS       = 0xC3
+        case VDVSET     = 0xC4
+        case VCMOFSET   = 0xC5
+        case FRCTR2     = 0xC6
+        case CABCCTRL   = 0xC7
+        case REGSEL1    = 0xC8
+        case REGSEL2    = 0xCA
+        case PWMFRSEL   = 0xCC
+
+        case PWCTRL1    = 0xD0
+        case VAPVANEN   = 0xD2
+        case CMD2EN     = 0xDF
+
+        case PVGAMCTRL  = 0xE0
+        case NVGAMCTRL  = 0xE1
     }
 
     struct MadctlConfig: OptionSet {
         let rawValue: UInt8
         
-        static let pageTopToBottom = MadctlConfig(rawValue: 0x00)
+        static let pageTopToBottom = MadctlConfig([])
         static let pageBottomToTop = MadctlConfig(rawValue: 0x80)
 
-        static let leftToRight = MadctlConfig(rawValue: 0x00)
+        static let leftToRight = MadctlConfig([])
         static let rightToLeft = MadctlConfig(rawValue: 0x40)
 
-        static let normalMode = MadctlConfig(rawValue: 0x00)
+        static let normalMode = MadctlConfig([])
         static let reverseMode = MadctlConfig(rawValue: 0x20)
 
-        static let lineTopToBottom = MadctlConfig(rawValue: 0x00)
+        static let lineTopToBottom = MadctlConfig([])
         static let lineBottomToTop = MadctlConfig(rawValue: 0x10)
         
-        static let RGB = MadctlConfig(rawValue: 0x00)
+        static let RGB = MadctlConfig([])
         static let BGR = MadctlConfig(rawValue: 0x08)
     }
 
@@ -240,10 +289,10 @@ extension MadST7789 {
         writeCommand(.SLPOUT)
     }
 
-    func writeConfig(_ config: (Command, [UInt8])) {
-        writeCommand(config.0)
-        if config.1.count > 0 {
-            writeData(config.1)
+    func writeConfig(_ data: [UInt8]?, to address: Command) {
+        writeCommand(address)
+        if let data = data {
+            writeData(data)
         }
     }
 
