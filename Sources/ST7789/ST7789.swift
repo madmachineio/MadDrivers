@@ -9,15 +9,15 @@ public final class MadST7789 {
     public enum Rotation {
         case angle0, angle90, angle180, angle270
     }
-
+/*
     private let initConfigs: [(address: Command, data: [UInt8]?)] = [
         (.COLMOD, [0x55]),
         (.INVON, nil),
         (.DISPON, nil)
     ]
+*/
 
 
-/*
     private let initConfigs: [(address: Command, data: [UInt8]?)] = [
         (.COLMOD, [0x05]),
 
@@ -35,7 +35,7 @@ public final class MadST7789 {
         (.INVON, nil),
         (.DISPON, nil)
     ]
-*/
+
 	let spi: SPI
     let cs, dc, rst, bl: DigitalOut
 
