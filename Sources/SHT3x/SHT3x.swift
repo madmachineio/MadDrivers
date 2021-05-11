@@ -41,7 +41,6 @@ final public class SHT3x {
         let value = startMeasure().rawHumi
         return 100.0 * Float(value) / 65535.0
     }
-
 }
 
 extension SHT3x {
@@ -66,8 +65,7 @@ extension SHT3x {
     // Write the data to the default address of the sensor.
     private func writeCommand(_ command: Command) {
         let value = command.rawValue
-        let array: [UInt8] = [UInt8(value >> 8), UInt8(value & 0xFF)]
-        i2c.write(array, to: address)
+        i2c.write([UInt8(value >> 8), UInt8(value & 0xFF)], to: address)
     }
 
     private func startMeasure() -> (rawTemp: UInt16, rawHumi: UInt16) {
