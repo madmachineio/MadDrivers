@@ -2,55 +2,95 @@ import SwiftIO
 
 final public class LIS3DH {
 
-    let defaultAddress = UInt8(0x18)
+    public enum GRange: UInt8 {
+        case g2     = 0
+        case g4     = 0b0001_0000
+        case g8     = 0b0010_0000
+        case g16    = 0b0011_0000
+    }
+
+    public enum DataRate: UInt8 {
+        case powerDown          = 0
+        case Hz1                = 0b0001_0000
+        case Hz10               = 0b0010_0000
+        case Hz25               = 0b0011_0000
+        case Hz50               = 0b0100_0000
+        case Hz100              = 0b0101_0000
+        case Hz200              = 0b0110_0000
+        case Hz400              = 0b0111_0000
+        case lowPowerHz1K6      = 0b1000_0000
+        case Hz1K3LowPower5K    = 0b1001_0000
+    }
+
     let defaultWhoAmI  = UInt8(0x33)
 
-    let spi: SPI?
-    let cs: DigitalOut?
-
-    let i2c: I2C!
+    let i2c: I2C
     let address: UInt8
+
+    var gRange: GRange
+    var dataRate: DataRate
 
     var rangeConfig: RangeConfig = []
     var dataRateConfig: DataRateConfig = []
 
-    public init(_ i2c: I2C, address: UInt8? = nil) {
-        spi = nil
-        cs = nil
-
-        self.i2c = i2c
-        if let add = address {
-            self.address = add
-        } else {
-            self.address = defaultAddress
+    var gCoefficient: Float {
+        switch gRange {
+        case .g2:
+            return 15987.0
+        case .g4:
+            return 7840.0
+        case .g8:
+            return 3883.0
+        case .g16:
+            return 1280.0
         }
-
-        setRange([.g2, .highResEnable])
-        setDataRate([.Hz400, .normalMode, .xEnable, .yEnable, .zEnable])
-        sleep(ms: 10)
     }
 
+    public init(_ i2c: I2C, address: UInt8 = 0x18) {
+        self.i2c = i2c
+        self.address = address
+
+        rangeConfig = [.highResEnable]
+        dataRateConfig = [.normalMode, .xEnable, .yEnable, .zEnable]
+
+        gRange = .g2
+        dataRate = .Hz400
+
+        setRange(gRange)
+        setDataRate(dataRate)
+
+        sleep(ms: 10)
+    }
 
     public func getDeviceID() -> UInt8 {
         return readRegister(.WHO_AM_I)
     }
 
-    func setRange(_ config: RangeConfig) {
-        rangeConfig = config
+    public func setRange(_ newRange: GRange) {
+        gRange = newRange
+        let newConfig = RangeConfig(rawValue: gRange.rawValue)
+        rangeConfig.remove(.rangeMask)
+        rangeConfig.insert(newConfig)
         writeRegister(rangeConfig.rawValue, to: .CTRL4)
     }
 
-    public func getRange() -> UInt8 {
-        return readRegister(.CTRL4)
+    public func getRange() -> GRange {
+        let ret = readRegister(.CTRL4) & RangeConfig([.rangeMask]).rawValue
+        return GRange(rawValue: ret)!
     }
 
-    public func getDataRate() -> UInt8 {
-        return readRegister(.CTRL1)
-    }
+    public func setDataRate(_ newRate: DataRate) {
+        dataRate = newRate
+        let newConfig = DataRateConfig(rawValue: dataRate.rawValue)
+        dataRateConfig.remove(.dataRateMask)
+        dataRateConfig.insert(newConfig)
 
-    func setDataRate(_ config: DataRateConfig) {
-        dataRateConfig = config
         writeRegister(dataRateConfig.rawValue, to: .CTRL1)
+    }
+
+    public func getDataRate() -> DataRate {
+        let ret = readRegister(.CTRL1) & DataRateConfig([.dataRateMask]).rawValue
+        return DataRate(rawValue: ret)!
     }
 
     public func readRawValue() -> (x: Int16, y: Int16, z: Int16) {
@@ -62,31 +102,40 @@ final public class LIS3DH {
 
         return (x, y, z)
     }
-    
-    func writeRegister(_ value: UInt8, to reg: Register) {
-        i2c.write([reg.rawValue, value], to: address)
+
+    public func readValue() -> (x: Float, y: Float, z: Float) {
+        let (ix, iy, iz) = readRawValue()
+        var value: (x: Float, y: Float, z: Float) = (Float(ix), Float(iy), Float(iz))
+
+        value.x = value.x / gCoefficient
+        value.y = value.y / gCoefficient
+        value.z = value.z / gCoefficient
+
+        return value
     }
 
-    func readRegister(_ reg: Register) -> UInt8 {
-        let data = i2c.writeRead([reg.rawValue], readCount: 1, address: address)
-        if data.count > 0 {
-            return data[0]
-        } else {
-            return 0
-        }
+    public func readX() -> Float {
+        let rawValues = readRegister(.OUT_X_L, count: 2)
+        guard rawValues.count == 2 else { return 0 }
+        let ix = Int16(rawValues[0]) | (Int16(rawValues[1]) << 8)
+
+        return Float(ix) / gCoefficient
     }
 
-    func readRegister(_ beginReg: Register, count: Int) -> [UInt8] {
-        var writeByte = beginReg.rawValue
+    public func readY() -> Float {
+        let rawValues = readRegister(.OUT_Y_L, count: 2)
+        guard rawValues.count == 2 else { return 0 }
+        let iy = Int16(rawValues[0]) | (Int16(rawValues[1]) << 8)
 
-        writeByte |= 0x80
-
-        let data = i2c.writeRead([writeByte], readCount: count, address: address)
-        return data
+        return Float(iy) / gCoefficient
     }
 
-    func writeRegister(_ reg: Register) {
+    public func readZ() -> Float {
+        let rawValues = readRegister(.OUT_Z_L, count: 2)
+        guard rawValues.count == 2 else { return 0 }
+        let iz = Int16(rawValues[0]) | (Int16(rawValues[1]) << 8)
 
+        return Float(iz) / gCoefficient
     }
 
 }
@@ -146,10 +195,7 @@ extension LIS3DH {
     struct RangeConfig: OptionSet {
         let rawValue: UInt8
 
-        static let g2   = RangeConfig([])
-        static let g4   = RangeConfig(rawValue: 0b0001_0000)
-        static let g8   = RangeConfig(rawValue: 0b0010_0000)
-        static let g16  = RangeConfig(rawValue: 0b0011_0000)
+        static let rangeMask       = RangeConfig(rawValue: 0b0011_0000)
 
         static let highResDisable  = RangeConfig([])
         static let highResEnable   = RangeConfig(rawValue: 0b1000)
@@ -158,16 +204,7 @@ extension LIS3DH {
     struct DataRateConfig: OptionSet {
         let rawValue: UInt8
 
-        static let powerDown        = DataRateConfig([])
-        static let Hz1              = DataRateConfig(rawValue: 0b0001_0000)
-        static let Hz10             = DataRateConfig(rawValue: 0b0010_0000)
-        static let Hz25             = DataRateConfig(rawValue: 0b0011_0000)
-        static let Hz50             = DataRateConfig(rawValue: 0b0100_0000)
-        static let Hz100            = DataRateConfig(rawValue: 0b0101_0000)
-        static let Hz200            = DataRateConfig(rawValue: 0b0110_0000)
-        static let Hz400            = DataRateConfig(rawValue: 0b0111_0000)
-        static let lowPowerHz1K6    = DataRateConfig(rawValue: 0b1000_0000)
-        static let Hz1K3LowPower5K  = DataRateConfig(rawValue: 0b1001_0000)
+        static let dataRateMask     = DataRateConfig(rawValue: 0b1111_0000)
         
         static let normalMode       = DataRateConfig([])
         static let lowPowerMode     = DataRateConfig(rawValue: 0b1000)
@@ -175,5 +212,27 @@ extension LIS3DH {
         static let xEnable          = DataRateConfig(rawValue: 0b0001)
         static let yEnable          = DataRateConfig(rawValue: 0b0010)
         static let zEnable          = DataRateConfig(rawValue: 0b0100)
+    }
+
+    func writeRegister(_ value: UInt8, to reg: Register) {
+        i2c.write([reg.rawValue, value], to: address)
+    }
+
+    func readRegister(_ reg: Register) -> UInt8 {
+        let data = i2c.writeRead([reg.rawValue], readCount: 1, address: address)
+        if data.count > 0 {
+            return data[0]
+        } else {
+            return 0
+        }
+    }
+
+    func readRegister(_ beginReg: Register, count: Int) -> [UInt8] {
+        var writeByte = beginReg.rawValue
+
+        writeByte |= 0x80
+
+        let data = i2c.writeRead([writeByte], readCount: count, address: address)
+        return data
     }
 }
