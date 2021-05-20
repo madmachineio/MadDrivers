@@ -1,9 +1,5 @@
 import SwiftIO
 
-#if canImport(MadDisplay)
-import struct MadDisplay.ColorSpace
-#endif
-
 public final class ST7789 {
 
     public enum Rotation {
@@ -43,12 +39,10 @@ public final class ST7789 {
     
     public private(set) var width: Int
     public private(set) var height: Int
-    public let bitCount = 16
 
-#if canImport(MadDisplay)
-    public var colorSpace = ColorSpace()
-#endif
-
+    public let depth = 16
+    public let grayscale = false
+    public let reverseBytesInWord = true
 
     private var xOffset: Int
     private var yOffset: Int
@@ -71,11 +65,6 @@ public final class ST7789 {
         self.xOffset = 0
         self.yOffset = 0
 
-#if canImport(MadDisplay)
-        colorSpace.depth = 16
-        colorSpace.grayscale = false
-        colorSpace.reverseBytesInWord = true
-#endif
 
         reset()
         setRoation(rotation)
