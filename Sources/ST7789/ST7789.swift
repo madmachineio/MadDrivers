@@ -4,7 +4,7 @@ import SwiftIO
 import struct MadDisplay.ColorSpace
 #endif
 
-public final class MadST7789 {
+public final class ST7789 {
 
     public enum Rotation {
         case angle0, angle90, angle180, angle270
@@ -206,7 +206,7 @@ public final class MadST7789 {
     }
 }
 
-extension MadST7789 {
+extension ST7789 {
     enum Command: UInt8 {
         case NOP        = 0x00
         case SWRESET    = 0x01
