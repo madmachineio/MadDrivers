@@ -57,7 +57,7 @@ final public class VEML6040 {
         self.address = address
 
         configValue = [.noTrig, .autoMode]
-        integrationTime = .i40ms
+        integrationTime = .i160ms
 
         setIntegrationTime(integrationTime)
     }
