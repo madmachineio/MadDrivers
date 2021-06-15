@@ -1,6 +1,6 @@
 import SwiftIO
 
-final class LCD1602 {
+final public class LCD1602 {
     
     private enum Command: UInt8 {
         case clearDisplay   = 0x01
@@ -67,7 +67,7 @@ final class LCD1602 {
     private var entryModeConfig: EntryMode
     private var shiftModeConfig: ShiftMode
     
-    init(_ i2c: I2C, address: UInt8 = 0x3E, columns: UInt8 = 16, rows: UInt8 = 2, dotSize: UInt8 = 8) {
+    public init(_ i2c: I2C, address: UInt8 = 0x3E, columns: UInt8 = 16, rows: UInt8 = 2, dotSize: UInt8 = 8) {
         
         guard (columns > 0) && (rows == 1 || rows == 2) && (dotSize == 8 || dotSize == 10) else {
             fatalError("LCD1602 parameter error, init failed")
@@ -104,89 +104,89 @@ final class LCD1602 {
         turnOn()
     }
     
-    func clear() {
+    public func clear() {
         writeCommand(.clearDisplay)
         sleep(ms: 2)
     }
     
-    func home() {
+    public func home() {
         writeCommand(.returnHome)
         sleep(ms: 2)
     }
     
-    func turnOn() {
+    public func turnOn() {
         controlModeConfig.insert(.displayOn)
         controlModeConfig.remove(.displayOff)
         writeConfig(controlModeConfig, to: .displayControl)
     }
     
-    func turnOff() {
+    public func turnOff() {
         controlModeConfig.insert(.displayOff)
         controlModeConfig.remove(.displayOn)
         writeConfig(controlModeConfig, to: .displayControl)
     }
     
-    func cursorOn() {
+    public func cursorOn() {
         controlModeConfig.insert(.cursorOn)
         controlModeConfig.remove(.cursorOff)
         writeConfig(controlModeConfig, to: .displayControl)
     }
     
-    func cursorOff() {
+    public func cursorOff() {
         controlModeConfig.insert(.cursorOff)
         controlModeConfig.remove(.cursorOn)
         writeConfig(controlModeConfig, to: .displayControl)
     }
     
-    func cursorBlinkOn() {
+    public func cursorBlinkOn() {
         controlModeConfig.insert(.blinkOn)
         controlModeConfig.remove(.blinkOff)
         writeConfig(controlModeConfig, to: .displayControl)
     }
     
-    func cursorBlinkOff() {
+    public func cursorBlinkOff() {
         controlModeConfig.insert(.blinkOff)
         controlModeConfig.remove(.blinkOn)
         writeConfig(controlModeConfig, to: .displayControl)
     }
     
-    func leftToRight() {
+    public func leftToRight() {
         entryModeConfig.insert(.entryLeft)
         entryModeConfig.remove(.entryRight)
         writeConfig(entryModeConfig, to: .entryModeSet)
     }
     
-    func rightToLeft() {
+    public func rightToLeft() {
         entryModeConfig.insert(.entryRight)
         entryModeConfig.remove(.entryLeft)
         writeConfig(entryModeConfig, to: .entryModeSet)
     }
     
-    func autoScroll() {
+    public func autoScroll() {
         entryModeConfig.insert(.entryShiftIncrement)
         entryModeConfig.remove(.entryShiftDecrement)
         writeConfig(entryModeConfig, to: .entryModeSet)
     }
     
-    func noAutoScroll() {
+    public func noAutoScroll() {
         entryModeConfig.insert(.entryShiftDecrement)
         entryModeConfig.remove(.entryShiftIncrement)
         writeConfig(entryModeConfig, to: .entryModeSet)
     }
     
-    func scrollLeft() {
+    public func scrollLeft() {
         shiftModeConfig.insert([.displayMove, .moveLeft])
         shiftModeConfig.remove([.cursorMove, .moveRight])
         writeConfig(shiftModeConfig, to: .cursorShift)
     }
     
-    func scrollRight() {
+    public func scrollRight() {
         shiftModeConfig.insert([.displayMove, .moveRight])
         shiftModeConfig.remove([.cursorMove, .moveLeft])
         writeConfig(shiftModeConfig, to: .cursorShift)
     }
     
-    func clear(x: Int, y: Int, count: Int = 1) {
+    public func clear(x: Int, y: Int, count: Int = 1) {
         guard count > 0 else {
             return
         }
@@ -200,7 +200,7 @@ final class LCD1602 {
         setCursor(x: x, y: y)
     }
     
-    func setCursor(x: Int, y: Int) {
+    public func setCursor(x: Int, y: Int) {
         guard x >= 0 && y >= 0 else { 
             return
         }
@@ -208,16 +208,16 @@ final class LCD1602 {
         writeCommand(val)
     }
     
-    func write(x: Int, y: Int, _ str: String) {
+    public func write(x: Int, y: Int, _ str: String) {
         setCursor(x: x, y: y)
         writeData(str)
     }
     
-    func write(x: Int, y: Int, _ num: Int) {
+    public func write(x: Int, y: Int, _ num: Int) {
         write(x: x, y: y, String(num))
     }
     
-    func write(x: Int, y: Int, _ num: Float, decimal: Int? = 1) {
+    public func write(x: Int, y: Int, _ num: Float, decimal: Int? = 1) {
         if let decimal = decimal {
             if decimal <= 0 {
                 write(x: x, y: y, String(Int(num)))
