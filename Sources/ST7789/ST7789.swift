@@ -143,7 +143,7 @@ public final class ST7789 {
     
     public func writeBitmap(x: Int, y: Int, width w: Int, height h: Int, data: [UInt8]) {
         setAddrWindow(x: x, y: y, width: w, height: h) 
-        writeData(data)
+        writeData(data, count: w * h * 2)
     }
     
     public func writeScreen(_ data: [UInt8]) {
@@ -306,5 +306,11 @@ extension ST7789 {
         spi.write(data)
         cs.high()
     }
-    
+
+    func writeData(_ data: [UInt8], count: Int) {
+        dc.high()
+        cs.low()
+        spi.write(data, count: count)
+        cs.high()
+    }
 }
