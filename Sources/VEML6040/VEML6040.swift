@@ -14,7 +14,7 @@ final public class VEML6040 {
     public let address: UInt8
     public let i2c: I2C
     
-    var sensitivity: Float {
+    public var sensitivity: Float {
         switch integrationTime {
         case .i40ms:
             return 0.25168
