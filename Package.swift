@@ -20,7 +20,8 @@ let package = Package(
     dependencies: [
         // Dependencies declare other packages that this package depends on.
         // .package(url: /* package url */, from: "1.0.0"),
-        .package(url: "https://github.com/madmachineio/SwiftIO.git", from: "0.0.1")
+        .package(url: "https://github.com/madmachineio/SwiftIO.git", from: "0.0.1"),
+        .package(url: "https://github.com/madmachineio/MadDisplay.git", from: "0.0.1")
     ],
     targets: [
         // Targets are the basic building blocks of a package. A target can define a module or a test suite.
@@ -39,7 +40,7 @@ let package = Package(
             dependencies: ["SwiftIO"]),
         .target(
             name: "ST7789",
-            dependencies: ["SwiftIO"]),
+            dependencies: ["SwiftIO", "MadDisplay"]),
         .target(
             name: "VEML6040",
             dependencies: ["SwiftIO"]),

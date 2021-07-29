@@ -1,19 +1,22 @@
 import SwiftIO
 
+#if canImport(MadDisplay)
+import struct MadDisplay.ColorSpace
+#endif
+
 public final class ST7789 {
     
     public enum Rotation {
         case angle0, angle90, angle180, angle270
     }
-    /*
-     private let initConfigs: [(address: Command, data: [UInt8]?)] = [
-     (.COLMOD, [0x55]),
-     (.INVON, nil),
-     (.DISPON, nil)
-     ]
-     */
     
-    
+    private let initConfigs: [(address: Command, data: [UInt8]?)] = [
+        (.COLMOD, [0x55]),
+        (.INVON, nil),
+        (.DISPON, nil)
+    ]
+
+    /*    
     private let initConfigs: [(address: Command, data: [UInt8]?)] = [
         (.COLMOD, [0x05]),
         
@@ -31,6 +34,7 @@ public final class ST7789 {
         (.INVON, nil),
         (.DISPON, nil)
     ]
+    */
     
     let spi: SPI
     let cs, dc, rst, bl: DigitalOut
@@ -46,7 +50,11 @@ public final class ST7789 {
     
     private var xOffset: Int
     private var yOffset: Int
-    
+
+    #if canImport(MadDisplay)
+    public private(set) var colorSpace = ColorSpace()
+    #endif
+
     public init(spi: SPI, cs: DigitalOut, dc: DigitalOut, rst: DigitalOut, bl: DigitalOut,
                 width: Int = 240, height: Int = 240, rotation: Rotation = .angle0) {
         guard (width == 240 && height == 240) || (width == 240 && height == 320) ||
@@ -64,7 +72,11 @@ public final class ST7789 {
         self.rotation = rotation
         self.xOffset = 0
         self.yOffset = 0
-        
+
+        #if canImport(MadDisplay)
+        colorSpace.depth = 16
+        colorSpace.reverseBytesInWord = true
+        #endif 
         
         reset()
         setRoation(rotation)
@@ -314,3 +326,15 @@ extension ST7789 {
         cs.high()
     }
 }
+
+
+
+
+
+
+#if canImport(MadDisplay)
+import protocol MadDisplay.BitmapWritable
+extension ST7789: BitmapWritable {
+
+}
+#endif
