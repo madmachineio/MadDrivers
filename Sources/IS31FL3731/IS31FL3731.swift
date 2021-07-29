@@ -140,7 +140,7 @@ public final class IS31FL3731 {
     }
 }
 
-extension MadIS31FL3731 {
+extension IS31FL3731 {
 
     private enum Register: UInt8 {
         case configuration      = 0x00
