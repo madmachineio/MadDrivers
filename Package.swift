@@ -10,6 +10,7 @@ let package = Package(
         .library(
             name: "MadDrivers",
             targets: [
+                "IS31FL3731",
                 "LCD1602",
                 "LIS3DH",
                 "MCP4725",
