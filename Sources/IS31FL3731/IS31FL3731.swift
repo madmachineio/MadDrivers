@@ -174,10 +174,15 @@ extension IS31FL3731 {
     private func readRegister(_ register: Register) -> UInt8 {
         selectPage(functionPage)
         i2c.write(register.rawValue, to: address)
-        let ret = i2c.readByte(from: address)
+        let ret = i2c.readByte(from: address) 
         selectPage(currentFrame)
 
-        return ret
+        if let ret = ret {
+            return ret
+        } else {
+            print("IS31FL3731 readRegister error!")
+            return 0
+        }
     }
 
     private func readData(_ register: UInt8) -> UInt8 {
@@ -185,7 +190,12 @@ extension IS31FL3731 {
         i2c.write(register, to: address)
         let ret = i2c.readByte(from: address)
         writeRegister(.shutdown, 1)
-        return ret
+        if let ret = ret {
+            return ret
+        } else {
+            print("IS31FL3731 readRegister error!")
+            return 0
+        }
     }
 
     private func controlRegInit(_ value: Bool) {
