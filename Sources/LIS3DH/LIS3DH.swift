@@ -1,7 +1,14 @@
 import SwiftIO
 
+/// This is the library for the LIS3DH accelerometer. You can use the sensor to measure the accelerations in x, y, and z-axes.
+///
+/// The acceleration describes the change of velocity with time, usually measured in m/s^2. The sensor measures it by detecting the force. It can sense gravity and measure inertial force caused by movement. They will change the internal capacitance of the sensor, thus change the voltage in the circuit.
+///
+/// The sensor supports I2C and SPI protocol. It will give raw readings between -32768 and 32767 (16-bit resolution). The acceleration has direction so you will get positive or negative values. The calculation of acceleration depends on the selected scaling range: ±2, ±4, ±8  or ±16g. The raw reading will be mapped according to the range.
 final public class LIS3DH {
     
+    
+    /// The ranges of the measurement. It will decide how the raw reading is calculated.
     public enum GRange: UInt8 {
         case g2     = 0
         case g4     = 0b0001_0000
@@ -9,6 +16,8 @@ final public class LIS3DH {
         case g16    = 0b0011_0000
     }
     
+    
+    /// The supported data rate for the sensor.
     public enum DataRate: UInt8 {
         case powerDown          = 0
         case Hz1                = 0b0001_0000
@@ -46,6 +55,11 @@ final public class LIS3DH {
         }
     }
     
+    
+    /// Initialize the sensor using I2C communication.
+    /// - Parameters:
+    ///   - i2c: **REQUIRED** The I2C interface that the sensor connects.
+    ///   - address: **OPTIONAL** The device address of the sensor. It has a default value.
     public init(_ i2c: I2C, address: UInt8 = 0x18) {
         self.i2c = i2c
         self.address = address
@@ -62,10 +76,15 @@ final public class LIS3DH {
         sleep(ms: 10)
     }
     
+    
+    /// Get the device ID from the sensor. It can be used to test if the sensor is connected.
+    /// - Returns: The device ID.
     public func getDeviceID() -> UInt8 {
         return readRegister(.WHO_AM_I)
     }
     
+    /// Set the scaling range of the sensor. The supported ranges are ±2, ±4, ±8 and ±16g.
+    /// - Parameter newRange: The selected `GRange`.
     public func setRange(_ newRange: GRange) {
         gRange = newRange
         let newConfig = RangeConfig(rawValue: gRange.rawValue)
@@ -74,11 +93,15 @@ final public class LIS3DH {
         writeRegister(rangeConfig.rawValue, to: .CTRL4)
     }
     
+    /// Get the selected scaling range of the sensor.
+    /// - Returns: The current range of measurement.
     public func getRange() -> GRange {
         let ret = readRegister(.CTRL4) & RangeConfig([.rangeMask]).rawValue
         return GRange(rawValue: ret)!
     }
     
+    /// Set the data rate of the sensor.
+    /// - Parameter newRate: The new data rate defined in `DataRate`.
     public func setDataRate(_ newRate: DataRate) {
         dataRate = newRate
         let newConfig = DataRateConfig(rawValue: dataRate.rawValue)
@@ -88,11 +111,16 @@ final public class LIS3DH {
         writeRegister(dataRateConfig.rawValue, to: .CTRL1)
     }
     
+    /// Get current data rate.
+    /// - Returns: The specified data rate.
     public func getDataRate() -> DataRate {
         let ret = readRegister(.CTRL1) & DataRateConfig([.dataRateMask]).rawValue
         return DataRate(rawValue: ret)!
     }
     
+    
+    /// Read raw values of acceleration on x, y, z-axes at once.
+    /// - Returns: x, y, z values from -32768 to 32767.
     public func readRawValue() -> (x: Int16, y: Int16, z: Int16) {
         let rawValues = readRegister(.OUT_X_L, count: 6)
         guard rawValues.count == 6 else { return (0, 0, 0) }
@@ -103,6 +131,9 @@ final public class LIS3DH {
         return (x, y, z)
     }
     
+    
+    /// Read x, y, z acceleration values represented in g (9.8m/s^2) within the selected range.
+    /// - Returns: 3 float within the selected g range.
     public func readValue() -> (x: Float, y: Float, z: Float) {
         let (ix, iy, iz) = readRawValue()
         var value: (x: Float, y: Float, z: Float) = (Float(ix), Float(iy), Float(iz))
@@ -114,6 +145,8 @@ final public class LIS3DH {
         return value
     }
     
+    /// Read the acceleration on x-axis.
+    /// - Returns: A float representing the acceleration.
     public func readX() -> Float {
         let rawValues = readRegister(.OUT_X_L, count: 2)
         guard rawValues.count == 2 else { return 0 }
@@ -122,6 +155,8 @@ final public class LIS3DH {
         return Float(ix) / gCoefficient
     }
     
+    /// Read the acceleration on y-axis.
+    /// - Returns: A float representing the acceleration.
     public func readY() -> Float {
         let rawValues = readRegister(.OUT_Y_L, count: 2)
         guard rawValues.count == 2 else { return 0 }
@@ -130,6 +165,8 @@ final public class LIS3DH {
         return Float(iy) / gCoefficient
     }
     
+    /// Read the acceleration on y-axis.
+    /// - Returns: A float representing the acceleration.
     public func readZ() -> Float {
         let rawValues = readRegister(.OUT_Z_L, count: 2)
         guard rawValues.count == 2 else { return 0 }

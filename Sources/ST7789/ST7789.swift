@@ -4,8 +4,14 @@ import SwiftIO
 import struct MadDisplay.ColorSpace
 #endif
 
+
+/// The is the library for ST7789 SPI screen. It supports two sizes of screens: 240x240 and 240x320.
+///
+/// It has 16-bit color pixels. One pixel matches one point of the coordinate system on the screen. It starts from (0,0). The origin of the display is on the top left corner by default. x and y coordinates go up respectively to the right and downwards. The origin can also be changed to any of the four corners of the screen as you rotate the display.
 public final class ST7789 {
     
+    
+    /// The rotation angles of the screen. 
     public enum Rotation {
         case angle0, angle90, angle180, angle270
     }
@@ -55,6 +61,17 @@ public final class ST7789 {
     public private(set) var colorSpace = ColorSpace()
     #endif
 
+    
+    /// Initialize all the necessary pins and set the parameters of the screen. The ST7789 chip can drive 240x240 and 240x320 screens. By default, 240x240 is set.
+    /// - Parameters:
+    ///   - spi: **REQUIRED** SPI interface. The communication speed between two devices should be as fast as possible within the range, usually 60,000,000.
+    ///   - cs: **REQUIRED** The digital output pin used for chip select.
+    ///   - dc: **REQUIRED** The digital output pin used for data or command.
+    ///   - rst: **REQUIRED** The digital output pin used to reset the screen.
+    ///   - bl: **REQUIRED**  The digital output pin used for backlight control.
+    ///   - width: **OPTIONAL**  The width of the screen. The default width is 240.
+    ///   - height: **OPTIONAL** The height of the screen. The default height is 240.
+    ///   - rotation: **OPTIONAL** Set the origin and rotation of the screen. By default, the origin is on top left of the screen.
     public init(spi: SPI, cs: DigitalOut, dc: DigitalOut, rst: DigitalOut, bl: DigitalOut,
                 width: Int = 240, height: Int = 240, rotation: Rotation = .angle0) {
         guard (width == 240 && height == 240) || (width == 240 && height == 320) ||
@@ -89,6 +106,9 @@ public final class ST7789 {
         bl.high()
     }
     
+    
+    /// Change the orientation of the display and set the origin of the coordinate system.
+    /// - Parameter angle: The rotation angle: `.angle0`, `.angle90`, `.angle180`, `.angle270`. They correspond to the four corners on the screen.
     public func setRoation(_ angle: Rotation) {
         rotation = angle 
         var madctlConfig: MadctlConfig
@@ -147,23 +167,42 @@ public final class ST7789 {
         writeConfig([madctlConfig.rawValue], to: .MADCTL)
     }
     
+    /// Write a single pixel on the screen by telling its position and color.
+    /// - Parameters:
+    ///   - x: The x-coordinate.
+    ///   - y: The y-coordinate.
+    ///   - color: The UInt16 color value.
     @inline(__always)
     public func writePixel(x: Int, y: Int, color: UInt16) {
         setAddrWindow(x: x, y: y, width: 1, height: 1)
         writeData(color)
     }
     
+    
+    /// Set an area of pixels on the screen. The data is in UInt8, while a pixel needs a UInt16. So every two data in the array set one pixel.
+    /// - Parameters:
+    ///   - x: The x-coordinate of the start point.
+    ///   - y: The y-coordinate of the start point.
+    ///   - w: The width of the area.
+    ///   - h: The height of the area.
+    ///   - data: **REQUIRED** An array of color data in UInt8.
     public func writeBitmap(x: Int, y: Int, width w: Int, height h: Int, data: [UInt8]) {
         setAddrWindow(x: x, y: y, width: w, height: h) 
         writeData(data, count: w * h * 2)
     }
     
+    
+    /// Set the screen with colors defined in an array. Two data are for one pixel. So the data count should be double the product of width and height to set all pixels.
+    /// - Parameter data: An array of color data in UInt8.
     public func writeScreen(_ data: [UInt8]) {
         guard data.count <= width * height * 2 else { return }
         setAddrWindow(x: 0, y: 0, width: width, height: height) 
         writeData(data)
     }
     
+    
+    /// Paint the whole screen with a specified color.
+    /// - Parameter color: A 16-bit color value, by default, black.
     public func clearScreen(_ color: UInt16 = 0x0000) {
         let highByte = UInt8(color >> 8)
         let lowByte = UInt8(color & 0xFF)
@@ -179,6 +218,8 @@ public final class ST7789 {
         writeScreen(data)
     }
     
+    
+    /// Reset the screen.
     public func reset() {
         cs.high()
         rst.low()
