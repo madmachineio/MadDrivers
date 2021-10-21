@@ -18,12 +18,20 @@ let package = Package(
                 "SHT3x",
                 "ST7789",
                 "VEML6040"]),
+        .library(name: "HCSR04", targets: ["HCSR04"]),
+        .library(name: "IS31FL3731", targets: ["IS31FL3731"]),
+        .library(name: "LCD1602", targets: ["LCD1602"]),
+        .library(name: "LIS3DH", targets: ["LIS3DH"]),
+        .library(name: "MCP4725", targets: ["MCP4725"]),
+        .library(name: "SHT3x", targets: ["SHT3x"]),
+        .library(name: "ST7789", targets: ["ST7789"]),
+        .library(name: "VEML6040", targets: ["VEML6040"]),
     ],
     dependencies: [
         // Dependencies declare other packages that this package depends on.
         // .package(url: /* package url */, from: "1.0.0"),
-        .package(url: "https://github.com/madmachineio/SwiftIO.git", from: "0.0.1"),
-        .package(url: "https://github.com/madmachineio/MadDisplay.git", from: "0.0.1")
+        .package(url: "https://github.com/madmachineio/SwiftIO.git", .upToNextMajor(from: "0.0.1")),
+        .package(url: "https://github.com/madmachineio/MadDisplay.git", .upToNextMajor(from: "0.0.1"))
     ],
     targets: [
         // Targets are the basic building blocks of a package. A target can define a module or a test suite.
