@@ -1,5 +1,12 @@
 import SwiftIO
 
+/// This is the library for MCP4725 12-bit DAC ( (digital to analog converter).
+///
+/// You can use I2C to control it in order to get different output from 0 to reference voltage.
+///
+/// The chip contains an EEROM. If you store the defined output voltage to it, the device can automatically output the same voltage next time it starts to work.
+///
+/// - Attention: The device address may be different depending on the hardware module. Here are some possible addresses: 0x60, 0x61, 0x62, 0x63, 0x64, 0x65.
 final public class MCP4725 {
     enum WriteType: UInt8 {
         case writeDAC = 0x40
@@ -12,6 +19,12 @@ final public class MCP4725 {
     let address: UInt8
     let maxRawValue = Int(4095)
     
+    /// Initialize the device. Use the specified I2C bus and send the device address to get ready for the following communication.
+    /// - Parameters:
+    ///   - i2c: **REQUIRED** The I2C interface for the communication.
+    ///   - address: **OPTIONAL** The device address. It has a default value and you can change it according to your device.
+    ///   - referenceVoltage: **OPTIONAL** The reference voltage of your board. 3.3 by default.
+    ///   - outputVoltage: **OPTIONAL** The output voltage. If you don’t set it, the device will output 0 volt by default.
     public init(_ i2c: I2C, address: UInt8 = 0x60, referenceVoltage: Double = 3.3, outputVoltage: Double? = nil) {
         self.i2c = i2c
         self.address = address
@@ -23,14 +36,22 @@ final public class MCP4725 {
         }
     }
     
+    /// Read from the device to get current output voltage. It is a Double.
+    /// - Returns: Current output voltage.
     public func getOutputVoltage() -> Double {
         return Double(getOutputValue()) / Double(maxRawValue) * referenceVoltage
     }
     
+    /// Read from the device to get the raw value of the DAC.
+    /// - Returns: DAC raw value
     public func getOutputRawValue() -> Int {
         return Int(getOutputValue())
     }
     
+    /// Set a raw value to the device to output the determined voltage. The value is between 0 and 4095.
+    /// - Parameters:
+    ///   - newValue: The raw value sent to the device.
+    ///   - writeToEEROM: Whether EEROM will store the value. By default, it won't.
     public func setRawValue(_ newValue: Int, writeToEEROM: Bool = false) {
         guard newValue >= 0 && newValue <= maxRawValue else {
             print("value \(newValue) is not acceptable!")
@@ -52,6 +73,10 @@ final public class MCP4725 {
         i2c.write(data, to: address)
     }
     
+    /// Set the output voltage. The value is between 0 and reference voltage.
+    /// - Parameters:
+    ///   - voltage: The voltage the device will output.
+    ///   - writeToEEROM: Whether EEROM will store the value. By default, it won't.
     public func setOutputVoltage(_ voltage: Double, writeToEEROM: Bool = false) {
         guard voltage >= 0.0 && voltage <= referenceVoltage else {
             print("voltage \(voltage) is not acceptable!")
@@ -73,6 +98,8 @@ final public class MCP4725 {
         i2c.write(data, to: address)
     }
     
+    /// Set a series of voltage values to the device to obtain varying voltages. The value is between 0 and reference voltage.
+    /// - Parameter voltages: Voltage values stored in an array.
     public func fastWrite(_ voltages: [Double]) {
         var data = [UInt8](repeating: 0x00, count: voltages.count * 2)
         

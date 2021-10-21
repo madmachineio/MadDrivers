@@ -1,13 +1,18 @@
-/// This is the library for SHT3x digital humidity and temperature Sensor. 
-/// It supports I2C protocol. Refer to the datasheet for more detailed information.
 import SwiftIO
+
+/// The SHT3x library allows you to read temperature and relative humidity. It supports I2C protocol.
+///
+/// The sensor contains components sensitive to two factors. During its work, different temperature or humidity levels will lead to corresponding voltages. Your board can read the voltage and calculate the final results.
 
 final public class SHT3x {
     
     let i2c: I2C
     let address: UInt8
     
-    // Initialize the I2C bus and reset the sensor to prepare for the following commands.
+    /// Initialize the I2C bus and reset the sensor to prepare for the following commands.
+    /// - Parameters:
+    ///   - i2c: **REQUIRED** The I2C interface that the sensor connects.
+    ///   - address: **OPTIONAL** The sensor's address. It has a default value.
     public init(_ i2c: I2C, address: UInt8 = 0x44) {
         self.i2c = i2c
         self.address = address
@@ -15,28 +20,30 @@ final public class SHT3x {
         reset()
     }
     
+    /// Reset the sensor.
     public func reset() {
         sleep(ms: 2)
         writeCommand(.softReset)
         sleep(ms: 2)
     }
     
-    // Send the command to start the measurement. The data returned will be stored in 6 bytes. 
-    // The first two bytes are reserved for temperature.
-    // Convert the data into a float representing the current temperature.
+    /// Get the temperature in Celcius.
+    /// - Returns: A float representing the current temperature
     public func readCelsius() -> Float {
         let value = startMeasure().rawTemp
         return 175.0 * Float(value) / 65535.0 - 45.0
     }
     
+    
+    /// Read the temperature in Fahrenheit.
+    /// - Returns: A float representing the temperature.
     public func readFahrenheit() -> Float {
         let value = startMeasure().rawTemp
         return 315.0 * Float(value) / 65535.0 - 49.0
     }
-    
-    // Send the command to start the measurement. The data returned will be stored in 6 bytes. 
-    // The fourth and fifth bytes are reserved for humidity.
-    // Convert the data into a float representing the current humidity.
+ 
+    /// Read the current relative humidity.
+    /// - Returns: A float between 0 and 1 representing the humidity.
     public func readHumidity() -> Float {
         let value = startMeasure().rawHumi
         return 100.0 * Float(value) / 65535.0
