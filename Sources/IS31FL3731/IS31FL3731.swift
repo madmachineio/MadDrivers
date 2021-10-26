@@ -12,49 +12,49 @@ import struct MadDisplay.ColorSpace
  You can also regard the LED matrix as a 9x16 screen and use `MadDisplay` to display text on it.
  
  - Attention: If you set all pixels to full brightness, the module will require too much current. So you may need to connect an external power supply instead of the computer's USB port. And if you hear buzzing from it, don't worry, it's because it works quickly to switch LED on and off.
-
+ 
  */
 
 public final class IS31FL3731 {
-
-	let i2c: I2C
+    
+    let i2c: I2C
     let address: UInt8
     /// Width of the LED matrix. It's 16 by default.
     public let width: Int = 16
     /// Height of the LED matrix. It's 9 by default.
     public let height: Int = 9
-
+    
     public private(set) var currentFrame: UInt8 = 0
-
+    
     let functionPage: UInt8 = 0x0B
-
+    
     let configPicutreMode: UInt8   = 0x00
     let configAutoPlayMode: UInt8  = 0x08
     //let configAudioPlayMode: UInt8 = 0x18
     let pwmRegOffset: UInt8 = 0x24
-
+    
 #if canImport(MadDisplay)
     public private(set) var colorSpace = ColorSpace()
 #endif
-
+    
     /**
      Initialize the module to get it ready for lighting.
      - Parameter i2c: **REQUIRED** The I2C interface that the module connects.
      - Parameter address: **OPTIONAL** The address of the module. It has a default value.
      */
     public init(i2c: I2C, address: UInt8 = 0x74) {
-
+        
         self.i2c = i2c
         self.address = address
-
+        
 #if canImport(MadDisplay)
         colorSpace.depth = 8
         colorSpace.grayscale = true
 #endif
-
+        
         shutdown()
         setToPictureMode()
-
+        
         for frame in 0..<8 {
             selectPage(UInt8(frame))
             controlRegInit(true)
@@ -64,7 +64,7 @@ public final class IS31FL3731 {
         setToFrame(Int(currentFrame))
         startup()
     }
-
+    
     public func setToPictureMode(frame: Int? = nil) {
         writeRegister(.configuration, configPicutreMode)
         if let frame = frame {
@@ -75,25 +75,25 @@ public final class IS31FL3731 {
     public func setToAutoPlayMode() {
         writeRegister(.configuration, configAutoPlayMode)
     }
-
+    
     public func setToFrame(_ frame: Int) {
         guard frame < 8 && frame >= 0 else { return }
         currentFrame = UInt8(frame)
         selectPage(currentFrame)
         writeRegister(.pictureDisplay, currentFrame)
     }
-
+    
     public func startBreath() {
         //writeRegister(.autoPlayDelay, 23)
         writeRegister(.pictureDisplay, currentFrame)
         writeRegister(.breathControl1, 0b0100_0100)
         writeRegister(.breathControl2, 0b0001_0100)
     }
-
+    
     public func stopBreath() {
         writeRegister(.breathControl2, 0b0000_0100)
     }
-
+    
     public func setPlayEndFrame(_ frame: Int) {
         var frame = frame
         if frame > 7 || frame < 0 {
@@ -101,7 +101,7 @@ public final class IS31FL3731 {
         }
         writeRegister(.autoPlayControl, UInt8(frame))
     }
-
+    
     /**
      Light an LED by telling its number from 0 to 143. The brightness of the LED can range from 0 (off) to 255 (full brightness).
      
@@ -114,7 +114,7 @@ public final class IS31FL3731 {
         let data = [UInt8(number) + pwmRegOffset, brightness]
         i2c.write(data, to: address)
     }
-
+    
     /**
      Light an LED by telling its coordinates.
      
@@ -131,7 +131,7 @@ public final class IS31FL3731 {
         let data = [reg, brightness]
         i2c.write(data, to: address)
     }
-
+    
     /**
      Set a part of the pixels on the matrix by defining the area. The area is a rectangle determined by a starting point, width and height. Then you can set the pixels to any brightness to get a unique lighting effect.
      
@@ -145,23 +145,23 @@ public final class IS31FL3731 {
         guard x < self.width && y < self.height && width >= 1 && height >= 1 else {
             return
         }
-
+        
         let bitmapWidth: Int, bitmapHeight: Int
-
+        
         if x + width <= self.width {
             bitmapWidth = width
         } else {
             bitmapWidth = self.width - x
         }
-
+        
         if y + height <= self.height {
             bitmapHeight = height
         } else {
             bitmapHeight = self.height - y
         }
-
+        
         var rowData = [UInt8](repeating: 0x00, count: bitmapWidth + 1)
-
+        
         for cY in y..<y + bitmapHeight {
             var rowPos = 1
             for cX in x..<x + bitmapWidth {
@@ -173,7 +173,7 @@ public final class IS31FL3731 {
             i2c.write(rowData, to: address)
         }
     }
-
+    
     
     /// Set all pixels to a specified brightness.
     /// - Parameter brightness: **REQUIRED** The value between 0 and 255 to set the brightness. By default, all pixels are set to 0.
@@ -185,7 +185,7 @@ public final class IS31FL3731 {
 }
 
 extension IS31FL3731 {
-
+    
     private enum Register: UInt8 {
         case configuration      = 0x00
         case pictureDisplay     = 0x01
@@ -201,26 +201,26 @@ extension IS31FL3731 {
         case audioADCRate       = 0x0C
         case command            = 0xFD
     }
-
+    
     private func selectPage(_ page: UInt8) {
         guard page < 8 || page == functionPage else { return }
         let data = [Register.command.rawValue, page]
         i2c.write(data, to: address)
     }
-
+    
     private func writeRegister(_ register: Register, _ value: UInt8) {
         selectPage(functionPage)
         let data = [register.rawValue, value]
         i2c.write(data, to: address)
         selectPage(currentFrame)
     }
-
+    
     private func readRegister(_ register: Register) -> UInt8 {
         selectPage(functionPage)
         i2c.write(register.rawValue, to: address)
-        let ret = i2c.readByte(from: address) 
+        let ret = i2c.readByte(from: address)
         selectPage(currentFrame)
-
+        
         if let ret = ret {
             return ret
         } else {
@@ -228,7 +228,7 @@ extension IS31FL3731 {
             return 0
         }
     }
-
+    
     private func readData(_ register: UInt8) -> UInt8 {
         writeRegister(.shutdown, 0)
         i2c.write(register, to: address)
@@ -241,29 +241,29 @@ extension IS31FL3731 {
             return 0
         }
     }
-
+    
     private func controlRegInit(_ value: Bool) {
         var data: [UInt8]
-
+        
         if value {
             data = [UInt8](repeating: 0xFF, count: 0x12 + 1)
         } else {
             data = [UInt8](repeating: 0x00, count: 0x12 + 1)
         }
-
+        
         data[0] = 0x00
         i2c.write(data, to: address)
     }
-
+    
     private func blinkRegInit(_ value: Bool) {
         var data: [UInt8]
-
+        
         if value {
             data = [UInt8](repeating: 0xFF, count: 0x12 + 1)
         } else {
             data = [UInt8](repeating: 0x00, count: 0x12 + 1)
         }
-
+        
         data[0] = 0x12
         i2c.write(data, to: address)
     }
@@ -272,12 +272,12 @@ extension IS31FL3731 {
         writeRegister(.shutdown, 1)
         sleep(ms: 10)
     }
-
+    
     private func shutdown() {
         writeRegister(.shutdown, 0)
         sleep(ms: 10)
     }
-
+    
 }
 
 
@@ -285,7 +285,7 @@ extension IS31FL3731 {
 import protocol MadDisplay.BitmapWritable
 
 extension IS31FL3731: BitmapWritable {
-
+    
 }
 
 #endif
