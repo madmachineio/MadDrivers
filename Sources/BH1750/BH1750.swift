@@ -6,11 +6,11 @@ import SwiftIO
 /// It provides 16-bit resolution to sense the amount of ambiant light. The light will be 0 to 65535 lux (lx).
 final public class BH1750 {
     
-    let i2c: I2C
-    let address: UInt8
+    private let i2c: I2C
+    private let address: UInt8
     
-    let mode: Mode
-    var resolution: Resolution
+    private let mode: Mode
+    private var resolution: Resolution
     
     /// It decides if the sensor will measure the light all the time or just once.
     public enum Mode: UInt8 {
@@ -34,8 +34,10 @@ final public class BH1750 {
     /// - Parameters:
     ///   - i2c: **REQUIRED** An I2C pin for the communication.
     ///   - address: **OPTIONAL** The sensor's address. It has a default value.
-    ///   - mode: **OPTIONAL** Whether the sensor measures once or continuously. `.continuous` by default.
-    ///   - resolution: **OPTIONAL** The resolution for the measurement. `.middle` by default.
+    ///   - mode: **OPTIONAL** Whether the sensor measures once or continuously.
+    ///     `.continuous` by default.
+    ///   - resolution: **OPTIONAL** The resolution for the measurement.
+    ///     `.middle` by default.
     public init(_ i2c: I2C, address: UInt8 = 0x23,
                 mode: Mode = .continuous, resolution: Resolution = .middle) {
         self.i2c = i2c
@@ -83,12 +85,12 @@ extension BH1750 {
         i2c.write(value, to: address)
     }
     
-    func reset() {
+    private func reset() {
         writeCommand(Setting.powerOn.rawValue)
         writeCommand(Setting.reset.rawValue)
     }
     
-    func setResolution(_ resolution: Resolution) {
+    private func setResolution(_ resolution: Resolution) {
         self.resolution = resolution
         
         let configValue = mode.rawValue | resolution.rawValue
@@ -96,7 +98,7 @@ extension BH1750 {
         sleep(ms: measurementTime)
     }
     
-    func readRawValue() -> UInt16 {
+    private func readRawValue() -> UInt16 {
         var value: [UInt8]
         
         switch mode {
@@ -104,8 +106,8 @@ extension BH1750 {
             /// In this mode, the sensor measures the light continuously, so you can read directly.
             value = i2c.read(count: 2, from: address)
         case .oneTime:
-            /// In this mode, every time the sensor finishes the reading, the sensor will be powered down.
-            /// You need to resend the command for a new reading.
+            /// In this mode, every time the sensor finishes the reading, the sensor will move to
+            /// power down mode. You need to resend the command for a new reading.
             let configValue = mode.rawValue | resolution.rawValue
             writeCommand(configValue)
             sleep(ms: measurementTime)
