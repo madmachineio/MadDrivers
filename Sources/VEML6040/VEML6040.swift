@@ -1,9 +1,31 @@
+//=== VEML6040.swift ------------------------------------------------------===//
+//
+// Copyright (c) MadMachine Limited
+// Licensed under MIT License
+//
+// Authors: Andy Liu
+// Created: 03/01/2021
+// Updated: 10/26/2021
+//
+// See https://madmachine.io for more information
+//
+//===----------------------------------------------------------------------===//
+
 import SwiftIO
 
 /**
- The library VEML6040 allows you to use this color sensor to measure red, green, blue and white lights. It  provides 16-bit resolution for each channel. You can communicate with it using I2C protocol.
+ This is the library for VEML6040 color sensor.
+ You can communicate with it using I2C protocol.
+
+ The sensor can measure red, green, blue and white lights. It provides 16-bit
+ resolution for each channel. When receiving a reflected light, it can detect
+ the intensity of each light. Then you can get the color based on the reading.
+
  
- - Attention: Our eyes are more sensitive to blue light, while the sensor is less sensitive. So the color you see may be unlike that the sensor reads. In this case, if you want to use the sensor to detect color, you need to normalize the RGB values relative to the white light.
+ - Attention: Our eyes are more sensitive to blue light, while the sensor
+ is less sensitive. So the color you see may be unlike that the sensor reads.
+ In this case, if you want to use the sensor to detect color, you need to
+ normalize the RGB values relative to the white light.
  
  */
 
@@ -24,7 +46,8 @@ final public class VEML6040 {
     /// The I2C interface for the sensor.
     public let i2c: I2C
     
-    /// Get a suitable sensitivity according to the integration time. A longer time will lead to a higher sensitivity.
+    /// Get a suitable sensitivity according to the integration time.
+    /// A longer time will lead to a higher sensitivity.
     public var sensitivity: Float {
         switch integrationTime {
         case .i40ms:
@@ -42,7 +65,8 @@ final public class VEML6040 {
         }
     }
     
-    /// Get the detectable intensity according to the integration time. A longer time will lead to a smaller range.
+    /// Get the detectable intensity according to the integration time.
+    /// A longer time will lead to a smaller range.
     public var maxLux: Int {
         switch integrationTime {
         case .i40ms:
@@ -63,7 +87,9 @@ final public class VEML6040 {
     private var integrationTime: IntegrationTime
     private var configValue: Config
     
-    /// Initialize the I2C bus and reset the sensor to prepare for the following commands. It configures the sensor and set a default integration time of 160ms.
+    /// Initialize the I2C bus and reset the sensor to prepare for the
+    /// following commands. It configures the sensor and set a default
+    /// integration time of 160ms.
     /// - Parameters:
     ///   - i2c: **REQUIRED** The I2C interface that the sensor connects.
     ///   - address: **OPTIONAL** The sensor's address. It has a default value.
@@ -77,8 +103,12 @@ final public class VEML6040 {
         setIntegrationTime(integrationTime)
     }
     
-    /// Set the integration time to adjust the sensitivity of the sensor. If you choose a longer time, the sensitivity will increase and the detectable intensity will decrease accordingly. By default, the time is 160ms.
-    /// - Parameter newValue: The new integration time for the sensor. You can find it in the enum `IntegrationTime`.
+    /// Set the integration time to adjust the sensitivity of the sensor.
+    /// If you choose a longer time, the sensitivity will increase and the
+    /// detectable intensity will decrease accordingly.
+    /// By default, the time is 160ms.
+    /// - Parameter newValue: The new integration time for the sensor.
+    ///     You can find it in the enum `IntegrationTime`.
     public func setIntegrationTime(_ newValue: IntegrationTime) {
         integrationTime = newValue
         let newConfig = Config(rawValue: integrationTime.rawValue)

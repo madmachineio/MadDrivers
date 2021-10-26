@@ -1,3 +1,16 @@
+//=== LCD1602.swift -------------------------------------------------------===//
+//
+// Copyright (c) MadMachine Limited
+// Licensed under MIT License
+//
+// Authors: Andy Liu
+// Created: 06/13/2021
+// Updated: 10/26/2021
+//
+// See https://madmachine.io for more information
+//
+//===----------------------------------------------------------------------===//
+
 import SwiftIO
 
 final public class LCD1602 {
@@ -67,9 +80,11 @@ final public class LCD1602 {
     private var entryModeConfig: EntryMode
     private var shiftModeConfig: ShiftMode
     
-    public init(_ i2c: I2C, address: UInt8 = 0x3E, columns: UInt8 = 16, rows: UInt8 = 2, dotSize: UInt8 = 8) {
+    public init(_ i2c: I2C, address: UInt8 = 0x3E,
+                columns: UInt8 = 16, rows: UInt8 = 2, dotSize: UInt8 = 8) {
         
-        guard (columns > 0) && (rows == 1 || rows == 2) && (dotSize == 8 || dotSize == 10) else {
+        guard (columns > 0) && (rows == 1 || rows == 2)
+                && (dotSize == 8 || dotSize == 10) else {
             fatalError("LCD1602 parameter error, init failed")
         }
         

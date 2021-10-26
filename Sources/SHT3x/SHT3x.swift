@@ -1,15 +1,32 @@
+//=== SHT3x.swift ---------------------------------------------------------===//
+//
+// Copyright (c) MadMachine Limited
+// Licensed under MIT License
+//
+// Authors: Andy Liu
+// Created: 02/25/2021
+// Updated: 10/26/2021
+//
+// See https://madmachine.io for more information
+//
+//===----------------------------------------------------------------------===//
+
 import SwiftIO
 
-/// The SHT3x library allows you to read temperature and relative humidity. It supports I2C protocol.
+/// The SHT3x library allows you to read temperature and relative humidity.
+/// It supports I2C protocol.
 ///
-/// The sensor contains components sensitive to two factors. During its work, different temperature or humidity levels will lead to corresponding voltages. Your board can read the voltage and calculate the final results.
+/// The sensor contains components sensitive to two factors.
+/// During its work, different temperature or humidity levels will lead to
+/// corresponding voltages. Your board can read the voltage and calculate
+/// the final results.
 
 final public class SHT3x {
     
     let i2c: I2C
     let address: UInt8
     
-    /// Initialize the I2C bus and reset the sensor to prepare for the following commands.
+    /// Initialize the I2C bus and reset the sensor.
     /// - Parameters:
     ///   - i2c: **REQUIRED** The I2C interface that the sensor connects.
     ///   - address: **OPTIONAL** The sensor's address. It has a default value.
