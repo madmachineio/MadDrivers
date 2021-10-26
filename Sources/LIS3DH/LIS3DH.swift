@@ -1,23 +1,49 @@
+//=== LIS3DH.swift --------------------------------------------------------===//
+//
+// Copyright (c) MadMachine Limited
+// Licensed under MIT License
+//
+// Authors: Andy Liu
+// Created: 05/11/2021
+// Updated: 10/26/2021
+//
+// See https://madmachine.io for more information
+//
+//===----------------------------------------------------------------------===//
+
 import SwiftIO
 
-/// This is the library for the LIS3DH accelerometer. You can use the sensor to measure the accelerations in x, y, and z-axes.
+/// This is the library for the LIS3DH accelerometer.
+/// You can use the sensor to measure the accelerations in x, y, and z-axes.
 ///
-/// The acceleration describes the change of velocity with time, usually measured in m/s^2. The sensor measures it by detecting the force. It can sense gravity and measure inertial force caused by movement. They will change the internal capacitance of the sensor, thus change the voltage in the circuit.
+/// The acceleration describes the change of velocity with time,
+/// usually measured in m/s^2. The sensor measures it by detecting the force.
+/// It can sense gravity and measure inertial force caused by movement.
+/// They will change the internal capacitance of the sensor,
+/// thus change the voltage in the circuit.
 ///
-/// The sensor supports I2C and SPI protocol. It will give raw readings between -32768 and 32767 (16-bit resolution). The acceleration has direction so you will get positive or negative values. The calculation of acceleration depends on the selected scaling range: ±2, ±4, ±8  or ±16g. The raw reading will be mapped according to the range.
+/// The sensor supports I2C and SPI protocol.
+/// It will give raw readings between -32768 and 32767 (16-bit resolution).
+/// The acceleration has direction so you will get positive or negative values.
+/// The calculation of acceleration depends on the selected scaling range:
+/// ±2, ±4, ±8  or ±16g. The raw reading will be mapped according to the range.
 final public class LIS3DH {
     
     
-    /// The ranges of the measurement. It will decide how the raw reading is calculated.
+    /// The ranges of the measurement.
     public enum GRange: UInt8 {
+        /// The acceleration is from -2g to 2g. It is the default setting.
         case g2     = 0
+        /// The acceleration is from -4g to 4g.
         case g4     = 0b0001_0000
+        /// The acceleration is from -8g to 8g.
         case g8     = 0b0010_0000
+        /// The acceleration is from -16g to 16g.
         case g16    = 0b0011_0000
     }
     
     
-    /// The supported data rate for the sensor.
+    /// The supported data rate for the sensor, 400Hz by default.
     public enum DataRate: UInt8 {
         case powerDown          = 0
         case Hz1                = 0b0001_0000
@@ -59,7 +85,7 @@ final public class LIS3DH {
     /// Initialize the sensor using I2C communication.
     /// - Parameters:
     ///   - i2c: **REQUIRED** The I2C interface that the sensor connects.
-    ///   - address: **OPTIONAL** The device address of the sensor. It has a default value.
+    ///   - address: **OPTIONAL** The device address of the sensor.
     public init(_ i2c: I2C, address: UInt8 = 0x18) {
         self.i2c = i2c
         self.address = address
@@ -77,13 +103,15 @@ final public class LIS3DH {
     }
     
     
-    /// Get the device ID from the sensor. It can be used to test if the sensor is connected.
+    /// Get the device ID from the sensor.
+    /// It can be used to test if the sensor is connected.
     /// - Returns: The device ID.
     public func getDeviceID() -> UInt8 {
         return readRegister(.WHO_AM_I)
     }
     
-    /// Set the scaling range of the sensor. The supported ranges are ±2, ±4, ±8 and ±16g.
+    /// Set the scaling range of the sensor.
+    /// The supported ranges are ±2, ±4, ±8 and ±16g.
     /// - Parameter newRange: The selected `GRange`.
     public func setRange(_ newRange: GRange) {
         gRange = newRange
@@ -132,11 +160,13 @@ final public class LIS3DH {
     }
     
     
-    /// Read x, y, z acceleration values represented in g (9.8m/s^2) within the selected range.
+    /// Read x, y, z acceleration values represented in g (9.8m/s^2)
+    /// within the selected range.
     /// - Returns: 3 float within the selected g range.
     public func readValue() -> (x: Float, y: Float, z: Float) {
         let (ix, iy, iz) = readRawValue()
-        var value: (x: Float, y: Float, z: Float) = (Float(ix), Float(iy), Float(iz))
+        var value: (x: Float, y: Float, z: Float) =
+            (Float(ix), Float(iy), Float(iz))
         
         value.x = value.x / gCoefficient
         value.y = value.y / gCoefficient

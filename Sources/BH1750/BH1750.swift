@@ -13,7 +13,8 @@
 
 import SwiftIO
 
-/// This is the library for the BH1750 light sensor.
+/// This is the library for the BH1750 light sensor
+/// used to measure light intensity.
 ///
 /// The sensor communicates with your board via an I2C bus.
 /// It provides 16-bit resolution to sense the amount of ambiant light.

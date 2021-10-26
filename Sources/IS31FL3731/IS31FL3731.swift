@@ -1,3 +1,16 @@
+//=== IS31FL3731.swift ----------------------------------------------------===//
+//
+// Copyright (c) MadMachine Limited
+// Licensed under MIT License
+//
+// Authors: Andy Liu
+// Created: 07/29/2021
+// Updated: 10/26/2021
+//
+// See https://madmachine.io for more information
+//
+//===----------------------------------------------------------------------===//
+
 import SwiftIO
 
 #if canImport(MadDisplay)
@@ -5,14 +18,22 @@ import struct MadDisplay.ColorSpace
 #endif
 
 /**
- This is the library for IS31FL3731 chip. It supports I2C communication. By default, you can use it with a 9x16 LED matrix.
+ This is the library for IS31FL3731 chip. It supports I2C communication.
+ By default, you can use it with a 9x16 LED matrix.
  
- The LED matrix has 16 rows (X0 - X15), each row has 9 LEDs (Y0 - Y8). One LED stands for one pixel. The first LED labeled X0 and Y0 is the origin. There are two ways to indicate it: 0 or (0,0). Each LED has 8-bit grayscale, that is, its brightness has 256 levels. 0 is off and 255 is full brightness.
+ The LED matrix has 16 rows (X0 - X15), each row has 9 LEDs (Y0 - Y8).
+ One LED stands for one pixel. The first LED labeled X0 and Y0 is the origin.
+ There are two ways to indicate it: 0 or (0,0).
+ Each LED has 8-bit grayscale, that is, its brightness has 256 levels.
+ 0 is off and 255 is full brightness.
  
- You can also regard the LED matrix as a 9x16 screen and use `MadDisplay` to display text on it.
+ You can also regard the LED matrix as a 9x16 screen and
+ use `MadDisplay` to display text on it.
  
- - Attention: If you set all pixels to full brightness, the module will require too much current. So you may need to connect an external power supply instead of the computer's USB port. And if you hear buzzing from it, don't worry, it's because it works quickly to switch LED on and off.
- 
+ - Attention: If you set all pixels to full brightness, the module will require
+ too much current. So you may need to connect an external power supply
+ instead of the computer's USB port. And if you hear buzzing from it,
+ don't worry, it's because it works quickly to switch LED on and off.
  */
 
 public final class IS31FL3731 {
@@ -40,7 +61,7 @@ public final class IS31FL3731 {
     /**
      Initialize the module to get it ready for lighting.
      - Parameter i2c: **REQUIRED** The I2C interface that the module connects.
-     - Parameter address: **OPTIONAL** The address of the module. It has a default value.
+     - Parameter address: **OPTIONAL** The address of the module.
      */
     public init(i2c: I2C, address: UInt8 = 0x74) {
         
@@ -103,10 +124,12 @@ public final class IS31FL3731 {
     }
     
     /**
-     Light an LED by telling its number from 0 to 143. The brightness of the LED can range from 0 (off) to 255 (full brightness).
+     Light an LED by telling its number from 0 to 143.
+     The brightness of the LED can range from 0 (off) to 255 (full brightness).
      
      - Parameter number: **REQUIRED** The location of the LED from 0 to 143.
-     - Parameter brightness: **REQUIRED** The brightness of the specified LED. By default, the LED is set to full brightness.
+     - Parameter brightness: **REQUIRED** The brightness of the specified LED.
+        By default, the LED is set to full brightness.
      */
     @inline(__always)
     public func writePixel(_ number: Int, brightness: UInt8 = 255) {
@@ -118,11 +141,14 @@ public final class IS31FL3731 {
     /**
      Light an LED by telling its coordinates.
      
-     You can know the coordinate from the labels printed on the module.  The x is from 0 to 15 and y is  from 0 to 8. Each LED can have 256 levels of brightness from 0 (off) to 255 (full brightness).
+     You can know the coordinate from the labels printed on the module.
+     The x is from 0 to 15 and y is  from 0 to 8. Each LED can have 256 levels
+     of brightness from 0 (off) to 255 (full brightness).
      
      - Parameter x: **REQUIRED** The x coordinate of the LED.
      - Parameter y: **REQUIRED** The y coordinate of the LED.
-     - Parameter brightness: **REQUIRED** The brightness of the specified LED. By default, the LED is set to full brightness.
+     - Parameter brightness: **REQUIRED** The brightness of the specified LED.
+        By default, the LED is set to full brightness.
      */
     @inline(__always)
     public func writePixel(x: Int, y: Int, brightness: UInt8 = 255) {
@@ -133,16 +159,25 @@ public final class IS31FL3731 {
     }
     
     /**
-     Set a part of the pixels on the matrix by defining the area. The area is a rectangle determined by a starting point, width and height. Then you can set the pixels to any brightness to get a unique lighting effect.
+     Set a part of the pixels on the matrix by defining the area.
+     The area is a rectangle determined by a starting point, width and height.
+     Then you can set the pixels to any brightness to get a unique
+     lighting effect.
      
-     - Parameter x: **REQUIRED** The horizontal line of the matrix to decide the start point, from 0 to 15.
-     - Parameter y: **REQUIRED** The vertical line of the matrix to decide the start point, from 0 to 8.
-     - Parameter width: **REQUIRED** The number of pixels in the horizontal direction.
-     - Parameter height: **REQUIRED** The number of pixels in the vertical direction.
-     - Parameter brightness: **REQUIRED** The brightness level of all the pixels. Each byte stands for the brightness of each pixel
+     - Parameter x: **REQUIRED** The horizontal line of the matrix to decide
+        the start point, from 0 to 15.
+     - Parameter y: **REQUIRED** The vertical line of the matrix to decide
+        the start point, from 0 to 8.
+     - Parameter width: **REQUIRED** The number of pixels horizontally.
+     - Parameter height: **REQUIRED** The number of pixels vertically.
+     - Parameter brightness: **REQUIRED** The brightness level of all pixels.
+        Each byte stands for the brightness of each pixel.
      */
-    public func writeBitmap(x: Int, y: Int, width: Int, height: Int, data: [UInt8]) {
-        guard x < self.width && y < self.height && width >= 1 && height >= 1 else {
+    public func writeBitmap(x: Int, y: Int, width: Int,
+                            height: Int, data: [UInt8]
+    ) {
+        guard x < self.width && y < self.height
+                && width >= 1 && height >= 1 else {
             return
         }
         
@@ -176,7 +211,8 @@ public final class IS31FL3731 {
     
     
     /// Set all pixels to a specified brightness.
-    /// - Parameter brightness: **REQUIRED** The value between 0 and 255 to set the brightness. By default, all pixels are set to 0.
+    /// - Parameter brightness: **REQUIRED** The value between 0 and 255
+    ///     to set the brightness. By default, all pixels are set to 0.
     public func fill(_ brightness: UInt8 = 0x00) {
         var data = [UInt8](repeating: brightness, count: 144 + 1)
         data[0] = pwmRegOffset

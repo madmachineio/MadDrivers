@@ -1,3 +1,16 @@
+//=== ST7789.swift --------------------------------------------------------===//
+//
+// Copyright (c) MadMachine Limited
+// Licensed under MIT License
+//
+// Authors: Andy Liu
+// Created: 04/22/2021
+// Updated: 10/26/2021
+//
+// See https://madmachine.io for more information
+//
+//===----------------------------------------------------------------------===//
+
 import SwiftIO
 
 #if canImport(MadDisplay)
@@ -5,13 +18,19 @@ import struct MadDisplay.ColorSpace
 #endif
 
 
-/// The is the library for ST7789 SPI screen. It supports two sizes of screens: 240x240 and 240x320.
+/// This is the library for ST7789 SPI screen.
+/// It supports two sizes of screens: 240x240 and 240x320.
 ///
-/// It has 16-bit color pixels. One pixel matches one point of the coordinate system on the screen. It starts from (0,0). The origin of the display is on the top left corner by default. x and y coordinates go up respectively to the right and downwards. The origin can also be changed to any of the four corners of the screen as you rotate the display.
+/// It has 16-bit color pixels. One pixel matches one point of the
+/// coordinate system on the screen. It starts from (0,0).
+/// The origin of the display is on the top left corner by default.
+/// x and y coordinates go up respectively to the right and downwards.
+/// The origin can also be changed to any of the four corners of the screen
+/// as you rotate the display.
 public final class ST7789 {
     
     
-    /// The rotation angles of the screen. 
+    /// The rotation angles of the screen.
     public enum Rotation {
         case angle0, angle90, angle180, angle270
     }
@@ -22,30 +41,32 @@ public final class ST7789 {
         (.DISPON, nil)
     ]
 
-    /*    
-    private let initConfigs: [(address: Command, data: [UInt8]?)] = [
-        (.COLMOD, [0x05]),
-        
-        (.PORCTRL, [0x0C, 0x0C, 0x00, 0x33, 0x33]),
-        (.GCTRL, [0x35]),
-        (.VCOMS, [0x32]),
-        (.VDVVRHEN, [0x01]),
-        (.VRHS, [0x15]),
-        (.VDVSET, [0x20]),
-        (.FRCTR2, [0x0F]),
-        (.PWCTRL1, [0xA4, 0xA1]),
-        (.PVGAMCTRL, [0xD0, 0x04, 0x0A, 0x08, 0x07, 0x05, 0x32, 0x32, 0x48, 0x38, 0x15, 0x15, 0x2A, 0x2E]),
-        (.NVGAMCTRL, [0xD0, 0x07, 0x0D, 0x09, 0x09, 0x16, 0x30, 0x44, 0x49, 0x39, 0x16, 0x16, 0x2B, 0x2F]),
-        
-        (.INVON, nil),
-        (.DISPON, nil)
-    ]
-    */
+    /*
+     private let initConfigs: [(address: Command, data: [UInt8]?)] = [
+     (.COLMOD, [0x05]),
+
+     (.PORCTRL, [0x0C, 0x0C, 0x00, 0x33, 0x33]),
+     (.GCTRL, [0x35]),
+     (.VCOMS, [0x32]),
+     (.VDVVRHEN, [0x01]),
+     (.VRHS, [0x15]),
+     (.VDVSET, [0x20]),
+     (.FRCTR2, [0x0F]),
+     (.PWCTRL1, [0xA4, 0xA1]),
+     (.PVGAMCTRL, [0xD0, 0x04, 0x0A, 0x08, 0x07, 0x05, 0x32,
+     0x32, 0x48, 0x38, 0x15, 0x15, 0x2A, 0x2E]),
+     (.NVGAMCTRL, [0xD0, 0x07, 0x0D, 0x09, 0x09, 0x16, 0x30,
+     0x44, 0x49, 0x39, 0x16, 0x16, 0x2B, 0x2F]),
+
+     (.INVON, nil),
+     (.DISPON, nil)
+     ]
+     */
     
     let spi: SPI
     let cs, dc, rst, bl: DigitalOut
     
-    private(set) var rotation: Rotation 
+    private(set) var rotation: Rotation
     
     public private(set) var width: Int
     public private(set) var height: Int
@@ -57,27 +78,34 @@ public final class ST7789 {
     private var xOffset: Int
     private var yOffset: Int
 
-    #if canImport(MadDisplay)
+#if canImport(MadDisplay)
     public private(set) var colorSpace = ColorSpace()
-    #endif
+#endif
 
     
-    /// Initialize all the necessary pins and set the parameters of the screen. The ST7789 chip can drive 240x240 and 240x320 screens. By default, 240x240 is set.
+    /// Initialize all the necessary pins and set the parameters of the screen.
+    /// The ST7789 chip can drive 240x240 and 240x320 screens.
+    /// By default, 240x240 is set.
     /// - Parameters:
-    ///   - spi: **REQUIRED** SPI interface. The communication speed between two devices should be as fast as possible within the range, usually 60,000,000.
+    ///   - spi: **REQUIRED** SPI interface. The communication speed between
+    ///     two devices should be as fast as possible within the range,
+    ///     usually 60,000,000.
     ///   - cs: **REQUIRED** The digital output pin used for chip select.
     ///   - dc: **REQUIRED** The digital output pin used for data or command.
     ///   - rst: **REQUIRED** The digital output pin used to reset the screen.
-    ///   - bl: **REQUIRED**  The digital output pin used for backlight control.
-    ///   - width: **OPTIONAL**  The width of the screen. The default width is 240.
-    ///   - height: **OPTIONAL** The height of the screen. The default height is 240.
-    ///   - rotation: **OPTIONAL** Set the origin and rotation of the screen. By default, the origin is on top left of the screen.
-    public init(spi: SPI, cs: DigitalOut, dc: DigitalOut, rst: DigitalOut, bl: DigitalOut,
-                width: Int = 240, height: Int = 240, rotation: Rotation = .angle0) {
-        guard (width == 240 && height == 240) || (width == 240 && height == 320) ||
-                (width == 320 && height == 240) else {
-            fatalError("Not support this resolution!")
-        }
+    ///   - bl: **REQUIRED** The digital output pin used for backlight control.
+    ///   - width: **OPTIONAL** The width of the screen. It is 240 by default.
+    ///   - height: **OPTIONAL** The height of the screen. It is 240 by default.
+    ///   - rotation: **OPTIONAL** Set the origin and rotation of the screen.
+    ///     By default, the origin is on top left of the screen.
+    public init(spi: SPI, cs: DigitalOut, dc: DigitalOut,
+                rst: DigitalOut, bl: DigitalOut,
+                width: Int = 240, height: Int = 240,
+                rotation: Rotation = .angle0) {
+        guard (width == 240 && height == 240) || (width == 240 && height == 320)
+                || (width == 320 && height == 240) else {
+                    fatalError("Not support this resolution!")
+                }
         
         self.spi = spi
         self.cs = cs
@@ -90,10 +118,10 @@ public final class ST7789 {
         self.xOffset = 0
         self.yOffset = 0
 
-        #if canImport(MadDisplay)
+#if canImport(MadDisplay)
         colorSpace.depth = 16
         colorSpace.reverseBytesInWord = true
-        #endif 
+#endif
         
         reset()
         setRoation(rotation)
@@ -107,10 +135,12 @@ public final class ST7789 {
     }
     
     
-    /// Change the orientation of the display and set the origin of the coordinate system.
-    /// - Parameter angle: The rotation angle: `.angle0`, `.angle90`, `.angle180`, `.angle270`. They correspond to the four corners on the screen.
+    /// Change the orientation of the display and set the origin of the
+    /// coordinate system. The rotation angle has four choices, which
+    /// correspond to the four corners on the screen.
+    /// - Parameter angle: The rotation angle.
     public func setRoation(_ angle: Rotation) {
-        rotation = angle 
+        rotation = angle
         var madctlConfig: MadctlConfig
         
         if width == 240 && height == 240 {
@@ -118,49 +148,61 @@ public final class ST7789 {
             case .angle0:
                 xOffset = 0
                 yOffset = 0
-                madctlConfig = [.pageTopToBottom, .leftToRight, .normalMode, .lineTopToBottom, .RGB]
+                madctlConfig = [.pageTopToBottom, .leftToRight,
+                                .normalMode, .lineTopToBottom, .RGB]
             case .angle90:
                 xOffset = 0
                 yOffset = 0
-                madctlConfig = [.pageTopToBottom, .rightToLeft, .reverseMode, .lineTopToBottom, .RGB]
+                madctlConfig = [.pageTopToBottom, .rightToLeft,
+                                .reverseMode, .lineTopToBottom, .RGB]
             case .angle180:
                 xOffset = 0
                 yOffset = 80
-                madctlConfig = [.pageBottomToTop, .rightToLeft, .normalMode, .lineTopToBottom, .RGB]
+                madctlConfig = [.pageBottomToTop, .rightToLeft,
+                                .normalMode, .lineTopToBottom, .RGB]
             case .angle270:
                 xOffset = 80
                 yOffset = 0
-                madctlConfig = [.pageBottomToTop, .leftToRight, .reverseMode, .lineTopToBottom, .RGB]
+                madctlConfig = [.pageBottomToTop, .leftToRight,
+                                .reverseMode, .lineTopToBottom, .RGB]
             }
         } else if width == 240 && height == 320 {
             xOffset = 0
             yOffset = 0
             switch rotation {
             case .angle0:
-                madctlConfig = [.pageTopToBottom, .leftToRight, .normalMode, .lineTopToBottom, .RGB]
+                madctlConfig = [.pageTopToBottom, .leftToRight,
+                                .normalMode, .lineTopToBottom, .RGB]
             case .angle90:
                 swap(&width, &height)
-                madctlConfig = [.pageTopToBottom, .rightToLeft, .reverseMode, .lineTopToBottom, .RGB]
+                madctlConfig = [.pageTopToBottom, .rightToLeft,
+                                .reverseMode, .lineTopToBottom, .RGB]
             case .angle180:
-                madctlConfig = [.pageBottomToTop, .rightToLeft, .normalMode, .lineTopToBottom, .RGB]
+                madctlConfig = [.pageBottomToTop, .rightToLeft,
+                                .normalMode, .lineTopToBottom, .RGB]
             case .angle270:
                 swap(&width, &height)
-                madctlConfig = [.pageBottomToTop, .leftToRight, .reverseMode, .lineTopToBottom, .RGB]
+                madctlConfig = [.pageBottomToTop, .leftToRight,
+                                .reverseMode, .lineTopToBottom, .RGB]
             }
         } else {
             xOffset = 0
             yOffset = 0
             switch rotation {
             case .angle0:
-                madctlConfig = [.pageTopToBottom, .rightToLeft, .reverseMode, .lineTopToBottom, .RGB]
+                madctlConfig = [.pageTopToBottom, .rightToLeft,
+                                .reverseMode, .lineTopToBottom, .RGB]
             case .angle90:
                 swap(&width, &height)
-                madctlConfig = [.pageBottomToTop, .rightToLeft, .normalMode, .lineTopToBottom, .RGB]
+                madctlConfig = [.pageBottomToTop, .rightToLeft,
+                                .normalMode, .lineTopToBottom, .RGB]
             case .angle180:
-                madctlConfig = [.pageBottomToTop, .leftToRight, .reverseMode, .lineTopToBottom, .RGB]
+                madctlConfig = [.pageBottomToTop, .leftToRight,
+                                .reverseMode, .lineTopToBottom, .RGB]
             case .angle270:
                 swap(&width, &height)
-                madctlConfig = [.pageTopToBottom, .leftToRight, .normalMode, .lineTopToBottom, .RGB]
+                madctlConfig = [.pageTopToBottom, .leftToRight,
+                                .normalMode, .lineTopToBottom, .RGB]
             }
         }
         
@@ -179,24 +221,28 @@ public final class ST7789 {
     }
     
     
-    /// Set an area of pixels on the screen. The data is in UInt8, while a pixel needs a UInt16. So every two data in the array set one pixel.
+    /// Set an area of pixels on the screen. The data is in UInt8,
+    /// while a pixel needs a UInt16. So every 2 data in the array set 1 pixel.
     /// - Parameters:
     ///   - x: The x-coordinate of the start point.
     ///   - y: The y-coordinate of the start point.
     ///   - w: The width of the area.
     ///   - h: The height of the area.
-    ///   - data: **REQUIRED** An array of color data in UInt8.
-    public func writeBitmap(x: Int, y: Int, width w: Int, height h: Int, data: [UInt8]) {
-        setAddrWindow(x: x, y: y, width: w, height: h) 
+    ///   - data: An array of color data in UInt8.
+    public func writeBitmap(x: Int, y: Int, width w: Int,
+                            height h: Int, data: [UInt8]) {
+        setAddrWindow(x: x, y: y, width: w, height: h)
         writeData(data, count: w * h * 2)
     }
     
     
-    /// Set the screen with colors defined in an array. Two data are for one pixel. So the data count should be double the product of width and height to set all pixels.
+    /// Set the screen with colors defined in an array.
+    /// Two data are for one pixel. So the data count should be double
+    /// the product of width and height to set all pixels.
     /// - Parameter data: An array of color data in UInt8.
     public func writeScreen(_ data: [UInt8]) {
         guard data.count <= width * height * 2 else { return }
-        setAddrWindow(x: 0, y: 0, width: width, height: height) 
+        setAddrWindow(x: 0, y: 0, width: width, height: height)
         writeData(data)
     }
     
