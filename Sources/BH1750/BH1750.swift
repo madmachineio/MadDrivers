@@ -1,3 +1,16 @@
+//=== BH1750.swift --------------------------------------------------------===//
+//
+// Copyright (c) MadMachine Limited
+// Licensed under MIT License
+//
+// Authors: Ines Zhou
+// Created: 10/26/2021
+// Updated: 10/26/2021
+//
+// See https://madmachine.io for more information
+//
+//===----------------------------------------------------------------------===//
+
 import SwiftIO
 
 /// This is the library for the BH1750 light sensor.
