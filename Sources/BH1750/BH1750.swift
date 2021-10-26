@@ -16,7 +16,8 @@ import SwiftIO
 /// This is the library for the BH1750 light sensor.
 ///
 /// The sensor communicates with your board via an I2C bus.
-/// It provides 16-bit resolution to sense the amount of ambiant light. The light will be 0 to 65535 lux (lx).
+/// It provides 16-bit resolution to sense the amount of ambiant light.
+/// The light will be 0 to 65535 lux (lx).
 final public class BH1750 {
     
     private let i2c: I2C
@@ -25,15 +26,17 @@ final public class BH1750 {
     private let mode: Mode
     private var resolution: Resolution
     
-    /// It decides if the sensor will measure the light all the time or just once.
+    /// It decides if the sensor will measure the light all the time or once.
     public enum Mode: UInt8 {
         /// The sensor will read the ambient light continuously.
         case continuous = 0b0001_0000
-        /// The sensor will read once and move to powered down mode until the next reading.
+        /// The sensor will read once and move to powered down mode
+        /// until the next reading.
         case oneTime = 0b0010_0000
     }
     
-    /// It decides the precision of the measurement. By default, you will choose the middle one.
+    /// It decides the precision of the measurement.
+    /// By default, you will choose the middle one.
     public enum Resolution: UInt8 {
         /// Start measurement at 0.5lx resolution.
         case high = 0b0001
@@ -116,11 +119,13 @@ extension BH1750 {
         
         switch mode {
         case .continuous:
-            /// In this mode, the sensor measures the light continuously, so you can read directly.
+            /// In this mode, the sensor measures the light continuously,
+            /// so you can read directly.
             value = i2c.read(count: 2, from: address)
         case .oneTime:
-            /// In this mode, every time the sensor finishes the reading, the sensor will move to
-            /// power down mode. You need to resend the command for a new reading.
+            /// In this mode, every time the sensor finishes the reading,
+            /// the sensor will move to power down mode.
+            /// You need to resend the command for a new reading.
             let configValue = mode.rawValue | resolution.rawValue
             writeCommand(configValue)
             sleep(ms: measurementTime)
