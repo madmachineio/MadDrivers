@@ -23,12 +23,14 @@ import struct MadDisplay.ColorSpace
  
  The LED matrix has 16 rows (X0 - X15), each row has 9 LEDs (Y0 - Y8).
  One LED stands for one pixel. The first LED labeled X0 and Y0 is the origin.
- There are two ways to indicate it: 0 or (0,0).
- Each LED has 8-bit grayscale, that is, its brightness has 256 levels.
- 0 is off and 255 is full brightness.
+ There are two ways to indicate it: 0 or (0,0). Each LED has 8-bit grayscale,
+ that is, 256 levels of brightness. 0 is off and 255 is full brightness.
+
+ The display has 8 seperate frames from 0 to 7. You can show any of them or
+ display in turns to create an animation.
  
- You can also regard the LED matrix as a 9x16 screen and
- use `MadDisplay` to display text on it.
+ You can also regard the LED matrix as a 9x16 screen and use `MadDisplay`
+ to display text on it.
  
  - Attention: If you set all pixels to full brightness, the module will require
  too much current. So you may need to connect an external power supply
@@ -38,21 +40,15 @@ import struct MadDisplay.ColorSpace
 
 public final class IS31FL3731 {
     
-    let i2c: I2C
-    let address: UInt8
+    private let i2c: I2C
+    private let address: UInt8
     /// Width of the LED matrix. It's 16 by default.
     public let width: Int = 16
     /// Height of the LED matrix. It's 9 by default.
     public let height: Int = 9
-    
+
+    /// The current frame that the matrix displays or sets.
     public private(set) var currentFrame: UInt8 = 0
-    
-    let functionPage: UInt8 = 0x0B
-    
-    let configPicutreMode: UInt8   = 0x00
-    let configAutoPlayMode: UInt8  = 0x08
-    //let configAudioPlayMode: UInt8 = 0x18
-    let pwmRegOffset: UInt8 = 0x24
     
 #if canImport(MadDisplay)
     public private(set) var colorSpace = ColorSpace()
@@ -74,7 +70,8 @@ public final class IS31FL3731 {
 #endif
         
         shutdown()
-        setToPictureMode()
+        stopBreath()
+        setMode(.picutreMode)
         
         for frame in 0..<8 {
             selectPage(UInt8(frame))
@@ -85,75 +82,105 @@ public final class IS31FL3731 {
         setToFrame(Int(currentFrame))
         startup()
     }
-    
-    public func setToPictureMode(frame: Int? = nil) {
-        writeRegister(.configuration, configPicutreMode)
-        if let frame = frame {
-            setToFrame(frame)
-        }
-    }
-    
-    public func setToAutoPlayMode() {
-        writeRegister(.configuration, configAutoPlayMode)
-    }
-    
-    public func setToFrame(_ frame: Int) {
+
+    /// Change the current frame to a specified frame from 0 to 7.
+    /// - Parameters:
+    ///   - frame: The frame to be set or displayed.
+    ///   - show: Whether to show the specified frame. By default, it's true
+    ///     and the matrix show the frame.
+    public func setToFrame(_ frame: Int, show: Bool = true) {
         guard frame < 8 && frame >= 0 else { return }
         currentFrame = UInt8(frame)
         selectPage(currentFrame)
-        writeRegister(.pictureDisplay, currentFrame)
+
+        if show {
+            writeRegister(.pictureDisplay, currentFrame)
+        }
     }
-    
+
+    /// Make the preset LEDs to create a breathing effect.
+    ///
+    /// It will happen once. If you want the LEDs to breath continously, you
+    /// can use it with `setAutoPlay`.
     public func startBreath() {
-        //writeRegister(.autoPlayDelay, 23)
-        writeRegister(.pictureDisplay, currentFrame)
         writeRegister(.breathControl1, 0b0100_0100)
         writeRegister(.breathControl2, 0b0001_0100)
     }
-    
-    public func stopBreath() {
-        writeRegister(.breathControl2, 0b0000_0100)
-    }
-    
-    public func setPlayEndFrame(_ frame: Int) {
-        var frame = frame
-        if frame > 7 || frame < 0 {
-            frame = 0
+
+
+    /// Display the frames in sequence from the first frame (frame0) in a
+    /// designated pattern.
+    ///
+    /// You can set the number of frames from 0 to 7. If it's 0, all frames
+    /// will be displayed. And 1-7 corresponds to a number of frames.
+    /// For example, 3 means three frames, so the matrix displays frame0 to
+    /// frames2 in sequence.
+    ///
+    /// The number of loops can be 0 to 7. 1-7 means the corresponding number
+    /// of loops and 0 refers to an
+    /// infinite loop.
+    ///
+    /// And the display speed is decided by the delay time. The maximum is
+    /// around 700ms.
+    /// - Parameters:
+    ///   - frames: The number of frames from 0 to 7, all frames by default.
+    ///   - delay: The delay time between frames in ms, 500 by default.
+    ///   - loops: The number of loops from 0 to 7. By default the frames
+    ///     loops endlessly.
+    public func setAutoPlay(_ frames: Int = 0, delay: Int = 500,
+                            loops: Int = 0) {
+        var frames = frames
+        var loops = loops
+        let delay = delay / 11
+
+        if frames > 7 || frames < 0 {
+            frames = 0
         }
-        writeRegister(.autoPlayControl, UInt8(frame))
+        if loops > 7 {
+            loops = 0
+        }
+
+        if delay == 0 {
+            setMode(.picutreMode)
+        }
+
+        let data = UInt8(loops) << 4 | UInt8(frames)
+        let data2 = UInt8(delay % 64)
+
+        writeRegister(.autoPlayControl, data)
+        writeRegister(.autoPlayDelay, data2)
+        setMode(.autoPlayMode)
     }
     
     /**
      Light an LED by telling its number from 0 to 143.
      The brightness of the LED can range from 0 (off) to 255 (full brightness).
      
-     - Parameter number: **REQUIRED** The location of the LED from 0 to 143.
-     - Parameter brightness: **REQUIRED** The brightness of the specified LED.
-        By default, the LED is set to full brightness.
+     - Parameter number: The location of the LED from 0 to 143.
+     - Parameter brightness: The brightness of the specified LED.
+     By default, the LED is set to full brightness.
      */
     @inline(__always)
     public func writePixel(_ number: Int, brightness: UInt8 = 255) {
         guard number < width * height && number >= 0 else { return }
-        let data = [UInt8(number) + pwmRegOffset, brightness]
+        let data = [UInt8(number) + Offset.pwm.rawValue, brightness]
         i2c.write(data, to: address)
     }
     
     /**
      Light an LED by telling its coordinates.
+     The brightness of the LED can range from 0 (off) to 255 (full brightness).
      
-     You can know the coordinate from the labels printed on the module.
-     The x is from 0 to 15 and y is  from 0 to 8. Each LED can have 256 levels
-     of brightness from 0 (off) to 255 (full brightness).
-     
-     - Parameter x: **REQUIRED** The x coordinate of the LED.
-     - Parameter y: **REQUIRED** The y coordinate of the LED.
-     - Parameter brightness: **REQUIRED** The brightness of the specified LED.
-        By default, the LED is set to full brightness.
+     - Parameter x: The x coordinate of the LED.
+     - Parameter y: The y coordinate of the LED.
+     - Parameter brightness: The brightness of the specified LED.
+     By default, the LED is set to full brightness.
      */
     @inline(__always)
     public func writePixel(x: Int, y: Int, brightness: UInt8 = 255) {
+
         guard x <= width && y <= height else { return }
-        let reg = UInt8(y * width + x) + pwmRegOffset
+        let reg = UInt8(y * width + x) + Offset.pwm.rawValue
         let data = [reg, brightness]
         i2c.write(data, to: address)
     }
@@ -161,25 +188,24 @@ public final class IS31FL3731 {
     /**
      Set a part of the pixels on the matrix by defining the area.
      The area is a rectangle determined by a starting point, width and height.
-     Then you can set the pixels to any brightness to get a unique
-     lighting effect.
+     Then you can set the pixels to any brightness.
      
-     - Parameter x: **REQUIRED** The horizontal line of the matrix to decide
-        the start point, from 0 to 15.
-     - Parameter y: **REQUIRED** The vertical line of the matrix to decide
-        the start point, from 0 to 8.
-     - Parameter width: **REQUIRED** The number of pixels horizontally.
-     - Parameter height: **REQUIRED** The number of pixels vertically.
-     - Parameter brightness: **REQUIRED** The brightness level of all pixels.
-        Each byte stands for the brightness of each pixel.
+     - Parameter x: The horizontal line of the matrix to decide
+     the start point, from 0 to 15.
+     - Parameter y: The vertical line of the matrix to decide
+     the start point, from 0 to 8.
+     - Parameter width: The number of pixels horizontally.
+     - Parameter height: The number of pixels vertically.
+     - Parameter brightness: The brightness level of all pixels.
+     Each byte stands for the brightness of each pixel.
      */
     public func writeBitmap(x: Int, y: Int, width: Int,
                             height: Int, data: [UInt8]
     ) {
         guard x < self.width && y < self.height
                 && width >= 1 && height >= 1 else {
-            return
-        }
+                    return
+                }
         
         let bitmapWidth: Int, bitmapHeight: Int
         
@@ -204,26 +230,31 @@ public final class IS31FL3731 {
                 rowData[rowPos] = data[pos]
                 rowPos += 1
             }
-            rowData[0] = pwmRegOffset + UInt8(cY * self.width + x)
+            rowData[0] = Offset.pwm.rawValue + UInt8(cY * self.width + x)
             i2c.write(rowData, to: address)
         }
     }
     
     
     /// Set all pixels to a specified brightness.
-    /// - Parameter brightness: **REQUIRED** The value between 0 and 255
-    ///     to set the brightness. By default, all pixels are set to 0.
+    /// - Parameter brightness: The level between 0 and 255.
+    ///     By default, all LEDs are off.
     public func fill(_ brightness: UInt8 = 0x00) {
         var data = [UInt8](repeating: brightness, count: 144 + 1)
-        data[0] = pwmRegOffset
+        data[0] = Offset.pwm.rawValue
         i2c.write(data, to: address)
     }
 }
 
 extension IS31FL3731 {
-    
-    private enum Register: UInt8 {
-        case configuration      = 0x00
+
+    private enum PageRegister: UInt8 {
+        case command            = 0xFD
+        case functionPage       = 0x0B
+    }
+
+    private enum FunctionRegister: UInt8 {
+        case modeConfiguration  = 0x00
         case pictureDisplay     = 0x01
         case autoPlayControl    = 0x02
         case autoPlayDelay      = 0x03
@@ -235,28 +266,45 @@ extension IS31FL3731 {
         case shutdown           = 0x0A
         case AGCControl         = 0x0B
         case audioADCRate       = 0x0C
-        case command            = 0xFD
     }
-    
+
+    enum Mode: UInt8 {
+        case picutreMode        = 0x00
+        /// In auto play mode, the frame is 0 by default. So it's 0b01000.
+        case autoPlayMode       = 0x08
+    }
+
+    private enum Offset: UInt8 {
+        case ledControl = 0x00
+        case blink = 0x12
+        case pwm = 0x24
+    }
+
+
+    private func setMode(_ mode: Mode) {
+        writeRegister(FunctionRegister.modeConfiguration, mode.rawValue)
+    }
+
     private func selectPage(_ page: UInt8) {
-        guard page < 8 || page == functionPage else { return }
-        let data = [Register.command.rawValue, page]
+        guard page < 8 || page == PageRegister.functionPage.rawValue else { return }
+        let data = [PageRegister.command.rawValue, page]
         i2c.write(data, to: address)
     }
+
     
-    private func writeRegister(_ register: Register, _ value: UInt8) {
-        selectPage(functionPage)
+    private func writeRegister(_ register: FunctionRegister, _ value: UInt8) {
+        selectPage(PageRegister.functionPage.rawValue)
         let data = [register.rawValue, value]
         i2c.write(data, to: address)
         selectPage(currentFrame)
     }
     
-    private func readRegister(_ register: Register) -> UInt8 {
-        selectPage(functionPage)
+    private func readRegister(_ register: FunctionRegister) -> UInt8 {
+        selectPage(PageRegister.functionPage.rawValue)
         i2c.write(register.rawValue, to: address)
         let ret = i2c.readByte(from: address)
         selectPage(currentFrame)
-        
+
         if let ret = ret {
             return ret
         } else {
@@ -277,6 +325,10 @@ extension IS31FL3731 {
             return 0
         }
     }
+
+    private func stopBreath() {
+            writeRegister(.breathControl2, 0b0000_0000)
+    }
     
     private func controlRegInit(_ value: Bool) {
         var data: [UInt8]
@@ -287,7 +339,7 @@ extension IS31FL3731 {
             data = [UInt8](repeating: 0x00, count: 0x12 + 1)
         }
         
-        data[0] = 0x00
+        data[0] = Offset.ledControl.rawValue
         i2c.write(data, to: address)
     }
     
@@ -300,17 +352,17 @@ extension IS31FL3731 {
             data = [UInt8](repeating: 0x00, count: 0x12 + 1)
         }
         
-        data[0] = 0x12
+        data[0] = Offset.blink.rawValue
         i2c.write(data, to: address)
     }
     
     private func startup() {
-        writeRegister(.shutdown, 1)
+        writeRegister(FunctionRegister.shutdown, 1)
         sleep(ms: 10)
     }
     
     private func shutdown() {
-        writeRegister(.shutdown, 0)
+        writeRegister(FunctionRegister.shutdown, 0)
         sleep(ms: 10)
     }
     
