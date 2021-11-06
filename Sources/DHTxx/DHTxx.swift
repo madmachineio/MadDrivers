@@ -32,15 +32,15 @@ public final class DHTxx {
     /**
      DigitalInOut pin id on the board.
      */
-    private let singal: DigitalInOut
+    private let signal: DigitalInOut
     
     /**
-     Initialize a DHTxx singal to a specified pin.
-     - parameter singal: **REQUIRED** The DigitalInOut pin id on the board.
+     Initialize a DHTxx signal to a specified pin.
+     - parameter signal: **REQUIRED** The DigitalInOut pin id on the board.
      See Id for reference.
      */
-    public init(_ singal: DigitalInOut){
-        self.singal = singal
+    public init(_ signal: DigitalInOut){
+        self.signal = signal
         signal.setToOutput(.pushPull, value: true)
         sleep(ms: 24)
     }
@@ -92,10 +92,10 @@ extension DHTxx {
         var dataBits: [Bool] = []
 
         /// MCU sends out start signal.
-        singal.setToOutput(.pushPull, value: false)
+        signal.setToOutput(.pushPull, value: false)
         sleep(ms: 18)
 
-        singal.setToInput(.pullUp)
+        signal.setToInput(.pullUp)
 
         /// Pull up voltage and wait for the sensors's response, which lasts
         /// about 20-40us.
@@ -124,7 +124,7 @@ extension DHTxx {
     private func edge(_ min: Int64, _ max: Int64, _ value: Bool) throws -> Int64{
         let start = getClockCycle()
 
-        while singal.read() != value {
+        while signal.read() != value {
             let time = cyclesToNanoseconds(start: start, stop: getClockCycle())
             if max < time {
                 throw DHTError.EdgeTimeOut
