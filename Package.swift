@@ -11,6 +11,7 @@ let package = Package(
             name: "MadDrivers",
             targets: [
                 "BH1750",
+                "DHTxx",
                 "HCSR04",
                 "IS31FL3731",
                 "LCD1602",
@@ -20,6 +21,7 @@ let package = Package(
                 "ST7789",
                 "VEML6040"]),
         .library(name: "BH1750", targets: ["BH1750"]),
+        .library(name: "DHTxx", targets: ["DHTxx"]),
         .library(name: "HCSR04", targets: ["HCSR04"]),
         .library(name: "IS31FL3731", targets: ["IS31FL3731"]),
         .library(name: "LCD1602", targets: ["LCD1602"]),
@@ -32,7 +34,7 @@ let package = Package(
     dependencies: [
         // Dependencies declare other packages that this package depends on.
         // .package(url: /* package url */, from: "1.0.0"),
-        .package(url: "https://github.com/madmachineio/SwiftIO.git", .upToNextMajor(from: "0.0.1")),
+        .package(url: "https://github.com/madmachineio/SwiftIO.git", .upToNextMajor(from: "0.0.4")),
         .package(url: "https://github.com/madmachineio/MadDisplay.git", .upToNextMajor(from: "0.0.1"))
     ],
     targets: [
@@ -40,6 +42,9 @@ let package = Package(
         // Targets can depend on other targets in this package, and on products in packages this package depends on.
         .target(
             name: "BH1750",
+            dependencies: ["SwiftIO"]),
+        .target(
+            name: "DHTxx",
             dependencies: ["SwiftIO"]),
         .target(
             name: "HCSR04",
