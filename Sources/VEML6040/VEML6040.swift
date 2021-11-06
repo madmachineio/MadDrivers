@@ -149,22 +149,13 @@ final public class VEML6040 {
         return readRegister(.whiteData)
     }
     
-    public func readRed() -> Int {
-        return calcLux(readRedRawValue())
-    }
-    
     /// Read intensity of the ambient light. The value is measured in lux.
+    /// The spectral characteristics of green light matches well to the human
+    /// eye. So the ambient light intensity is based on green channel.
     /// - Returns: An integer that represent the intensity in lux.
-    public func readGreen() -> Int {
-        return calcLux(readGreenRawValue())
-    }
-    
-    public func readBlue() -> Int {
-        return calcLux(readBlueRawValue())
-    }
-    
-    public func readWhite() -> Int {
-        return calcLux(readWhiteRawValue())
+    public func readAmbientLight() -> Int {
+        return Int(Float(readGreenRawValue()) * sensitivity)
+
     }
 }
 
@@ -204,9 +195,5 @@ extension VEML6040 {
     private func readRegister(_ reg: Reg) -> UInt16 {
         let data = i2c.writeRead(reg.rawValue, readCount: 2, address: address)
         return (UInt16(data[1]) << 8) | UInt16(data[0])
-    }
-    
-    private func calcLux(_ rawValue: UInt16) -> Int {
-        return Int(Float(rawValue) * sensitivity)
     }
 }
