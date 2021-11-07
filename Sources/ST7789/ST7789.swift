@@ -234,7 +234,20 @@ public final class ST7789 {
         setAddrWindow(x: x, y: y, width: w, height: h)
         writeData(data, count: w * h * 2)
     }
-    
+
+    /// Set an area of pixels on the screen. The data is in UInt8,
+    /// while a pixel needs a UInt16. So every 2 data in the array set 1 pixel.
+    /// - Parameters:
+    ///   - x: The x-coordinate of the start point.
+    ///   - y: The y-coordinate of the start point.
+    ///   - w: The width of the area.
+    ///   - h: The height of the area.
+    ///   - data: An buffer of color data in UInt8.
+    public func writeBitmap(x: Int, y: Int, width w: Int,
+                            height h: Int, data: UnsafeBufferPointer<UInt8>) {
+        setAddrWindow(x: x, y: y, width: w, height: h)
+        writeData(data, count: w * h * 2)
+    }
     
     /// Set the screen with colors defined in an array.
     /// Two data are for one pixel. So the data count should be double
@@ -407,6 +420,13 @@ extension ST7789 {
     }
 
     func writeData(_ data: [UInt8], count: Int) {
+        dc.high()
+        cs.low()
+        spi.write(data, count: count)
+        cs.high()
+    }
+
+    func writeData(_ data: UnsafeBufferPointer<UInt8>, count: Int) {
         dc.high()
         cs.low()
         spi.write(data, count: count)
