@@ -12,6 +12,7 @@ let package = Package(
             targets: [
                 "BH1750",
                 "DHTxx",
+                "DS3231",
                 "HCSR04",
                 "IS31FL3731",
                 "LCD1602",
@@ -22,6 +23,7 @@ let package = Package(
                 "VEML6040"]),
         .library(name: "BH1750", targets: ["BH1750"]),
         .library(name: "DHTxx", targets: ["DHTxx"]),
+        .library(name: "DS3231", targets: ["DS3231"]),
         .library(name: "HCSR04", targets: ["HCSR04"]),
         .library(name: "IS31FL3731", targets: ["IS31FL3731"]),
         .library(name: "LCD1602", targets: ["LCD1602"]),
@@ -45,6 +47,9 @@ let package = Package(
             dependencies: ["SwiftIO"]),
         .target(
             name: "DHTxx",
+            dependencies: ["SwiftIO"]),
+        .target(
+            name: "DS3231",
             dependencies: ["SwiftIO"]),
         .target(
             name: "HCSR04",
