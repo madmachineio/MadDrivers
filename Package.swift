@@ -18,6 +18,7 @@ let package = Package(
                 "LCD1602",
                 "LIS3DH",
                 "MCP4725",
+                "PCF8563",
                 "SHT3x",
                 "ST7789",
                 "VEML6040"]),
@@ -29,6 +30,7 @@ let package = Package(
         .library(name: "LCD1602", targets: ["LCD1602"]),
         .library(name: "LIS3DH", targets: ["LIS3DH"]),
         .library(name: "MCP4725", targets: ["MCP4725"]),
+        .library(name: "PCF8563", targets: ["PCF8563"]),
         .library(name: "SHT3x", targets: ["SHT3x"]),
         .library(name: "ST7789", targets: ["ST7789"]),
         .library(name: "VEML6040", targets: ["VEML6040"]),
@@ -65,6 +67,9 @@ let package = Package(
             dependencies: ["SwiftIO"]),
         .target(
             name: "MCP4725",
+            dependencies: ["SwiftIO"]),
+        .target(
+            name: "PCF8563",
             dependencies: ["SwiftIO"]),
         .target(
             name: "SHT3x",
