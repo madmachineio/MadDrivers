@@ -86,7 +86,7 @@ final public class PCF8563 {
     /// accurate. If it stops, it returns false.
     /// - Returns: Boolean value representing the status of the RTC.
     public func isRunning() -> Bool? {
-        let data = readRegister(Register.vlSecond)
+        let data = readRegister(Register.control1)
         var stopBit: UInt8 = 2
 
         if let data = data {
