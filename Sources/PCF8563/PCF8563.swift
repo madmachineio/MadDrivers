@@ -37,6 +37,9 @@ final public class PCF8563 {
     /// specified time. If not, the time will not be reset by default.
     /// If you want to make it mandatory, you can set the parameter
     /// `update` to `true`.
+    ///
+    /// The time info includes the year, month, day, hour, minute, second,
+    /// dayOfWeek. You may set Sunday or Monday as 0 for day of week.
     /// - Parameters:
     ///   - time: Current time from year to second.
     ///   - update: Whether to update the time.
@@ -55,10 +58,9 @@ final public class PCF8563 {
         }
     }
 
-    /// Read current time. The time info includes the year, month, day, hour,
-    /// minute, second, dayOfWeek. The dayOfWeek value (0-6) depends on the time
-    /// you set. You may set Sunday or Monday as 0.
-    /// - Returns: The time info in a struct if the communication is stable.
+    /// Read current time. The time info is stored in a struct including the
+    /// year, month, day, hour, minute, second, dayOfWeek. 
+    /// - Returns: A Time struct if the communication is stable. Or it will be nil.
     public func readCurrent() -> Time? {
         i2c.write(Register.vlSecond.rawValue, to: address)
         let data = i2c.read(count: 7, from: address)
@@ -103,7 +105,7 @@ final public class PCF8563 {
         }
     }
 
-    /// Make the clock start to work so the time will keep being updated.
+    /// Make the clock start to work so the time will keep updated.
     public func start() {
         let data = readRegister(Register.control1)
 
@@ -116,7 +118,8 @@ final public class PCF8563 {
         }
     }
 
-    /// Stop the internal clock, so the time will not be updated any longer.
+    /// Stop the internal clock, and the time you read from the RTC will not
+    /// be accurate anymore.
     public func stop() {
         let data = readRegister(Register.control1)
 
@@ -130,6 +133,9 @@ final public class PCF8563 {
     }
 
     /// Store the time info.
+    ///
+    /// The dayOfWeek is from 0 to 6. You can decide that Sunday or Monday is 0
+    /// when adjusting the current time.
     public struct Time {
         public let year: UInt16
         public let month: UInt8
@@ -157,6 +163,15 @@ final public class PCF8563 {
 
 extension PCF8563 {
 
+    private enum Register: UInt8 {
+        case control1 = 0x00
+        case control2 = 0x01
+        case vlSecond = 0x02
+        case clkout = 0x0D
+        case timerControl = 0x0E
+        case timer = 0x0F
+    }
+
     private func bcdToBin(_ value: UInt8) -> UInt8 {
         return value - 6 * (value >> 4)
     }
@@ -181,15 +196,6 @@ extension PCF8563 {
         } else {
             return false
         }
-    }
-
-    private enum Register: UInt8 {
-        case control1 = 0x00
-        case control2 = 0x01
-        case vlSecond = 0x02
-        case clkout = 0x0D
-        case timerControl = 0x0E
-        case timer = 0x0F
     }
 
     private func writeData(_ reg: Register, _ data: [UInt8]) {
