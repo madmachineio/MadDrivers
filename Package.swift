@@ -10,6 +10,7 @@ let package = Package(
         .library(
             name: "MadDrivers",
             targets: [
+                "ADXL345",
                 "BH1750",
                 "DHTxx",
                 "DS3231",
@@ -21,6 +22,7 @@ let package = Package(
                 "SHT3x",
                 "ST7789",
                 "VEML6040"]),
+        .library(name: "ADXL345", targets: ["ADXL345"]),
         .library(name: "BH1750", targets: ["BH1750"]),
         .library(name: "DHTxx", targets: ["DHTxx"]),
         .library(name: "DS3231", targets: ["DS3231"]),
@@ -42,6 +44,9 @@ let package = Package(
     targets: [
         // Targets are the basic building blocks of a package. A target can define a module or a test suite.
         // Targets can depend on other targets in this package, and on products in packages this package depends on.
+        .target(
+            name: "ADXL345",
+            dependencies: ["SwiftIO"]),
         .target(
             name: "BH1750",
             dependencies: ["SwiftIO"]),
