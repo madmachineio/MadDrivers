@@ -47,6 +47,11 @@ final public class ADXL345 {
     ///   - i2c: **REQUIRED** The I2C interface that the sensor connects.
     ///   - address: **OPTIONAL** The device address of the sensor.
     public init(_ i2c: I2C, address: UInt8 = 0x53) {
+        let speed = i2c.getSpeed()
+        guard speed == .standard || speed == .fast else {
+            fatalError(#function + ": ADXL345 only supports 100kbps and 400kbps I2C speed")
+        }
+
         self.i2c = i2c
         self.address = address
         self.spi = nil
@@ -54,7 +59,9 @@ final public class ADXL345 {
         dataRate = .hz100
         gRange = .g2
 
-        guard getDeviceID()! == 0xE5 else { return }
+        guard let deviceId = getDeviceID(), deviceId == 0xE5 else {
+            fatalError(#function + ": ADXL345 not connected")
+        }
 
         setDataRate(dataRate)
         setRange(gRange)
