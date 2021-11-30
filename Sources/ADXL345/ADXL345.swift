@@ -60,7 +60,7 @@ final public class ADXL345 {
         gRange = .g2
 
         guard let deviceId = getDeviceID(), deviceId == 0xE5 else {
-            fatalError(#function + ": ADXL345 not connected")
+            fatalError(#function + ": cann't find ADXL345 at address \(address)")
         }
 
         setDataRate(dataRate)
