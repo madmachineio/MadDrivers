@@ -1,0 +1,52 @@
+name: build
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build:
+    name: Build on ${{ matrix.os }}
+    strategy:
+      matrix:
+        # os: [ubuntu-18.04, ubuntu-20.04, macos-10.15, macos-11]
+        os: [ubuntu-18.04, ubuntu-20.04, macos-10.15]
+        swift: ["5.4.0"]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - name: Prepare Swift
+        uses: fwal/setup-swift@v1
+        with:
+          swift-version: ${{ matrix.swift }}
+
+      - name: Get Swift version
+        run: swift --version
+
+      - name: Prepare mm-sdk 0.5.0 for Linux
+        if: ${{ matrix.os == 'ubuntu-18.04' || matrix.os == 'ubuntu-20.04' }}
+        run: |
+          wget https://github.com/madmachineio/mm-sdk/releases/download/0.5.0/mm-sdk-0.5.0-ubuntu18.04-x64.tar.bz2 -O ../a.tar.bz2
+          cd ..
+          tar -jxvf a.tar.bz2
+          cd $GITHUB_WORKSPACE
+
+      - name: Prepare mm-sdk 0.5.0 for macOS
+        if: ${{ matrix.os == 'macos-10.15' || matrix.os == 'macos-11' }}
+        run: |
+          wget https://github.com/madmachineio/mm-sdk/releases/download/0.5.0/mm-sdk-0.5.0-macOS-x64.zip -O ../a.zip
+          cd ..
+          unzip a.zip
+          cd $GITHUB_WORKSPACE
+
+      - name: Get mm-sdk version
+        run: $GITHUB_WORKSPACE/../mm-sdk/usr/mm/mm --version
+
+      - name: Build Project Executable
+        run: |
+          cd $GITHUB_WORKSPACE
+          $GITHUB_WORKSPACE/../mm-sdk/usr/mm/mm build
