@@ -5,19 +5,29 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
+  schedule:
+    - cron: '1 0 * * 4'
+
+env:
+  SDK_VERSION: '0.5.0'
+  LINUX_SDK: 'https://github.com/madmachineio/mm-sdk/releases/download/0.5.0/mm-sdk-0.5.0-ubuntu18.04-x64.tar.bz2'
+  MACOS_SDK: 'https://github.com/madmachineio/mm-sdk/releases/download/0.5.0/mm-sdk-0.5.0-macOS-x64.zip'
 
 jobs:
-  build:
-    name: Build on ${{ matrix.os }}
+  build_default:
+    name: Test build on ${{ matrix.os }}
     strategy:
       matrix:
-        # os: [ubuntu-18.04, ubuntu-20.04, macos-10.15, macos-11]
-        os: [ubuntu-18.04, ubuntu-20.04, macos-10.15]
+        # os: [ubuntu-20.04, macos-10.15, macos-11]
+        os: [ubuntu-20.04, macos-10.15]
+        # os: [ubuntu-20.04]
         swift: ["5.4.0"]
     runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v2
+        with:
+          ref: 'main'
 
       - name: Prepare Swift
         uses: fwal/setup-swift@v1
@@ -27,26 +37,69 @@ jobs:
       - name: Get Swift version
         run: swift --version
 
-      - name: Prepare mm-sdk 0.5.0 for Linux
+      - name: Prepare mm-sdk for Linux
         if: ${{ matrix.os == 'ubuntu-18.04' || matrix.os == 'ubuntu-20.04' }}
         run: |
-          wget https://github.com/madmachineio/mm-sdk/releases/download/0.5.0/mm-sdk-0.5.0-ubuntu18.04-x64.tar.bz2 -O ../a.tar.bz2
-          cd ..
-          tar -jxvf a.tar.bz2
-          cd $GITHUB_WORKSPACE
+          wget ${{ env.LINUX_SDK }} -O ~/sdk.tar.bz2
+          tar -jxvf ~/sdk.tar.bz2 -C ~/
 
-      - name: Prepare mm-sdk 0.5.0 for macOS
+      - name: Prepare mm-sdk for macOS
         if: ${{ matrix.os == 'macos-10.15' || matrix.os == 'macos-11' }}
         run: |
-          wget https://github.com/madmachineio/mm-sdk/releases/download/0.5.0/mm-sdk-0.5.0-macOS-x64.zip -O ../a.zip
-          cd ..
-          unzip a.zip
-          cd $GITHUB_WORKSPACE
+          wget ${{ env.MACOS_SDK }} -O ~/sdk.zip
+          unzip ~/sdk.zip -d ~/
 
       - name: Get mm-sdk version
-        run: $GITHUB_WORKSPACE/../mm-sdk/usr/mm/mm --version
+        id: sdk-verify
+        run: |
+          echo "::set-output name=SDK_VERSION::$(~/mm-sdk/usr/mm/mm --version)"
+      
+      - name: Abort if mm-sdk version not match
+        if: ${{ steps.sdk-verify.outputs.SDK_VERSION != env.SDK_VERSION }}
+        run: |
+          echo "Required SDK version: ${{ env.SDK_VERSION }}"
+          echo "Current SDK version: ${{ steps.sdk-verify.outputs.SDK_VERSION }}"
+          exit 1
 
-      - name: Build Project Executable
+      - name: Build project
+        id: build-project
         run: |
           cd $GITHUB_WORKSPACE
-          $GITHUB_WORKSPACE/../mm-sdk/usr/mm/mm build
+          ~/mm-sdk/usr/mm/mm build
+          echo "::set-output name=EXAMPLES::$(find . -maxdepth 1 -name "Examples")"
+
+
+      - name: Build examples
+        if: ${{ steps.build-project.outputs.EXAMPLES != '' }}
+        run: |
+          find $GITHUB_WORKSPACE/Examples -name "Package.swift" > $GITHUB_WORKSPACE/examples.txt
+          dirarray=($(cat $GITHUB_WORKSPACE/examples.txt))
+          for item in "${dirarray[@]}"; do
+            example_path=$(dirname "${item}")
+            cd $example_path
+            ~/mm-sdk/usr/mm/mm build
+
+
+
+            bin_path=($(find $example_path/.build -name "[sf][we][ia][ft][th][ie][or].bin"))
+
+            store_path=${bin_path#"$GITHUB_WORKSPACE/Examples/"}
+            sub_path=${store_path#*.}
+            store_path=${store_path%$sub_path}
+            store_path=${store_path%/*}
+
+            cd $GITHUB_WORKSPACE
+            mkdir -p Binary/$store_path
+            cp -rf $bin_path $GITHUB_WORKSPACE/Binary/$store_path
+
+          done
+
+          cd $GITHUB_WORKSPACE
+          zip -r defaultboard_defaulteabi.zip ./Binary
+      
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v2
+        with:
+          name: Binary on ${{ matrix.os }}
+          path: defaultboard_defaulteabi.zip
+          retention-days: 7

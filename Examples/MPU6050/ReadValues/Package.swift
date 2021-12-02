@@ -18,7 +18,7 @@ let package = Package(
                 "SwiftIO",
                 "MadBoards",
                 // use specific library would speed up the compile procedure
-                .product(name: "MadDrivers", package: "MadDrivers")
+                .product(name: "MPU6050", package: "MadDrivers")
             ]),
         .testTarget(
             name: "ReadValuesTests",
