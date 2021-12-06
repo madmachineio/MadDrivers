@@ -4,42 +4,42 @@
 [![Discord](https://img.shields.io/discord/592743353049808899?&logo=Discord&colorB=7289da)](https://madmachine.io/discord)
 [![twitter](https://img.shields.io/twitter/follow/madmachineio?label=%40madmachineio&style=social)](https://twitter.com/madmachineio)
 
-This is the MadMachine driver library for different devices. It provides an easy way to use all kinds of devices with your boards. You could directly use the related class to read or write data and don't need to understand the communication details.
+This `MadDrivers` library provides an easy way to use all kinds of devices with your boards. You could directly use the related class to read or write data and don't need to understand the communication details.
 
 ## Drivers
-You can find some frequently-used hardware here. 
+You can find some frequently-used hardware here:
 
 | Type                   | Device     | Interface |
-|------------------------|------------|---------------|
-| Temperature & Humidity | DHTxx      | GPIO          |
-| Temperature & Humidity | SHT3x      | I2C           |
-| Accelerometer          | ADXL345    | I2C/SPI       |
-| Accelerometer          | LIS3DH     | I2C/SPI       |
-| Gyroscope              | MPU6050    | I2C           |
-| Ultrasonic             | HCSR04     | GPIO          |
-| Light                  | BH1750     | I2C           |
-| Color                  | VEML6040   | I2C           |
-| Display                | ST7789     | SPI           |
-| LED matrix             | IS31FL3731 | I2C           |
-| Display                | LCD1602    | I2C           |
-| RTC                    | DS3231     | I2C           |
-| RTC                    | PCF8523    | I2C           |
-| RTC                    | PCF8563    | I2C           |
-| Pressure               | BMP280     | I2C/SPI       |
-| DAC                    | MCP4725    | I2C           |
+|------------------------|------------|-----------|
+| Temperature & Humidity | DHTxx      | GPIO      |
+| Temperature & Humidity | SHT3x      | I2C       |
+| Accelerometer          | ADXL345    | I2C/SPI   |
+| Accelerometer          | LIS3DH     | I2C/SPI   |
+| Gyroscope              | MPU6050    | I2C       |
+| Ultrasonic             | HCSR04     | GPIO      |
+| Light                  | BH1750     | I2C       |
+| Color                  | VEML6040   | I2C       |
+| Display                | ST7789     | SPI       |
+| LED matrix             | IS31FL3731 | I2C       |
+| Display                | LCD1602    | I2C       |
+| RTC                    | DS3231     | I2C       |
+| RTC                    | PCF8523    | I2C       |
+| RTC                    | PCF8563    | I2C       |
+| Pressure               | BMP280     | I2C/SPI   |
+| DAC                    | MCP4725    | I2C       |
 
 
 We will keep adding more drivers. And your contributions are welcome!
 
 ## Use drivers
 
-Take the library SHT3x for example:
+Take the library `SHT3x` for example:
 
 1. Create an executable project. You can refer to [this tutorial](https://docs.madmachine.io/how-to/create-new-project).
 
 2. Open the project and open the file `package.swift`. 
 
-    The `MadDrivers` has already been added to your project by default. You could use all libraries in it. It's better to **specify the library** you need to reduce the build time for your project. Change the statement`.product(name: "MadDrivers", package: "MadDrivers")` to `.product(name: "SHT3x", package: "MadDrivers")` as shown below.
+    The `MadDrivers` has already been added to your project by default. You could use all libraries in it. It's better to **specify the specific library** to reduce the build time for your project. Change the statement `.product(name: "MadDrivers", package: "MadDrivers")` to `.product(name: "SHT3x", package: "MadDrivers")` as shown below.
 
 ```swift
 // swift-tools-version:5.3
@@ -71,7 +71,7 @@ let package = Package(
 )
 ```
 
-3. Now, you can write code for your project. In the file `main.swift`, import the `SHT3x`. Then you could use everything in it to communicate with the sensor.
+3. Now, you can write code for your project. In the file `main.swift`, import the `SHT3x`, then you could use everything in it to communicate with the sensor.
 
 ```swift
 import SwiftIO
@@ -95,7 +95,7 @@ while true {
 
 At first, you could try demo projects in the folder [Examples](https://github.com/madmachineio/MadDrivers/tree/main/Examples).
 
-In the Examples folder, you can find folders for different devices. Each folder may have one or several projects to help you get started with each device.
+In the Examples folder, there are folders for different devices. Each folder may have one or several projects to help you get started with each device.
 
 ```
 ├── Examples
