@@ -107,7 +107,11 @@ Take the library `SHT3x` for example:
 
 2. Open the project and open the file `package.swift`. 
 
-    The `MadDrivers` has already been added to your project by default. You could use all libraries in it. It's better to **specify the specific library** to reduce the build time for your project. Change the statement `.product(name: "MadDrivers", package: "MadDrivers")` to `.product(name: "SHT3x", package: "MadDrivers")` as shown below.
+    The `MadDrivers` has already been added to your project by default. You could use all libraries in it. It's better to **specify the specific library** to reduce the build time for your project. Change the statement
+    
+    `.product(name: "MadDrivers", package: "MadDrivers")` to
+    
+    `.product(name: "SHT3x", package: "MadDrivers")` as shown below.
 
 ```swift
 // swift-tools-version:5.3
