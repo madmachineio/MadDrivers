@@ -4,30 +4,98 @@
 [![Discord](https://img.shields.io/discord/592743353049808899?&logo=Discord&colorB=7289da)](https://madmachine.io/discord)
 [![twitter](https://img.shields.io/twitter/follow/madmachineio?label=%40madmachineio&style=social)](https://twitter.com/madmachineio)
 
-This `MadDrivers` library provides an easy way to use all kinds of devices with your boards. You could directly use the related class to read or write data and don't need to understand the communication details.
+This `MadDrivers` library, based on `SwiftIO`, provides an easy way to use all kinds of devices with your boards. You could directly use the related class to read or write data and don't need to understand the communication details.
+
+Note: This library aims to allow you to program the devices easily, so some uncommon errors or rare situations aren't be considered. The `SwiftIO` library can give the messages about the communication and which error occurs if it fails. If you need more detailed results about the device status to ensure security, you can download and modify the code according to your need.
 
 ## Drivers
 You can find some frequently-used hardware here:
 
-| Type                   | Device     | Interface |
-|------------------------|------------|-----------|
-| Temperature & Humidity | DHTxx      | GPIO      |
-| Temperature & Humidity | SHT3x      | I2C       |
-| Accelerometer          | ADXL345    | I2C/SPI   |
-| Accelerometer          | LIS3DH     | I2C/SPI   |
-| Gyroscope              | MPU6050    | I2C       |
-| Ultrasonic             | HCSR04     | GPIO      |
-| Light                  | BH1750     | I2C       |
-| Color                  | VEML6040   | I2C       |
-| Display                | ST7789     | SPI       |
-| LED matrix             | IS31FL3731 | I2C       |
-| Display                | LCD1602    | I2C       |
-| RTC                    | DS3231     | I2C       |
-| RTC                    | PCF8523    | I2C       |
-| RTC                    | PCF8563    | I2C       |
-| Pressure               | BMP280     | I2C/SPI   |
-| DAC                    | MCP4725    | I2C       |
-
+<table>
+<thead>
+  <tr>
+    <th>Type</th>
+    <th>Device</th>
+    <th>Communication</th>
+  </tr>
+</thead>
+<tbody>
+  <tr>
+    <td rowspan="2">Accelerometer</td>
+    <td>ADXL345</td>
+    <td>I2C/SPI</td>
+  </tr>
+  <tr>
+    <td>LIS3DH</td>
+    <td>I2C/SPI</td>
+  </tr>
+  <tr>
+    <td>Color</td>
+    <td>VEML6040</td>
+    <td>I2C</td>
+  </tr>
+  <tr>
+    <td>DAC</td>
+    <td>MCP4725</td>
+    <td>I2C</td>
+  </tr>
+  <tr>
+    <td rowspan="3">Dispaly<br></td>
+    <td>IS31FL3731</td>
+    <td>I2C</td>
+  </tr>
+  <tr>
+    <td>LCD1602</td>
+    <td>I2C</td>
+  </tr>
+  <tr>
+    <td>ST7789</td>
+    <td>SPI</td>
+  </tr>
+  <tr>
+    <td>Gyroscope</td>
+    <td>MPU6050</td>
+    <td>I2C</td>
+  </tr>
+  <tr>
+    <td>Light</td>
+    <td>BH1750</td>
+    <td>I2C</td>
+  </tr>
+  <tr>
+    <td>Pressure</td>
+    <td>BMP280</td>
+    <td>I2C/SPI</td>
+  </tr>
+  <tr>
+    <td rowspan="3">RTC</td>
+    <td>DS3231</td>
+    <td>I2C</td>
+  </tr>
+  <tr>
+    <td>PCF8523</td>
+    <td>I2C</td>
+  </tr>
+  <tr>
+    <td>PCF8563</td>
+    <td>I2C</td>
+  </tr>
+  <tr>
+    <td rowspan="2">Temperature &amp; Humidity</td>
+    <td>DHTxx</td>
+    <td>GPIO</td>
+  </tr>
+  <tr>
+    <td>SHT3x</td>
+    <td>I2C</td>
+  </tr>
+  <tr>
+    <td>Ultrasonic</td>
+    <td>HCSR04</td>
+    <td>GPIO</td>
+  </tr>
+</tbody>
+</table>
 
 We will keep adding more drivers. And your contributions are welcome!
 
