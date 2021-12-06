@@ -12,6 +12,7 @@ let package = Package(
             targets: [
                 "ADXL345",
                 "BH1750",
+                "BMP280",
                 "DHTxx",
                 "DS3231",
                 "HCSR04",
@@ -27,6 +28,7 @@ let package = Package(
                 "VEML6040"]),
         .library(name: "ADXL345", targets: ["ADXL345"]),
         .library(name: "BH1750", targets: ["BH1750"]),
+        .library(name: "BMP280", targets: ["BMP280"]),
         .library(name: "DHTxx", targets: ["DHTxx"]),
         .library(name: "DS3231", targets: ["DS3231"]),
         .library(name: "HCSR04", targets: ["HCSR04"]),
@@ -45,7 +47,8 @@ let package = Package(
         // Dependencies declare other packages that this package depends on.
         // .package(url: /* package url */, from: "1.0.0"),
         .package(url: "https://github.com/madmachineio/SwiftIO.git", .upToNextMajor(from: "0.0.5")),
-        .package(url: "https://github.com/madmachineio/MadDisplay.git", .upToNextMajor(from: "0.0.1"))
+        .package(url: "https://github.com/madmachineio/MadDisplay.git", .upToNextMajor(from: "0.0.1")),
+        .package(url: "https://github.com/apple/swift-numerics", from: "1.0.0")
     ],
     targets: [
         // Targets are the basic building blocks of a package. A target can define a module or a test suite.
@@ -56,6 +59,9 @@ let package = Package(
         .target(
             name: "BH1750",
             dependencies: ["SwiftIO"]),
+        .target(
+            name: "BMP280",
+            dependencies: ["SwiftIO", .product(name: "Numerics", package: "swift-numerics")]),
         .target(
             name: "DHTxx",
             dependencies: ["SwiftIO"]),
