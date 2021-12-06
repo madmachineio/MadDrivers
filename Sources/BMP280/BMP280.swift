@@ -12,7 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 import SwiftIO
-import Numerics
+import RealModule
 
 /// This is the library for BMP280 temperature and pressure sensor.
 ///
@@ -124,7 +124,7 @@ final public class BMP280 {
     /// - Returns: The altitude in meter.
     public func readAltitude(_ seaLevelPressure: Double) -> Double {
         let pressure = readPressure()
-        let altitude = 44330 * (1.0 - .pow(pressure / seaLevelPressure, 0.1903))
+        let altitude = 44330 * (1.0 - Double.pow(pressure / seaLevelPressure, 0.1903))
         return altitude
     }
 
