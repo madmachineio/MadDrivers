@@ -61,7 +61,8 @@ let package = Package(
             dependencies: ["SwiftIO"]),
         .target(
             name: "BMP280",
-            dependencies: ["SwiftIO", .product(name: "Numerics", package: "swift-numerics")]),
+            dependencies: ["SwiftIO",
+                            .product(name: "RealModule", package: "swift-numerics")]),
         .target(
             name: "DHTxx",
             dependencies: ["SwiftIO"]),
