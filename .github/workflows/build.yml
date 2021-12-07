@@ -26,8 +26,12 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v2
-        with:
-          ref: 'main'
+        run: |
+          if [ ! $GITHUB_HEAD_REF ];then
+            echo "Push action, working on main branch"
+          else
+            echo "Pull request, working on $GITHUB_HEAD_REF"
+          fi
 
       - name: Prepare Swift
         uses: fwal/setup-swift@v1
@@ -77,9 +81,15 @@ jobs:
           for item in "${dirarray[@]}"; do
             example_path=$(dirname "${item}")
             cd $example_path
+
+            if [ ! $GITHUB_HEAD_REF ];then
+              echo "Push action, working on main branch"
+            else
+              echo "Pull request, working on $GITHUB_HEAD_REF"
+              sed "s/branch(\"main\")/branch(\"$GITHUB_HEAD_REF\")/g" ./Package.swift
+            fi
+
             ~/mm-sdk/usr/mm/mm build
-
-
 
             bin_path=($(find $example_path/.build -name "[sf][we][ia][ft][th][ie][or].bin"))
 
