@@ -26,6 +26,7 @@ jobs:
     steps:
       - name: Check action type
         run: |
+          echo "OS: $RUNNER_OS"
           if [ ! $GITHUB_HEAD_REF ];then
             echo "Push action, working on main branch"
           else
@@ -43,28 +44,24 @@ jobs:
       - name: Get Swift version
         run: swift --version
 
-      - name: Prepare mm-sdk for Linux
-        if: ${{ matrix.os == 'ubuntu-18.04' || matrix.os == 'ubuntu-20.04' }}
+      - name: Prepare mm-sdk
+        id: prepare-sdk
         run: |
-          wget ${{ env.LINUX_SDK }} -O ~/sdk.tar.bz2
-          tar -jxvf ~/sdk.tar.bz2 -C ~/
-
-      - name: Prepare mm-sdk for macOS
-        if: ${{ matrix.os == 'macos-10.15' || matrix.os == 'macos-11' }}
-        run: |
-          wget ${{ env.MACOS_SDK }} -O ~/sdk.zip
-          unzip ~/sdk.zip -d ~/
-
-      - name: Get mm-sdk version
-        id: sdk-verify
-        run: |
+          echo "Get mm-sdk on $RUNNER_OS"
+          if [ $RUNNER_OS == "Linux" ];then
+            wget ${{ env.LINUX_SDK }} -O ~/sdk.tar.bz2
+            tar -jxvf ~/sdk.tar.bz2 -C ~/
+          else
+            wget ${{ env.MACOS_SDK }} -O ~/sdk.zip
+            unzip ~/sdk.zip -d ~/
+          fi
           echo "::set-output name=SDK_VERSION::$(~/mm-sdk/usr/mm/mm --version)"
       
       - name: Abort if mm-sdk version not match
-        if: ${{ steps.sdk-verify.outputs.SDK_VERSION != env.SDK_VERSION }}
+        if: ${{ steps.prepare-sdk.outputs.SDK_VERSION != env.SDK_VERSION }}
         run: |
           echo "Required SDK version: ${{ env.SDK_VERSION }}"
-          echo "Current SDK version: ${{ steps.sdk-verify.outputs.SDK_VERSION }}"
+          echo "Current SDK version: ${{ steps.prepare-sdk.outputs.SDK_VERSION }}"
           exit 1
 
       - name: Build project
@@ -80,15 +77,14 @@ jobs:
         run: |
           find $GITHUB_WORKSPACE/Examples -name "Package.swift" > $GITHUB_WORKSPACE/examples.txt
           dirarray=($(cat $GITHUB_WORKSPACE/examples.txt))
+
           for item in "${dirarray[@]}"; do
             example_path=$(dirname "${item}")
             cd $example_path
 
-            if [ ! $GITHUB_HEAD_REF ];then
-              echo "Push action, working on main branch"
-            else
-              echo "Pull request, working on $GITHUB_HEAD_REF"
-              sed -i "s/branch(\"main\")/branch(\"$GITHUB_HEAD_REF\")/g" ./Package.swift
+            if [ -n $GITHUB_HEAD_REF ];then
+              echo "Pull request, modify dependency to $GITHUB_HEAD_REF"
+              sed -i'.bak' -e "s/branch(\"main\")/branch(\"$GITHUB_HEAD_REF\")/g" ./Package.swift
             fi
 
             ~/mm-sdk/usr/mm/mm build
