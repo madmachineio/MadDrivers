@@ -24,14 +24,16 @@ jobs:
         swift: ["5.4.0"]
     runs-on: ${{ matrix.os }}
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v2
+      - name: Check action type
         run: |
           if [ ! $GITHUB_HEAD_REF ];then
             echo "Push action, working on main branch"
           else
             echo "Pull request, working on $GITHUB_HEAD_REF"
           fi
+
+      - name: Checkout repository
+        uses: actions/checkout@v2
 
       - name: Prepare Swift
         uses: fwal/setup-swift@v1
