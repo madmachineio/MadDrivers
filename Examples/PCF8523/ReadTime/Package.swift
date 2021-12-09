@@ -5,8 +5,8 @@ let package = Package(
     name: "ReadTime",
     dependencies: [
         // Dependencies declare other packages that this package depends on.
-        .package(url: "https://github.com/madmachineio/SwiftIO.git", .upToNextMajor(from: "0.0.1")),
-        .package(url: "https://github.com/madmachineio/MadBoards.git", .upToNextMajor(from: "0.0.1")),
+        .package(url: "https://github.com/madmachineio/SwiftIO.git", .branch("main")),
+        .package(url: "https://github.com/madmachineio/MadBoards.git", .branch("main")),
         .package(url: "https://github.com/madmachineio/MadDrivers.git", .branch("main")),
     ],
     targets: [
