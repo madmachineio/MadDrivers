@@ -18,7 +18,6 @@ env:
   SDK_VERSION: '0.5.0'
   LINUX_SDK: 'https://github.com/madmachineio/mm-sdk/releases/download/0.5.0/mm-sdk-0.5.0-ubuntu18.04-x64.tar.bz2'
   MACOS_SDK: 'https://github.com/madmachineio/mm-sdk/releases/download/0.5.0/mm-sdk-0.5.0-macOS-x64.zip'
-  REPOSITORY_NAME: ${GITHUB_REPOSITORY#*/}
 
 jobs:
   build_default:
@@ -34,9 +33,8 @@ jobs:
       - name: Check action type
         run: |
           echo "OS: $RUNNER_OS"
-          echo "Repository: $REPOSITORY_NAME"
-          echo "REF: $GITHUB_REF"
-          echo "Branch: $GITHUB_REF_NAME"
+          echo "Repository: $GITHUB_REPOSITORY"
+          echo "Commit: $GITHUB_SHA"
 
       - name: Checkout repository
         uses: actions/checkout@v2
@@ -83,6 +81,7 @@ jobs:
       - name: Build examples
         if: ${{ steps.build-project.outputs.EXAMPLES != '' }}
         run: |
+          REPO_ADDR=${GITHUB_REPOSITORY#*/}.git
           find $GITHUB_WORKSPACE/Examples -name "Package.swift" > $GITHUB_WORKSPACE/examples.txt
           dirarray=($(cat $GITHUB_WORKSPACE/examples.txt))
 
@@ -90,10 +89,9 @@ jobs:
             example_path=$(dirname "${item}")
             cd $example_path
 
-            if [ "$GITHUB_REF_NAME" != 'main' ];then
-              echo "Modify package dependency to: $GITHUB_REF_NAME"
-              sed -i'.bak' -e "s/branch(\"main\")/branch(\"$GITHUB_REF_NAME\")/g" ./Package.swift
-            fi
+            echo "Modify example package dependency to: $GITHUB_SHA"
+            LINE_NUMBER=$(sed -n "/$REPO_ADDR/=" ./Package.swift)
+            sed -i'.bak' -e ""$LINE_NUMBER"s/.branch(\"main\")/revision:\ \"$GITHUB_SHA\"/g" ./Package.swift
 
             ~/mm-sdk/usr/mm/mm build
 
