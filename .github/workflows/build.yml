@@ -91,7 +91,7 @@ jobs:
 
             echo "Modify example package dependency to: $GITHUB_SHA"
             LINE_NUMBER=$(sed -n "/$REPO_ADDR/=" ./Package.swift)
-            sed -i'.bak' -e ""$LINE_NUMBER"s/.branch(\"main\")/revision:\ \"$GITHUB_SHA\"/g" ./Package.swift
+            sed -i'.bak' -e ""$LINE_NUMBER"s/branch(\"main\")/revision(\"$GITHUB_SHA\")/g" ./Package.swift
 
             ~/mm-sdk/usr/mm/mm build
 
