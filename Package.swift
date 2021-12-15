@@ -12,6 +12,7 @@ let package = Package(
             targets: [
                 "ADXL345",
                 "BH1750",
+                "BME680",
                 "BMP280",
                 "DHTxx",
                 "DS3231",
@@ -28,6 +29,7 @@ let package = Package(
                 "VEML6040"]),
         .library(name: "ADXL345", targets: ["ADXL345"]),
         .library(name: "BH1750", targets: ["BH1750"]),
+        .library(name: "BME680", targets: ["BME680"]),
         .library(name: "BMP280", targets: ["BMP280"]),
         .library(name: "DHTxx", targets: ["DHTxx"]),
         .library(name: "DS3231", targets: ["DS3231"]),
@@ -59,6 +61,10 @@ let package = Package(
         .target(
             name: "BH1750",
             dependencies: ["SwiftIO"]),
+        .target(
+            name: "BME680",
+            dependencies: ["SwiftIO",
+                            .product(name: "RealModule", package: "swift-numerics")]),
         .target(
             name: "BMP280",
             dependencies: ["SwiftIO",
