@@ -26,6 +26,8 @@ final public class BH1750 {
     
     private let mode: Mode
     private var resolution: Resolution
+
+    private var readBuffer = [UInt8](repeating: 0, count: 2)
     
     /// It decides if the sensor will measure the light all the time or once.
     public enum Mode: UInt8 {
@@ -116,13 +118,13 @@ extension BH1750 {
     }
     
     private func readRawValue() -> UInt16 {
-        var value: [UInt8]
+        var ret: Result<(), Errno>
         
         switch mode {
         case .continuous:
             /// In this mode, the sensor measures the light continuously,
             /// so you can read directly.
-            value = i2c.read(count: 2, from: address)
+            ret = i2c.read(into: &readBuffer, from: address)
         case .oneTime:
             /// In this mode, every time the sensor finishes the reading,
             /// the sensor will move to power down mode.
@@ -130,9 +132,14 @@ extension BH1750 {
             let configValue = mode.rawValue | resolution.rawValue
             writeCommand(configValue)
             sleep(ms: measurementTime)
-            value = i2c.read(count: 2, from: address)
+            ret = i2c.read(into: &readBuffer, from: address)
+        }
+
+        if case .failure(let err) = ret {
+            print("error: \(#function) " + String(describing: err))
+            return 0
         }
         
-        return UInt16(value[0]) << 8 | UInt16(value[1])
+        return UInt16(readBuffer[0]) << 8 | UInt16(readBuffer[1])
     }
 }

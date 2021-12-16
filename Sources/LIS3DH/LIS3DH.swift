@@ -80,6 +80,8 @@ final public class LIS3DH {
             return 1280.0
         }
     }
+
+    private var readBuffer = [UInt8](repeating: 0, count: 6)
     
     
     /// Initialize the sensor using I2C communication.
@@ -150,11 +152,11 @@ final public class LIS3DH {
     /// Read raw values of acceleration on x, y, z-axes at once.
     /// - Returns: x, y, z values from -32768 to 32767.
     public func readRawValue() -> (x: Int16, y: Int16, z: Int16) {
-        let rawValues = readRegister(.OUT_X_L, count: 6)
-        guard rawValues.count == 6 else { return (0, 0, 0) }
-        let x = Int16(rawValues[0]) | (Int16(rawValues[1]) << 8)
-        let y = Int16(rawValues[2]) | (Int16(rawValues[3]) << 8)
-        let z = Int16(rawValues[4]) | (Int16(rawValues[5]) << 8)
+        readRegister(.OUT_X_L, count: 6)
+
+        let x = Int16(readBuffer[0]) | (Int16(readBuffer[1]) << 8)
+        let y = Int16(readBuffer[2]) | (Int16(readBuffer[3]) << 8)
+        let z = Int16(readBuffer[4]) | (Int16(readBuffer[5]) << 8)
         
         return (x, y, z)
     }
@@ -178,9 +180,8 @@ final public class LIS3DH {
     /// Read the acceleration on x-axis.
     /// - Returns: A float representing the acceleration.
     public func readX() -> Float {
-        let rawValues = readRegister(.OUT_X_L, count: 2)
-        guard rawValues.count == 2 else { return 0 }
-        let ix = Int16(rawValues[0]) | (Int16(rawValues[1]) << 8)
+        readRegister(.OUT_X_L, count: 2)
+        let ix = Int16(readBuffer[0]) | (Int16(readBuffer[1]) << 8)
         
         return Float(ix) / gCoefficient
     }
@@ -188,9 +189,8 @@ final public class LIS3DH {
     /// Read the acceleration on y-axis.
     /// - Returns: A float representing the acceleration.
     public func readY() -> Float {
-        let rawValues = readRegister(.OUT_Y_L, count: 2)
-        guard rawValues.count == 2 else { return 0 }
-        let iy = Int16(rawValues[0]) | (Int16(rawValues[1]) << 8)
+        readRegister(.OUT_Y_L, count: 2)
+        let iy = Int16(readBuffer[0]) | (Int16(readBuffer[1]) << 8)
         
         return Float(iy) / gCoefficient
     }
@@ -198,13 +198,11 @@ final public class LIS3DH {
     /// Read the acceleration on y-axis.
     /// - Returns: A float representing the acceleration.
     public func readZ() -> Float {
-        let rawValues = readRegister(.OUT_Z_L, count: 2)
-        guard rawValues.count == 2 else { return 0 }
-        let iz = Int16(rawValues[0]) | (Int16(rawValues[1]) << 8)
+        readRegister(.OUT_Z_L, count: 2)
+        let iz = Int16(readBuffer[0]) | (Int16(readBuffer[1]) << 8)
         
         return Float(iz) / gCoefficient
     }
-    
 }
 
 
@@ -286,20 +284,25 @@ extension LIS3DH {
     }
     
     func readRegister(_ reg: Register) -> UInt8 {
-        let data = i2c.writeRead([reg.rawValue], readCount: 1, address: address)
-        if data.count > 0 {
-            return data[0]
-        } else {
-            return 0
+        var byte: UInt8 = 0
+        let ret = i2c.writeRead(reg.rawValue, into: &byte, address: address)
+
+        if case .failure(let err) = ret {
+            print("error: \(#function) " + String(describing: err))
         }
+        return byte
     }
     
-    func readRegister(_ beginReg: Register, count: Int) -> [UInt8] {
+    func readRegister(_ beginReg: Register, count: Int) {
         var writeByte = beginReg.rawValue
         
         writeByte |= 0x80
-        
-        let data = i2c.writeRead([writeByte], readCount: count, address: address)
-        return data
+
+        for i in 0..<6 {
+            readBuffer[i] = 0
+        }
+
+        i2c.writeRead(writeByte, into: &readBuffer,
+                      readCount: count, address: address)
     }
 }

@@ -24,6 +24,8 @@ final public class BMP280 {
     private let spi: SPI?
     private let address: UInt8?
 
+    private var readBuffer = [UInt8](repeating: 0, count: 24)
+
     private var tSampling: Oversampling
     private var pSampling: Oversampling
     private var mode: Mode
@@ -81,7 +83,7 @@ final public class BMP280 {
 
         let var1 = (raw / 16384.0 - calibration[0] / 1024.0) * calibration[1]
         let var2 = (raw / 131072.0 - calibration[0] / 8192.0) *
-                    (raw / 131072.0 - calibration[0] / 8192.0) * calibration[2]
+        (raw / 131072.0 - calibration[0] / 8192.0) * calibration[2]
 
         let temp = (var1 + var2) / 5120.0
         return temp
@@ -270,31 +272,37 @@ extension BMP280 {
     }
 
     private func readRegister(_ register: Register) -> UInt8? {
-        var data: UInt8? = nil
+        var ret: Result<UInt8, Errno>
 
-        if let i2c = i2c {
-            i2c.write(register.rawValue, to: address!)
-            data = i2c.readByte(from: address!)
-        } else if let spi = spi {
-            spi.write(register.rawValue)
-            data = spi.readByte()
+        if i2c != nil {
+            i2c!.write(register.rawValue, to: address!)
+            ret = i2c!.readByte(from: address!)
+        } else {
+            spi!.write(register.rawValue)
+            ret = spi!.readByte()
         }
 
-        return data
+        switch ret {
+        case .success(let byte):
+            return byte
+        case .failure(let err):
+            print("error: \(#function) " + String(describing: err))
+            return nil
+        }
     }
 
-    private func readRegister(_ register: Register, count: Int) -> [UInt8] {
-        var data: [UInt8] = Array(repeating: 0, count: count)
+    private func readRegister(_ register: Register, count: Int) {
+        for i in 0..<24 {
+            readBuffer[i] = 0
+        }
 
         if let i2c = i2c {
             i2c.write(register.rawValue, to: address!)
-            data = i2c.read(count: count, from: address!)
+            i2c.read(into: &readBuffer, from: address!)
         } else if let spi = spi {
             spi.write(register.rawValue)
-            data = spi.read(count: count)
+            spi.read(into: &readBuffer)
         }
-
-        return data
     }
 
     /// Set standby duration and filter.
@@ -322,27 +330,29 @@ extension BMP280 {
 
     /// Read temperature or pressure raw value.
     private func readRawValue(_ register: Register) -> Double {
-        let data = readRegister(register, count: 3)
-        let raw = UInt32(data[0]) << 12 | UInt32(data[1]) << 4 | UInt32(data[2] >> 4)
+        readRegister(register, count: 3)
+        let raw = UInt32(readBuffer[0]) << 12 |
+        UInt32(readBuffer[1]) << 4 | UInt32(readBuffer[2] >> 4)
+
         return Double(raw)
     }
 
     private func readCalibration() -> [Double] {
-        let data = readRegister(.digT1, count: 24)
+        readRegister(.digT1, count: 24)
 
-        let t1 = Double(UInt16(data[0]) | (UInt16(data[1]) << 8))
-        let t2 = Double(Int16(data[2]) | (Int16(data[3]) << 8))
-        let t3 = Double(Int16(data[4]) | (Int16(data[5]) << 8))
+        let t1 = Double(UInt16(readBuffer[0]) | (UInt16(readBuffer[1]) << 8))
+        let t2 = Double(Int16(readBuffer[2]) | (Int16(readBuffer[3]) << 8))
+        let t3 = Double(Int16(readBuffer[4]) | (Int16(readBuffer[5]) << 8))
 
-        let p1 = Double(UInt16(data[6]) | (UInt16(data[7]) << 8))
-        let p2  = Double(Int16(data[8]) | (Int16(data[9]) << 8))
-        let p3  = Double(Int16(data[10]) | (Int16(data[11]) << 8))
-        let p4  = Double(Int16(data[12]) | (Int16(data[13]) << 8))
-        let p5  = Double(Int16(data[14]) | (Int16(data[15]) << 8))
-        let p6  = Double(Int16(data[16]) | (Int16(data[17]) << 8))
-        let p7  = Double(Int16(data[18]) | (Int16(data[19]) << 8))
-        let p8  = Double(Int16(data[20]) | (Int16(data[21]) << 8))
-        let p9  = Double(Int16(data[22]) | (Int16(data[23]) << 8))
+        let p1 = Double(UInt16(readBuffer[6]) | (UInt16(readBuffer[7]) << 8))
+        let p2  = Double(Int16(readBuffer[8]) | (Int16(readBuffer[9]) << 8))
+        let p3  = Double(Int16(readBuffer[10]) | (Int16(readBuffer[11]) << 8))
+        let p4  = Double(Int16(readBuffer[12]) | (Int16(readBuffer[13]) << 8))
+        let p5  = Double(Int16(readBuffer[14]) | (Int16(readBuffer[15]) << 8))
+        let p6  = Double(Int16(readBuffer[16]) | (Int16(readBuffer[17]) << 8))
+        let p7  = Double(Int16(readBuffer[18]) | (Int16(readBuffer[19]) << 8))
+        let p8  = Double(Int16(readBuffer[20]) | (Int16(readBuffer[21]) << 8))
+        let p9  = Double(Int16(readBuffer[22]) | (Int16(readBuffer[23]) << 8))
 
         let calibration = [t1, t2, t3, p1, p2, p3, p4, p5, p6, p7, p8, p9]
         return calibration

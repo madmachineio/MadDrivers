@@ -43,6 +43,8 @@ final public class BME680 {
     var heatValue: Double = 0
     var rangeSwitchingError: Double = 0
 
+    private var buffer = [UInt8](repeating: 0, count: 15)
+
     private let lookupTable1 = [
         1, 1, 1, 1, 1, 0.99, 1, 0.992,
         1, 1, 0.998, 0.995, 1, 0.99, 1, 1]
@@ -306,31 +308,37 @@ extension BME680 {
     }
 
     private func readRegister(_ register: Register) -> UInt8? {
-        var data: UInt8? = nil
+        var ret: Result<UInt8, Errno>
 
-        if let i2c = i2c {
-            i2c.write(register.rawValue, to: address!)
-            data = i2c.readByte(from: address!)
-        } else if let spi = spi {
-            spi.write(register.rawValue)
-            data = spi.readByte()
+        if i2c != nil {
+            i2c!.write(register.rawValue, to: address!)
+            ret = i2c!.readByte(from: address!)
+        } else {
+            spi!.write(register.rawValue)
+            ret = spi!.readByte()
         }
 
-        return data
+        switch ret {
+        case .success(let byte):
+            return byte
+        case .failure(let err):
+            print("error: \(#function) " + String(describing: err))
+            return nil
+        }
     }
 
-    private func readRegister(_ register: Register, count: Int) -> [UInt8] {
-        var data: [UInt8] = Array(repeating: 0, count: count)
+    private func readRegister(_ register: Register, into data: inout [UInt8], count: Int) {
+        for i in 0..<data.count {
+            data[i] = 0
+        }
 
         if let i2c = i2c {
             i2c.write(register.rawValue, to: address!)
-            data = i2c.read(count: count, from: address!)
+            i2c.read(into: &data, count: count, from: address!)
         } else if let spi = spi {
             spi.write(register.rawValue)
-            data = spi.read(count: count)
+            spi.read(into: &data, count: count)
         }
-
-        return data
     }
 
     /// Calculate the heating duration into an UInt8 value for the register.
@@ -371,9 +379,14 @@ extension BME680 {
     }
 
     func readCalibration() {
-        let coeff1 = readRegister(.coeff1, count: 23)
-        let coeff2 = readRegister(.coeff2, count: 14)
-        let coeff3 = readRegister(.coeff3, count: 5)
+        var coeff1 = [UInt8](repeating: 0, count: 23)
+        readRegister(.coeff1, into: &coeff1, count: 23)
+
+        var coeff2 = [UInt8](repeating: 0, count: 14)
+        readRegister(.coeff2, into: &coeff2, count: 14)
+
+        var coeff3 = [UInt8](repeating: 0, count: 5)
+        readRegister(.coeff3, into: &coeff3, count: 5)
 
         let coefficient = coeff1 + coeff2 + coeff3
 
@@ -467,39 +480,33 @@ extension BME680 {
     }
 
     private func readRawValues() -> [Double] {
-        var data: [UInt8] = []
-
         mode = .force
         writeCtrlMeas()
 
         var newData = false
         while !newData {
-            data = readRegister(.measStatus0, count: 15)
+            readRegister(.measStatus0, into: &buffer, count: 15)
 
-            let measStatus = data[0] & 0x80
+            let measStatus = buffer[0] & 0x80
             if measStatus != 0 {
                 newData = true
             }
             sleep(ms: 5)
         }
 
-        let rawPressure = Double(UInt32(data[2]) << 12 | UInt32(data[3]) << 4 |
-                                 UInt32(data[4]) >> 4)
-        let rawTemp = Double(UInt32(data[5]) << 12 | UInt32(data[6]) << 4 |
-                             UInt32(data[7]) >> 4)
-        let rawHum = Double(UInt16(data[8]) << 8 | UInt16(data[9]))
-        let rawGas = Double(UInt16(data[13]) << 2 | UInt16(data[14]) >> 6)
-        let gasRange = Double(data[14] & 0x0F)
+        let rawPressure = Double(UInt32(buffer[2]) << 12 |
+                                 UInt32(buffer[3]) << 4 | UInt32(buffer[4]) >> 4)
+        let rawTemp = Double(UInt32(buffer[5]) << 12 | UInt32(buffer[6]) << 4 |
+                             UInt32(buffer[7]) >> 4)
+        let rawHum = Double(UInt16(buffer[8]) << 8 | UInt16(buffer[9]))
+        let rawGas = Double(UInt16(buffer[13]) << 2 | UInt16(buffer[14]) >> 6)
+        let gasRange = Double(buffer[14] & 0x0F)
 
         let value1 = (rawTemp / 16384 - tCoeff[0] / 1024) * tCoeff[1]
         let value2 = (rawTemp / 131072 - tCoeff[0] / 8192) *
         (rawTemp / 131072 - tCoeff[0] / 8192) * (tCoeff[2] * 16)
 
         let tFine = value1 + value2
-
-        if rawTemp == 0x80000 {
-            print("!!!!!!!!!!!")
-        }
 
         return [rawPressure, rawTemp, rawHum, rawGas, gasRange, tFine]
     }

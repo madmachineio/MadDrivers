@@ -27,6 +27,7 @@ final public class DS3231 {
         31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31
     ]
 
+    private var readBuffer = [UInt8](repeating: 0, count: 7)
 
     /// Initialize the RTC.
     /// - Parameters:
@@ -75,43 +76,43 @@ final public class DS3231 {
     /// - Returns: The time info in a struct.
     public func readCurrent() -> Time? {
         i2c.write(Register.second.rawValue, to: address)
-        let data = i2c.read(count: 7, from: address)
 
-        if data.count != 7 {
-            print("readCurrent error")
+        let ret = i2c.read(into: &readBuffer, from: address)
+
+        if case .failure(let err) = ret {
+            print("error: \(#function) " + String(describing: err))
             return nil
-        } else {
-            let year = UInt16(bcdToBin(data[6])) + 2000
-            // Make sure the bit for century is 0.
-            let month = bcdToBin(data[5] & 0b0111_1111)
-            let day = bcdToBin(data[4])
-            let dayOfWeek = bcdToBin(data[3])
-            let hour = bcdToBin(data[2])
-            let minute = bcdToBin(data[1])
-            let second = bcdToBin(data[0])
-
-            let time = Time(
-                year: year, month: month, day: day, hour: hour,
-                minute: minute, second: second, dayOfWeek: dayOfWeek)
-            return time
         }
 
+        let year = UInt16(bcdToBin(readBuffer[6])) + 2000
+        // Make sure the bit for century is 0.
+        let month = bcdToBin(readBuffer[5] & 0b0111_1111)
+        let day = bcdToBin(readBuffer[4])
+        let dayOfWeek = bcdToBin(readBuffer[3])
+        let hour = bcdToBin(readBuffer[2])
+        let minute = bcdToBin(readBuffer[1])
+        let second = bcdToBin(readBuffer[0])
 
+        let time = Time(
+            year: year, month: month, day: day, hour: hour,
+            minute: minute, second: second, dayOfWeek: dayOfWeek)
+        return time
     }
 
     /// Read current temperature.
     /// - Returns: Temperature in Celsius.
     public func readTemperature() -> Float? {
         i2c.write(Register.temperature.rawValue, to: address)
-        let data = i2c.read(count: 2, from: address)
 
-        if data.count != 2 {
-            print("readTemperature error")
+        let ret = i2c.read(into: &readBuffer, count: 2, from: address)
+
+        if case .failure(let err) = ret {
+            print("error: \(#function) " + String(describing: err))
             return nil
-        } else {
-            let temperature = Float(data[0]) + Float(data[1] >> 6) * 0.25
-            return temperature
         }
+
+        let temperature = Float(readBuffer[0]) + Float(readBuffer[1] >> 6) * 0.25
+        return temperature
     }
 
 
@@ -436,12 +437,14 @@ extension DS3231 {
 
     private func readRegister(_ reg: Register) -> UInt8? {
         i2c.write(reg.rawValue, to: address)
-        let data = i2c.readByte(from: address)
-        
-        if let data = data {
-            return data
-        } else {
-            print("readByte error")
+
+        let ret = i2c.readByte(from: address)
+
+        switch ret {
+        case .success(let byte):
+            return byte
+        case .failure(let err):
+            print("error: \(#function) " + String(describing: err))
             return nil
         }
     }

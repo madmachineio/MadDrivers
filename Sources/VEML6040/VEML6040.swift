@@ -45,6 +45,8 @@ final public class VEML6040 {
     public let address: UInt8
     /// The I2C interface for the sensor.
     public let i2c: I2C
+
+    private var readBuffer = [UInt8](repeating: 0, count: 2)
     
     /// Get a suitable sensitivity according to the integration time.
     /// A longer time will lead to a higher sensitivity.
@@ -193,7 +195,13 @@ extension VEML6040 {
     }
     
     private func readRegister(_ reg: Reg) -> UInt16 {
-        let data = i2c.writeRead(reg.rawValue, readCount: 2, address: address)
-        return (UInt16(data[1]) << 8) | UInt16(data[0])
+        let ret = i2c.writeRead(reg.rawValue, into: &readBuffer, address: address)
+
+        if case .failure(let err) = ret {
+            print("error: \(#function) " + String(describing: err))
+            return 0
+        }
+        
+        return (UInt16(readBuffer[1]) << 8) | UInt16(readBuffer[0])
     }
 }
