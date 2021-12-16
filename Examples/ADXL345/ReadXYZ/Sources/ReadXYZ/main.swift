@@ -8,9 +8,7 @@ let sensor = ADXL345(i2c)
 while true {
     sleep(ms: 1000)
     let values = sensor.readValues()
-    if let values = values {
-        print(values)
-    }
+    print(values)
 }
 
 
