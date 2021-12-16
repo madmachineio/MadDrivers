@@ -17,6 +17,8 @@ final public class PCF8523 {
     private let i2c: I2C
     private let address: UInt8
 
+    private var readBuffer = [UInt8](repeating: 0, count: 7)
+
     /// Initialize the RTC.
     /// - Parameters:
     ///   - i2c: **REQUIRED** The I2C interface the RTC connects to.
@@ -60,25 +62,25 @@ final public class PCF8523 {
     /// - Returns: A Time struct if the communication is stable. Or it will be nil.
     public func readCurrent() -> Time? {
         i2c.write(Register.secondStatus.rawValue, to: address)
-        let data = i2c.read(count: 7, from: address)
+        let ret = i2c.read(into: &readBuffer, from: address)
 
-        if data.count != 7 {
-            print("readCurrent error")
+        if case .failure(let err) = ret {
+            print("error: \(#function) " + String(describing: err))
             return nil
-        } else {
-            let year = UInt16(bcdToBin(data[6])) + 2000
-            let month = bcdToBin(data[5])
-            let dayOfWeek = bcdToBin(data[4])
-            let day = bcdToBin(data[3])
-            let hour = bcdToBin(data[2])
-            let minute = bcdToBin(data[1])
-            let second = bcdToBin(data[0] & 0b0111_1111)
-
-            let time = Time(
-                year: year, month: month, day: day, hour: hour,
-                minute: minute, second: second, dayOfWeek: dayOfWeek)
-            return time
         }
+
+        let year = UInt16(bcdToBin(readBuffer[6])) + 2000
+        let month = bcdToBin(readBuffer[5])
+        let dayOfWeek = bcdToBin(readBuffer[4])
+        let day = bcdToBin(readBuffer[3])
+        let hour = bcdToBin(readBuffer[2])
+        let minute = bcdToBin(readBuffer[1])
+        let second = bcdToBin(readBuffer[0] & 0b0111_1111)
+
+        let time = Time(
+            year: year, month: month, day: day, hour: hour,
+            minute: minute, second: second, dayOfWeek: dayOfWeek)
+        return time
     }
 
     /// Enable the 1 second timer and generate an interrupt each second.
@@ -294,12 +296,13 @@ extension PCF8523 {
 
     private func readRegister(_ reg: Register) -> UInt8? {
         i2c.write(reg.rawValue, to: address)
-        let data = i2c.readByte(from: address)
 
-        if let data = data {
-            return data
-        } else {
-            print("readByte error")
+        let result = i2c.readByte(from: address)
+        switch result {
+        case .success(let byte):
+            return byte
+        case .failure(let err):
+            print(#function + String(describing: err))
             return nil
         }
     }
