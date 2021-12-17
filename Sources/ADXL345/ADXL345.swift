@@ -35,6 +35,7 @@ final public class ADXL345 {
     private let i2c: I2C?
     private let address: UInt8?
     private let spi: SPI?
+    private let csPin: DigitalOut?
 
     private var gRange: GRange
     private let gScaleFactor: Float = 0.004
@@ -56,6 +57,7 @@ final public class ADXL345 {
         self.i2c = i2c
         self.address = address
         self.spi = nil
+        self.csPin = nil
 
         dataRate = .hz100
         gRange = .g2
@@ -73,31 +75,42 @@ final public class ADXL345 {
         writeRegister(.intEnable, 0x00)
     }
 
-    /*
-     /// Initialize the sensor using SPI communication. The maximum SPI clock
-     /// speed is 5 MHz.
-    public init(_ spi: SPI) {
+    /// Initialize the sensor using SPI communication. The maximum SPI clock
+    /// speed is 5 MHz.
+    public init(_ spi: SPI, csPin: DigitalOut? = nil) {
         self.spi = spi
+        self.csPin = csPin
         self.i2c = nil
         self.address = nil
 
+        guard (spi.cs == false && csPin != nil && csPin!.getMode() == .pushPull) ||
+                (spi.cs == true && csPin == nil) else {
+                    fatalError(#function + ": csPin isn't correct")
+        }
+
+        guard spi.getMode() == (true, true) else {
+            fatalError(#function + ": spi mode doesn't match for ADXL345")
+        }
+
+        guard spi.getSpeed() <= 5_000_000 else {
+            fatalError(#function + ": cannot support spi speed faster than 5MHz")
+        }
+
 
         // Set the data rate as 100hz.
-        dataRate = .hz800
+        dataRate = .hz100
         // Set 2g as default g range.
         gRange = .g2
 
-
         setDataRate(dataRate)
         setRange(gRange)
-
 
         // Start to measure.
         writeRegister(.powerCTL, 0x08)
         // Disable the interrupt.
         writeRegister(.intEnable, 0x00)
     }
-     */
+
 
     /// Read x, y, z acceleration values represented in g (9.8m/s^2)
     /// within the selected range.
@@ -250,8 +263,10 @@ extension ADXL345 {
     private func writeRegister(_ register: Register, _ value: UInt8) {
         if let i2c = i2c {
             i2c.write([register.rawValue, value], to: address!)
-        }else if let spi = spi {
+        } else if let spi = spi {
+            csPin?.low()
             spi.write([register.rawValue, value])
+            csPin?.high()
         }
     }
 
@@ -262,8 +277,10 @@ extension ADXL345 {
             i2c!.write(register.rawValue, to: address!)
             ret = i2c!.readByte(from: address!)
         } else {
+            csPin?.low()
             spi!.write(register.rawValue)
             ret = spi!.readByte()
+            csPin?.high()
         }
 
         switch ret {
@@ -284,8 +301,11 @@ extension ADXL345 {
             i2c.write(register.rawValue, to: address!)
             i2c.read(into: &readBuffer, count: count, from: address!)
         } else if let spi = spi {
+            csPin?.low()
             spi.write(register.rawValue)
             spi.read(into: &readBuffer, count: count)
+            csPin?.high()
+            print(readBuffer)
         }
     }
 
