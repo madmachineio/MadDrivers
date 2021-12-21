@@ -28,6 +28,7 @@ final public class BME680 {
     private let i2c: I2C?
     private let address: UInt8?
     private let spi: SPI?
+    private let csPin: DigitalOut?
 
     private var tSampling: Oversampling
     private var hSampling: Oversampling
@@ -67,6 +68,7 @@ final public class BME680 {
         self.i2c = i2c
         self.address = address
         self.spi = nil
+        self.csPin = nil
 
         tSampling = .x8
         hSampling = .x2
@@ -91,6 +93,57 @@ final public class BME680 {
         setHeater(320, 150)
         // Enable gas conversion.
         writeRegister(.ctrlGas1, 0x10)
+    }
+
+    public init(_ spi: SPI, csPin: DigitalOut? = nil) {
+        self.spi = spi
+        self.csPin = csPin
+        self.i2c = nil
+        self.address = nil
+
+        _ = spi.readByte()
+        csPin?.high()
+
+        tSampling = .x8
+        hSampling = .x2
+        pSampling = .x4
+        filter = .size3
+        mode = .sleep
+
+        guard (spi.cs == false && csPin != nil && csPin!.getMode() == .pushPull)
+                || (spi.cs == true && csPin == nil) else {
+                    fatalError(#function + ": csPin isn't correct")
+        }
+
+        guard spi.getMode() == (true, true) ||
+                spi.getMode() == (false, false) else {
+            fatalError(#function + ": spi mode doesn't match for BME680")
+        }
+
+        guard spi.getSpeed() <= 10_000_000 else {
+            fatalError(#function + ": cannot support spi speed faster than 10MHz")
+        }
+
+
+        reset()
+        guard let chipID = readRegister(.chipID), chipID == 0x61 else {
+            fatalError(#function + ": cannot find BME680 via spi bus")
+        }
+
+        readCalibration()
+
+        // Set temperature, pressure, humidity oversampling.
+        writeCtrlMeas()
+        setHumiditySampling(hSampling)
+        // Set filter for the temperature and pressure measurement.
+        setFilter(filter)
+
+        // Set heater to 320 degree celsius for 150ms.
+        setHeater(320, 150)
+
+        // Enable gas conversion.
+        writeRegister(.ctrlGas1, 0x10)
+
     }
 
     /// Read current temperature in Celsius.
@@ -228,8 +281,6 @@ final public class BME680 {
         writeCtrlMeas()
     }
 
-
-
     /// Set IIR filter level for the pressure and temperature measurement.
     /// The humidity and gas measurement doesn't need the filter.
     /// - Parameter filter: A filter setting in `Filter` enumeration.
@@ -281,6 +332,7 @@ extension BME680 {
         case coeff2 = 0xE1
         case coeff3 = 0x00
         case measStatus0 = 0x1D
+        case status = 0x73
     }
 
     /// Power mode. It decides how the sensor performs the measurement.
@@ -299,11 +351,26 @@ extension BME680 {
         writeRegister(.ctrlMeas, ctrlMeas)
     }
 
+    private func setSPIMemPage(_ register: Register) {
+        var page: UInt8 = 0
+        if register.rawValue < 0x80 {
+            page = 0x10
+        }
+        writeRegister(.status, page)
+    }
+
     private func writeRegister(_ register: Register, _ value: UInt8) {
         if let i2c = i2c {
             i2c.write([register.rawValue, value], to: address!)
         } else if let spi = spi {
-            spi.write([register.rawValue, value])
+            if register != .status {
+                setSPIMemPage(register)
+            }
+
+            let register = register.rawValue & 0b0111_1111
+            csPin?.low()
+            spi.write([register, value])
+            csPin?.high()
         }
     }
 
@@ -314,8 +381,15 @@ extension BME680 {
             i2c!.write(register.rawValue, to: address!)
             ret = i2c!.readByte(from: address!)
         } else {
-            spi!.write(register.rawValue)
+            if register != .status {
+                setSPIMemPage(register)
+            }
+
+            let register = register.rawValue | 0b1000_0000
+            csPin?.low()
+            spi!.write(register)
             ret = spi!.readByte()
+            csPin?.high()
         }
 
         switch ret {
@@ -327,17 +401,24 @@ extension BME680 {
         }
     }
 
-    private func readRegister(_ register: Register, into data: inout [UInt8], count: Int) {
-        for i in 0..<data.count {
-            data[i] = 0
+    private func readRegister(_ register: Register, into buffer: inout [UInt8], count: Int) {
+        for i in 0..<buffer.count {
+            buffer[i] = 0
         }
 
         if let i2c = i2c {
             i2c.write(register.rawValue, to: address!)
-            i2c.read(into: &data, count: count, from: address!)
+            i2c.read(into: &buffer, count: count, from: address!)
         } else if let spi = spi {
-            spi.write(register.rawValue)
-            spi.read(into: &data, count: count)
+            if register != .status {
+                setSPIMemPage(register)
+            }
+            let register = register.rawValue | 0b1000_0000
+
+            csPin?.low()
+            spi.write(register)
+            spi.read(into: &buffer, count: count)
+            csPin?.high()
         }
     }
 
@@ -360,7 +441,7 @@ extension BME680 {
 
     /// Calculate the temperature into an UInt8 value for the register.
     private func calGasHeat(_ temp: Int) -> UInt8 {
-        let ambTemp = 25.0
+        let ambTemp = readTemperature()
 
         let value1 = gCoeff[0] / 16.0 + 49.0
         let value2 = gCoeff[1] / 32768.0 * 0.0005 + 0.00235
