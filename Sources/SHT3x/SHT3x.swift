@@ -5,7 +5,6 @@
 //
 // Authors: Andy Liu
 // Created: 02/25/2021
-// Updated: 10/26/2021
 //
 // See https://madmachine.io for more information
 //
@@ -25,6 +24,8 @@ final public class SHT3x {
     
     let i2c: I2C
     let address: UInt8
+
+    private var readBuffer = [UInt8](repeating: 0, count: 6)
     
     /// Initialize the I2C bus and reset the sensor.
     /// - Parameters:
@@ -95,13 +96,15 @@ extension SHT3x {
     private func startMeasure() -> (rawTemp: UInt16, rawHumi: UInt16) {
         writeCommand(.measureMedium)
         sleep(ms: 8)
-        let array = i2c.read(count: 6, from: address)
-        if array.count == 6 {
-            let temp = UInt16(array[0]) << 8 | UInt16(array[1])
-            let humi = UInt16(array[3]) << 8 | UInt16(array[4])
-            return (temp, humi)
-        } else {
+        let ret = i2c.read(into: &readBuffer, from: address)
+
+        if case .failure(let err) = ret {
+            print("error: \(#function) " + String(describing: err))
             return (0, 0)
         }
+
+        let temp = UInt16(readBuffer[0]) << 8 | UInt16(readBuffer[1])
+        let humi = UInt16(readBuffer[3]) << 8 | UInt16(readBuffer[4])
+        return (temp, humi)
     }
 }

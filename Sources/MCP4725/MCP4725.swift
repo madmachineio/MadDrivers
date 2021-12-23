@@ -5,7 +5,6 @@
 //
 // Authors: Andy Liu
 // Created: 02/25/2021
-// Updated: 10/26/2021
 //
 // See https://madmachine.io for more information
 //
@@ -36,6 +35,8 @@ final public class MCP4725 {
     
     let address: UInt8
     let maxRawValue = Int(4095)
+
+    private var readBuffer = [UInt8](repeating: 0, count: 5)
     
     /// Initialize the device. Use the specified I2C bus and
     /// send the device address to get ready for the following communication.
@@ -145,17 +146,26 @@ final public class MCP4725 {
 
 extension MCP4725 {
     func getEEROMValue() -> UInt16 {
-        let data = i2c.read(count: 5, from: address)
-        let high = UInt16(data[3] & 0x0F) << 8
-        let low = UInt16(data[4])
+        for i in 0..<5 {
+            readBuffer[i] = 0
+        }
+        i2c.read(into: &readBuffer, from: address)
+
+        let high = UInt16(readBuffer[3] & 0x0F) << 8
+        let low = UInt16(readBuffer[4])
         
         return high | low
     }
     
     func getOutputValue() -> UInt16 {
-        let data = i2c.read(count: 5, from: address)
-        let high = UInt16(data[1] & 0xF0) << 4
-        let low = (UInt16(data[1] & 0x0F) << 4) | (UInt16(data[2] & 0xF0) >> 4)
+        for i in 0..<5 {
+            readBuffer[i] = 0
+        }
+        i2c.read(into: &readBuffer, from: address)
+
+        let high = UInt16(readBuffer[1] & 0xF0) << 4
+        let low = (UInt16(readBuffer[1] & 0x0F) << 4) |
+        (UInt16(readBuffer[2] & 0xF0) >> 4)
         
         return high | low
     }

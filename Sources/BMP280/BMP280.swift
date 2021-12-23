@@ -5,7 +5,6 @@
 //
 // Authors: Ines Zhou
 // Created: 12/04/2021
-// Updated: 12/04/2021
 //
 // See https://madmachine.io for more information
 //
@@ -23,6 +22,9 @@ final public class BMP280 {
     private let i2c: I2C?
     private let spi: SPI?
     private let address: UInt8?
+    private let csPin: DigitalOut?
+
+    private var readBuffer = [UInt8](repeating: 0, count: 24)
 
     private var tSampling: Oversampling
     private var pSampling: Oversampling
@@ -43,6 +45,7 @@ final public class BMP280 {
     public init(_ i2c: I2C, address: UInt8 = 0x77) {
         self.i2c = i2c
         self.spi = nil
+        self.csPin = nil
         self.address = address
 
         tSampling = .x2
@@ -54,6 +57,56 @@ final public class BMP280 {
 
         guard let chipID = readRegister(.chipID), chipID == 0x58 else {
             fatalError(#function + ": cannot find BMP280 at address \(address)")
+        }
+
+        reset()
+        writeConfig()
+        writeCtrlMeas()
+        calibration = readCalibration()
+    }
+
+    /// Initialize the sensor using SPI communication.
+    ///
+    /// The maximum SPI clock speed is 10 MHz. The CPOL and CPHA of SPI
+    /// should be both true or both false. And the cs pin should be set only once.
+    /// You can set it when initializing an spi interface. If not, you need to
+    /// set the cs when initializing the sensor.
+    ///
+    /// - Parameters:
+    ///   - spi: **REQUIRED** The SPI interface that the sensor connects.
+    ///   - csPin: **OPTIONAL** The cs pin for the spi.
+    public init(_ spi: SPI, csPin: DigitalOut? = nil) {
+        self.spi = spi
+        self.csPin = csPin
+        self.i2c = nil
+        self.address = nil
+
+        _ = spi.readByte()
+        csPin?.high()
+
+        tSampling = .x2
+        pSampling = .x16
+        mode = .normal
+
+        standby = .ms05
+        filter = .x16
+
+        guard (spi.cs == false && csPin != nil && csPin!.getMode() == .pushPull)
+                || (spi.cs == true && csPin == nil) else {
+                    fatalError(#function + ": csPin isn't correct")
+        }
+
+        guard spi.getMode() == (true, true) ||
+                spi.getMode() == (false, false) else {
+            fatalError(#function + ": spi mode doesn't match for BMP280")
+        }
+
+        guard spi.getSpeed() <= 10_000_000 else {
+            fatalError(#function + ": cannot support spi speed faster than 10MHz")
+        }
+
+        guard let chipID = readRegister(.chipID), chipID == 0x58 else {
+            fatalError(#function + ": cannot find BMP280 via spi bus")
         }
 
         reset()
@@ -81,7 +134,7 @@ final public class BMP280 {
 
         let var1 = (raw / 16384.0 - calibration[0] / 1024.0) * calibration[1]
         let var2 = (raw / 131072.0 - calibration[0] / 8192.0) *
-                    (raw / 131072.0 - calibration[0] / 8192.0) * calibration[2]
+        (raw / 131072.0 - calibration[0] / 8192.0) * calibration[2]
 
         let temp = (var1 + var2) / 5120.0
         return temp
@@ -265,36 +318,51 @@ extension BMP280 {
         if let i2c = i2c {
             i2c.write([register.rawValue, value], to: address!)
         } else if let spi = spi {
-            spi.write([register.rawValue, value])
+            let register = register.rawValue & 0b0111_1111
+            csPin?.low()
+            spi.write([register, value])
+            csPin?.high()
         }
     }
 
     private func readRegister(_ register: Register) -> UInt8? {
-        var data: UInt8? = nil
+        var ret: Result<UInt8, Errno>
 
-        if let i2c = i2c {
-            i2c.write(register.rawValue, to: address!)
-            data = i2c.readByte(from: address!)
-        } else if let spi = spi {
-            spi.write(register.rawValue)
-            data = spi.readByte()
+        if i2c != nil {
+            i2c!.write(register.rawValue, to: address!)
+            ret = i2c!.readByte(from: address!)
+        } else {
+            let register = register.rawValue | 0b1000_0000
+            csPin?.low()
+            spi!.write(register)
+            ret = spi!.readByte()
+            csPin?.high()
         }
 
-        return data
+        switch ret {
+        case .success(let byte):
+            return byte
+        case .failure(let err):
+            print("error: \(#function) " + String(describing: err))
+            return nil
+        }
     }
 
-    private func readRegister(_ register: Register, count: Int) -> [UInt8] {
-        var data: [UInt8] = Array(repeating: 0, count: count)
+    private func readRegister(_ register: Register, into buffer: inout [UInt8], count: Int) {
+        for i in 0..<buffer.count {
+            buffer[i] = 0
+        }
 
         if let i2c = i2c {
             i2c.write(register.rawValue, to: address!)
-            data = i2c.read(count: count, from: address!)
+            i2c.read(into: &buffer, from: address!)
         } else if let spi = spi {
-            spi.write(register.rawValue)
-            data = spi.read(count: count)
+            let register = register.rawValue | 0b1000_0000
+            csPin?.low()
+            spi.write(register)
+            spi.read(into: &buffer, count: count)
+            csPin?.high()
         }
-
-        return data
     }
 
     /// Set standby duration and filter.
@@ -322,27 +390,29 @@ extension BMP280 {
 
     /// Read temperature or pressure raw value.
     private func readRawValue(_ register: Register) -> Double {
-        let data = readRegister(register, count: 3)
-        let raw = UInt32(data[0]) << 12 | UInt32(data[1]) << 4 | UInt32(data[2] >> 4)
+        readRegister(register, into: &readBuffer, count: 3)
+        let raw = UInt32(readBuffer[0]) << 12 |
+        UInt32(readBuffer[1]) << 4 | UInt32(readBuffer[2] >> 4)
+
         return Double(raw)
     }
 
     private func readCalibration() -> [Double] {
-        let data = readRegister(.digT1, count: 24)
+        readRegister(.digT1, into: &readBuffer, count: 24)
 
-        let t1 = Double(UInt16(data[0]) | (UInt16(data[1]) << 8))
-        let t2 = Double(Int16(data[2]) | (Int16(data[3]) << 8))
-        let t3 = Double(Int16(data[4]) | (Int16(data[5]) << 8))
+        let t1 = Double(UInt16(readBuffer[0]) | (UInt16(readBuffer[1]) << 8))
+        let t2 = Double(Int16(readBuffer[2]) | (Int16(readBuffer[3]) << 8))
+        let t3 = Double(Int16(readBuffer[4]) | (Int16(readBuffer[5]) << 8))
 
-        let p1 = Double(UInt16(data[6]) | (UInt16(data[7]) << 8))
-        let p2  = Double(Int16(data[8]) | (Int16(data[9]) << 8))
-        let p3  = Double(Int16(data[10]) | (Int16(data[11]) << 8))
-        let p4  = Double(Int16(data[12]) | (Int16(data[13]) << 8))
-        let p5  = Double(Int16(data[14]) | (Int16(data[15]) << 8))
-        let p6  = Double(Int16(data[16]) | (Int16(data[17]) << 8))
-        let p7  = Double(Int16(data[18]) | (Int16(data[19]) << 8))
-        let p8  = Double(Int16(data[20]) | (Int16(data[21]) << 8))
-        let p9  = Double(Int16(data[22]) | (Int16(data[23]) << 8))
+        let p1 = Double(UInt16(readBuffer[6]) | (UInt16(readBuffer[7]) << 8))
+        let p2  = Double(Int16(readBuffer[8]) | (Int16(readBuffer[9]) << 8))
+        let p3  = Double(Int16(readBuffer[10]) | (Int16(readBuffer[11]) << 8))
+        let p4  = Double(Int16(readBuffer[12]) | (Int16(readBuffer[13]) << 8))
+        let p5  = Double(Int16(readBuffer[14]) | (Int16(readBuffer[15]) << 8))
+        let p6  = Double(Int16(readBuffer[16]) | (Int16(readBuffer[17]) << 8))
+        let p7  = Double(Int16(readBuffer[18]) | (Int16(readBuffer[19]) << 8))
+        let p8  = Double(Int16(readBuffer[20]) | (Int16(readBuffer[21]) << 8))
+        let p9  = Double(Int16(readBuffer[22]) | (Int16(readBuffer[23]) << 8))
 
         let calibration = [t1, t2, t3, p1, p2, p3, p4, p5, p6, p7, p8, p9]
         return calibration

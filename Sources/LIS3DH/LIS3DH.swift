@@ -5,7 +5,6 @@
 //
 // Authors: Andy Liu
 // Created: 05/11/2021
-// Updated: 10/26/2021
 //
 // See https://madmachine.io for more information
 //
@@ -59,8 +58,10 @@ final public class LIS3DH {
     
     let defaultWhoAmI  = UInt8(0x33)
     
-    let i2c: I2C
-    let address: UInt8
+    let i2c: I2C?
+    let address: UInt8?
+    let spi: SPI?
+    let csPin: DigitalOut?
     
     var gRange: GRange
     var dataRate: DataRate
@@ -80,6 +81,8 @@ final public class LIS3DH {
             return 1280.0
         }
     }
+
+    private var readBuffer = [UInt8](repeating: 0, count: 6)
     
     
     /// Initialize the sensor using I2C communication.
@@ -87,24 +90,82 @@ final public class LIS3DH {
     ///   - i2c: **REQUIRED** The I2C interface that the sensor connects.
     ///   - address: **OPTIONAL** The device address of the sensor.
     public init(_ i2c: I2C, address: UInt8 = 0x18) {
+        let speed = i2c.getSpeed()
+        guard speed == .standard || speed == .fast else {
+            fatalError(#function + ": ADXL345 only supports 100kbps and 400kbps I2C speed")
+        }
+        
         self.i2c = i2c
         self.address = address
+        self.spi = nil
+        self.csPin = nil
         
         rangeConfig = [.highResEnable]
         dataRateConfig = [.normalMode, .xEnable, .yEnable, .zEnable]
         
         gRange = .g2
         dataRate = .Hz400
+
+        guard getDeviceID() == defaultWhoAmI else {
+            fatalError(#function + ": cann't find LIS3DH at address \(address)")
+        }
         
         setRange(gRange)
         setDataRate(dataRate)
         
         sleep(ms: 10)
     }
-    
+
+    /// Initialize the sensor using SPI communication.
+    ///
+    /// The maximum SPI clock speed is 10 MHz. Both the CPOL and CPHA of SPI
+    /// should be true. And the cs pin should be set only once. You can set it
+    /// when initializing an spi interface. If not, you need to set the cs when
+    /// initializing the sensor.
+    ///
+    /// - Parameters:
+    ///   - spi: **REQUIRED** The SPI interface that the sensor connects.
+    ///   - csPin: **OPTIONAL** The cs pin for the spi.
+    public init(_ spi: SPI, csPin: DigitalOut? = nil) {
+        self.spi = spi
+        self.csPin = csPin
+        self.i2c = nil
+        self.address = nil
+
+        _ = spi.readByte()
+        csPin?.high()
+
+        rangeConfig = [.highResEnable]
+        dataRateConfig = [.normalMode, .xEnable, .yEnable, .zEnable]
+
+        gRange = .g2
+        dataRate = .Hz400
+
+        guard (spi.cs == false && csPin != nil && csPin!.getMode() == .pushPull)
+                || (spi.cs == true && csPin == nil) else {
+                    fatalError(#function + ": csPin isn't correct")
+        }
+
+        guard spi.getSpeed() <= 10_000_000 else {
+            fatalError(#function + ": cannot support spi speed faster than 10MHz")
+        }
+
+        guard spi.getMode() == (true, true) else {
+            fatalError(#function + ": spi mode doesn't match for LIS3DH")
+        }
+
+        guard getDeviceID() == defaultWhoAmI else {
+            fatalError(#function + ": cannot find LIS3DH via spi bus")
+        }
+
+        setRange(gRange)
+        setDataRate(dataRate)
+
+        sleep(ms: 10)
+    }
     
     /// Get the device ID from the sensor.
-    /// It can be used to test if the sensor is connected.
+    /// It can be used to test if the sensor is connected. The ID should be 0x33.
     /// - Returns: The device ID.
     public func getDeviceID() -> UInt8 {
         return readRegister(.WHO_AM_I)
@@ -150,11 +211,11 @@ final public class LIS3DH {
     /// Read raw values of acceleration on x, y, z-axes at once.
     /// - Returns: x, y, z values from -32768 to 32767.
     public func readRawValue() -> (x: Int16, y: Int16, z: Int16) {
-        let rawValues = readRegister(.OUT_X_L, count: 6)
-        guard rawValues.count == 6 else { return (0, 0, 0) }
-        let x = Int16(rawValues[0]) | (Int16(rawValues[1]) << 8)
-        let y = Int16(rawValues[2]) | (Int16(rawValues[3]) << 8)
-        let z = Int16(rawValues[4]) | (Int16(rawValues[5]) << 8)
+        readRegister(.OUT_X_L, into: &readBuffer, count: 6)
+
+        let x = Int16(readBuffer[0]) | (Int16(readBuffer[1]) << 8)
+        let y = Int16(readBuffer[2]) | (Int16(readBuffer[3]) << 8)
+        let z = Int16(readBuffer[4]) | (Int16(readBuffer[5]) << 8)
         
         return (x, y, z)
     }
@@ -178,9 +239,8 @@ final public class LIS3DH {
     /// Read the acceleration on x-axis.
     /// - Returns: A float representing the acceleration.
     public func readX() -> Float {
-        let rawValues = readRegister(.OUT_X_L, count: 2)
-        guard rawValues.count == 2 else { return 0 }
-        let ix = Int16(rawValues[0]) | (Int16(rawValues[1]) << 8)
+        readRegister(.OUT_X_L, into: &readBuffer, count: 2)
+        let ix = Int16(readBuffer[0]) | (Int16(readBuffer[1]) << 8)
         
         return Float(ix) / gCoefficient
     }
@@ -188,9 +248,8 @@ final public class LIS3DH {
     /// Read the acceleration on y-axis.
     /// - Returns: A float representing the acceleration.
     public func readY() -> Float {
-        let rawValues = readRegister(.OUT_Y_L, count: 2)
-        guard rawValues.count == 2 else { return 0 }
-        let iy = Int16(rawValues[0]) | (Int16(rawValues[1]) << 8)
+        readRegister(.OUT_Y_L, into: &readBuffer, count: 2)
+        let iy = Int16(readBuffer[0]) | (Int16(readBuffer[1]) << 8)
         
         return Float(iy) / gCoefficient
     }
@@ -198,13 +257,11 @@ final public class LIS3DH {
     /// Read the acceleration on y-axis.
     /// - Returns: A float representing the acceleration.
     public func readZ() -> Float {
-        let rawValues = readRegister(.OUT_Z_L, count: 2)
-        guard rawValues.count == 2 else { return 0 }
-        let iz = Int16(rawValues[0]) | (Int16(rawValues[1]) << 8)
+        readRegister(.OUT_Z_L, into: &readBuffer, count: 2)
+        let iz = Int16(readBuffer[0]) | (Int16(readBuffer[1]) << 8)
         
         return Float(iz) / gCoefficient
     }
-    
 }
 
 
@@ -282,24 +339,53 @@ extension LIS3DH {
     }
     
     func writeRegister(_ value: UInt8, to reg: Register) {
-        i2c.write([reg.rawValue, value], to: address)
-    }
-    
-    func readRegister(_ reg: Register) -> UInt8 {
-        let data = i2c.writeRead([reg.rawValue], readCount: 1, address: address)
-        if data.count > 0 {
-            return data[0]
-        } else {
-            return 0
+        if let i2c = i2c {
+            i2c.write([reg.rawValue, value], to: address!)
+        } else if let spi = spi {
+            csPin?.low()
+            spi.write([reg.rawValue, value])
+            csPin?.high()
         }
     }
     
-    func readRegister(_ beginReg: Register, count: Int) -> [UInt8] {
+    func readRegister(_ reg: Register) -> UInt8 {
+        var byte: UInt8 = 0
+        var ret: Result<(), Errno>
+
+        if i2c != nil {
+            ret = i2c!.writeRead(reg.rawValue, into: &byte, address: address!)
+        } else {
+            let register = reg.rawValue | 0b1000_0000
+            csPin?.low()
+            spi!.write(register)
+            ret = spi!.read(into: &byte)
+            csPin?.high()
+        }
+
+        if case .failure(let err) = ret {
+            print("error: \(#function) " + String(describing: err))
+        }
+        return byte
+    }
+    
+    func readRegister(_ beginReg: Register, into buffer: inout [UInt8], count: Int) {
         var writeByte = beginReg.rawValue
-        
         writeByte |= 0x80
-        
-        let data = i2c.writeRead([writeByte], readCount: count, address: address)
-        return data
+
+        for i in 0..<buffer.count {
+            buffer[i] = 0
+        }
+
+        if let i2c = i2c {
+            i2c.writeRead(writeByte, into: &readBuffer,
+                          readCount: count, address: address!)
+        } else if let spi = spi {
+            writeByte |= 0b1100_0000
+            csPin?.low()
+            spi.write(writeByte)
+            spi.read(into: &buffer, count: count)
+            csPin?.high()
+        }
+
     }
 }

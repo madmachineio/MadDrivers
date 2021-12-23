@@ -63,7 +63,11 @@ You can find some frequently-used hardware here:
     <td>I2C</td>
   </tr>
   <tr>
-    <td>Pressure</td>
+    <td rowspan="2">Pressure</td>
+    <td>BME680</td>
+    <td>I2C/SPI</td>
+  </tr>
+  <tr>
     <td>BMP280</td>
     <td>I2C/SPI</td>
   </tr>

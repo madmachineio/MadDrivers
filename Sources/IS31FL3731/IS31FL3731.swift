@@ -5,7 +5,6 @@
 //
 // Authors: Andy Liu
 // Created: 07/29/2021
-// Updated: 10/26/2021
 //
 // See https://madmachine.io for more information
 //
@@ -305,23 +304,11 @@ extension IS31FL3731 {
         let ret = i2c.readByte(from: address)
         selectPage(currentFrame)
 
-        if let ret = ret {
-            return ret
-        } else {
-            print("IS31FL3731 readRegister error!")
-            return 0
-        }
-    }
-    
-    private func readData(_ register: UInt8) -> UInt8 {
-        writeRegister(.shutdown, 0)
-        i2c.write(register, to: address)
-        let ret = i2c.readByte(from: address)
-        writeRegister(.shutdown, 1)
-        if let ret = ret {
-            return ret
-        } else {
-            print("IS31FL3731 readRegister error!")
+        switch ret {
+        case .success(let byte):
+            return byte
+        case .failure(let err):
+            print("error: \(#function) " + String(describing: err))
             return 0
         }
     }

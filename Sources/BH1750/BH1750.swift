@@ -5,7 +5,6 @@
 //
 // Authors: Ines Zhou
 // Created: 10/26/2021
-// Updated: 10/26/2021
 //
 // See https://madmachine.io for more information
 //
@@ -26,6 +25,8 @@ final public class BH1750 {
     
     private let mode: Mode
     private var resolution: Resolution
+
+    private var readBuffer = [UInt8](repeating: 0, count: 2)
     
     /// It decides if the sensor will measure the light all the time or once.
     public enum Mode: UInt8 {
@@ -68,8 +69,7 @@ final public class BH1750 {
     /// Read the ambient light and represent it in lux.
     /// - Returns: A float representing the light amount in lux.
     public func readLux() -> Float {
-        let rawValue = readRawValue()
-        
+        let rawValue = readRawValue(into: &readBuffer)
         return Float(rawValue) * unit / 1.2
     }
 }
@@ -115,14 +115,18 @@ extension BH1750 {
         sleep(ms: measurementTime)
     }
     
-    private func readRawValue() -> UInt16 {
-        var value: [UInt8]
+    private func readRawValue(into buffer: inout [UInt8]) -> UInt16 {
+        var ret: Result<(), Errno>
+
+        for i in 0..<buffer.count {
+            buffer[i] = 0
+        }
         
         switch mode {
         case .continuous:
             /// In this mode, the sensor measures the light continuously,
             /// so you can read directly.
-            value = i2c.read(count: 2, from: address)
+            ret = i2c.read(into: &buffer, from: address)
         case .oneTime:
             /// In this mode, every time the sensor finishes the reading,
             /// the sensor will move to power down mode.
@@ -130,9 +134,14 @@ extension BH1750 {
             let configValue = mode.rawValue | resolution.rawValue
             writeCommand(configValue)
             sleep(ms: measurementTime)
-            value = i2c.read(count: 2, from: address)
+            ret = i2c.read(into: &buffer, from: address)
+        }
+
+        if case .failure(let err) = ret {
+            print("error: \(#function) " + String(describing: err))
+            return 0
         }
         
-        return UInt16(value[0]) << 8 | UInt16(value[1])
+        return UInt16(buffer[0]) << 8 | UInt16(buffer[1])
     }
 }

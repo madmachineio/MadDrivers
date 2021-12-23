@@ -5,7 +5,6 @@
 //
 // Authors: Ines Zhou
 // Created: 11/29/2021
-// Updated: 11/29/2021
 //
 // See https://madmachine.io for more information
 //
@@ -33,6 +32,8 @@ final public class MPU6050 {
     private let address: UInt8
     private var accelRange: AccelRange
     private var gyroRange: GyroRange
+
+    private var readBuffer = [UInt8](repeating: 0, count: 6)
 
     private var accelSensibility: Float {
         switch accelRange {
@@ -90,8 +91,8 @@ final public class MPU6050 {
     /// Read current temperature.
     /// - Returns: The temperature in Celsius.
     public func readTemperature() -> Float {
-        let data = readRegister(.tempOut, count: 2)
-        let rawTemp = (Int16(data[0]) << 8) | Int16(data[1])
+        readRegister(.tempOut, count: 2)
+        let rawTemp = (Int16(readBuffer[0]) << 8) | Int16(readBuffer[1])
         return Float(rawTemp) / 340.0 + 36.53
     }
 
@@ -100,10 +101,10 @@ final public class MPU6050 {
     /// within the selected range.
     /// - Returns: Accelerations on x, y, z-axes.
     public func readAcceleration() -> (x: Float, y: Float, z: Float) {
-        let data = readRegister(.accelOut, count: 6)
-        let rawX = (Int16(data[0]) << 8) | Int16(data[1])
-        let rawY = (Int16(data[2]) << 8) | Int16(data[3])
-        let rawZ = (Int16(data[4]) << 8) | Int16(data[5])
+        readRegister(.accelOut, count: 6)
+        let rawX = (Int16(readBuffer[0]) << 8) | Int16(readBuffer[1])
+        let rawY = (Int16(readBuffer[2]) << 8) | Int16(readBuffer[3])
+        let rawZ = (Int16(readBuffer[4]) << 8) | Int16(readBuffer[5])
 
         let x = Float(rawX) / accelSensibility
         let y = Float(rawY) / accelSensibility
@@ -117,10 +118,10 @@ final public class MPU6050 {
     /// degree/sec.
     /// - Returns: Angular velocity on x, y, z-axes.
     public func readRotation() -> (x: Float, y: Float, z: Float) {
-        let data = readRegister(.gyroOut, count: 6)
-        let rawX = (Int16(data[0]) << 8) | Int16(data[1])
-        let rawY = (Int16(data[2]) << 8) | Int16(data[3])
-        let rawZ = (Int16(data[4]) << 8) | Int16(data[5])
+        readRegister(.gyroOut, count: 6)
+        let rawX = (Int16(readBuffer[0]) << 8) | Int16(readBuffer[1])
+        let rawY = (Int16(readBuffer[2]) << 8) | Int16(readBuffer[3])
+        let rawZ = (Int16(readBuffer[4]) << 8) | Int16(readBuffer[5])
 
         let x = Float(rawX) / gyroSensibility
         let y = Float(rawY) / gyroSensibility
@@ -266,18 +267,23 @@ extension MPU6050 {
 
     private func readRegister(_ reg: Register) -> UInt8? {
         i2c.write(reg.rawValue, to: address)
-        let data = i2c.readByte(from: address)
 
-        if let data = data {
-            return data
-        } else {
+        let result = i2c.readByte(from: address)
+        switch result {
+        case .success(let byte):
+            return byte
+        case .failure(let err):
+            print(#function + String(describing: err))
             return nil
         }
     }
 
-    private func readRegister(_ register: Register, count: Int) -> [UInt8] {
+    private func readRegister(_ register: Register, count: Int) {
+        for i in 0..<6 {
+            readBuffer[i] = 0
+        }
+
         i2c.write(register.rawValue, to: address)
-        let data = i2c.read(count: count, from: address)
-        return data
+        i2c.read(into: &readBuffer, count: count, from: address)
     }
 }

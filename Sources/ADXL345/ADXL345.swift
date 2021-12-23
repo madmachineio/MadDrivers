@@ -5,7 +5,6 @@
 //
 // Authors: Ines Zhou
 // Created: 11/21/2021
-// Updated: 11/24/2021
 //
 // See https://madmachine.io for more information
 //
@@ -35,11 +34,13 @@ final public class ADXL345 {
     private let i2c: I2C?
     private let address: UInt8?
     private let spi: SPI?
+    private let csPin: DigitalOut?
 
     private var gRange: GRange
     private let gScaleFactor: Float = 0.004
     private var dataRate: DataRate
 
+    private var readBuffer = [UInt8](repeating: 0, count: 6)
 
     /// Initialize the sensor using I2C communication. The g range will be
     /// set to ±2g and the data rate will be 100Hz by default.
@@ -55,6 +56,7 @@ final public class ADXL345 {
         self.i2c = i2c
         self.address = address
         self.spi = nil
+        self.csPin = nil
 
         dataRate = .hz100
         gRange = .g2
@@ -72,88 +74,95 @@ final public class ADXL345 {
         writeRegister(.intEnable, 0x00)
     }
 
-    /*
-     /// Initialize the sensor using SPI communication. The maximum SPI clock
-     /// speed is 5 MHz.
-    public init(_ spi: SPI) {
+    /// Initialize the sensor using SPI communication.
+    ///
+    /// The maximum SPI clock speed is 5 MHz. Both the CPOL and CPHA of SPI
+    /// should be true. And the cs pin should be set only once. You can set it
+    /// when initializing an spi interface. If not, you need to set the cs when
+    /// initializing the sensor.
+    ///
+    /// - Parameters:
+    ///   - spi: **REQUIRED** The SPI interface that the sensor connects.
+    ///   - csPin: **OPTIONAL** The cs pin for the spi.
+    public init(_ spi: SPI, csPin: DigitalOut? = nil) {
         self.spi = spi
+        self.csPin = csPin
         self.i2c = nil
         self.address = nil
 
+        csPin?.high()
 
         // Set the data rate as 100hz.
-        dataRate = .hz800
+        dataRate = .hz100
         // Set 2g as default g range.
         gRange = .g2
 
+        // Perform a reading to get spi ready for the following communication.
+        _ = spi.readByte()
+
+        guard (spi.cs == false && csPin != nil && csPin!.getMode() == .pushPull)
+                || (spi.cs == true && csPin == nil) else {
+                    fatalError(#function + ": csPin isn't correct")
+        }
+
+        guard spi.getMode() == (true, true) else {
+            fatalError(#function + ": spi mode doesn't match for ADXL345")
+        }
+
+        guard spi.getSpeed() <= 5_000_000 else {
+            fatalError(#function + ": cannot support spi speed faster than 5MHz")
+        }
+
+        guard let deviceId = getDeviceID(), deviceId == 0xE5 else {
+            fatalError(#function + ": cann't find ADXL345 via spi bus")
+        }
 
         setDataRate(dataRate)
         setRange(gRange)
-
 
         // Start to measure.
         writeRegister(.powerCTL, 0x08)
         // Disable the interrupt.
         writeRegister(.intEnable, 0x00)
     }
-     */
+
 
     /// Read x, y, z acceleration values represented in g (9.8m/s^2)
     /// within the selected range.
     /// - Returns: 3 float within the selected g range.
-    public func readValues() -> (x: Float, y: Float, z: Float)? {
+    public func readValues() -> (x: Float, y: Float, z: Float) {
         let rawValues = readRawValues()
-        var values: (x: Float, y: Float, z: Float)? = nil
 
-        if let rawValues = rawValues {
-            let x = Float(rawValues.x) * gScaleFactor
-            let y = Float(rawValues.y) * gScaleFactor
-            let z = Float(rawValues.z) * gScaleFactor
-            values = (x, y, z)
-        }
-
-        return values
+        let x = Float(rawValues.x) * gScaleFactor
+        let y = Float(rawValues.y) * gScaleFactor
+        let z = Float(rawValues.z) * gScaleFactor
+        return (x, y, z)
     }
 
     /// Read the acceleration on x-axis represented in g (9.8m/s^2)
     /// within the selected range.
     /// - Returns: A float representing the acceleration.
-    public func readX() -> Float? {
-        let rawX = readRegister(.dataX0, count: 2)
-        var x: Float? = nil
-
-        if rawX.count == 2 {
-            x = Float(Int16(rawX[0]) | (Int16(rawX[1]) << 8)) * gScaleFactor
-        }
-
+    public func readX() -> Float {
+        readRegister(.dataX0, into: &readBuffer, count: 2)
+        let x = Float(Int16(readBuffer[0]) | (Int16(readBuffer[1]) << 8)) * gScaleFactor
         return x
     }
 
     /// Read the acceleration on y-axis represented in g (9.8m/s^2)
     /// within the selected range.
     /// - Returns: A float representing the acceleration.
-    public func readY() -> Float? {
-        let rawY = readRegister(.dataY0, count: 2)
-        var y: Float? = nil
-
-        if rawY.count == 2 {
-            y = Float(Int16(rawY[0]) | (Int16(rawY[1]) << 8)) * gScaleFactor
-        }
-
+    public func readY() -> Float {
+        readRegister(.dataY0, into: &readBuffer, count: 2)
+        let y = Float(Int16(readBuffer[0]) | (Int16(readBuffer[1]) << 8)) * gScaleFactor
         return y
     }
 
     /// Read the acceleration on z-axis represented in g (9.8m/s^2)
     /// within the selected range.
     /// - Returns: A float representing the acceleration.
-    public func readZ() -> Float? {
-        let rawZ = readRegister(.dataZ0, count: 2)
-        var z: Float? = nil
-
-        if rawZ.count == 2 {
-            z = Float(Int16(rawZ[0]) | (Int16(rawZ[1]) << 8)) * gScaleFactor
-        }
-
+    public func readZ() -> Float {
+        readRegister(.dataZ0, into: &readBuffer, count: 2)
+        let z = Float(Int16(readBuffer[0]) | (Int16(readBuffer[1]) << 8)) * gScaleFactor
         return z
     }
 
@@ -257,53 +266,64 @@ final public class ADXL345 {
 }
 
 extension ADXL345 {
-    private func readRawValues() -> (x: Int16,y: Int16, z: Int16)? {
-        let rawValues = readRegister(.dataX0, count: 6)
-        if rawValues.count == 6 {
-            let x = Int16(rawValues[0]) | (Int16(rawValues[1]) << 8)
-            let y = Int16(rawValues[2]) | (Int16(rawValues[3]) << 8)
-            let z = Int16(rawValues[4]) | (Int16(rawValues[5]) << 8)
-            return (x, y, z)
-        } else {
-            return nil
-        }
+    private func readRawValues() -> (x: Int16,y: Int16, z: Int16) {
+        readRegister(.dataX0, into: &readBuffer, count: 6)
 
+        let x = Int16(readBuffer[0]) | (Int16(readBuffer[1]) << 8)
+        let y = Int16(readBuffer[2]) | (Int16(readBuffer[3]) << 8)
+        let z = Int16(readBuffer[4]) | (Int16(readBuffer[5]) << 8)
+        return (x, y, z)
     }
 
     private func writeRegister(_ register: Register, _ value: UInt8) {
         if let i2c = i2c {
             i2c.write([register.rawValue, value], to: address!)
-        }else if let spi = spi {
+        } else if let spi = spi {
+            csPin?.low()
             spi.write([register.rawValue, value])
+            csPin?.high()
         }
     }
 
     private func readRegister(_ register: Register) -> UInt8? {
-        var data: UInt8? = nil
-
-        if let i2c = i2c {
-            i2c.write(register.rawValue, to: address!)
-            data = i2c.readByte(from: address!)
-        } else if let spi = spi {
-            spi.write(register.rawValue)
-            data = spi.readByte()
+        var ret: Result<UInt8, Errno>
+        if i2c != nil {
+            i2c!.write(register.rawValue, to: address!)
+            ret = i2c!.readByte(from: address!)
+        } else {
+            let register = 0b1000_0000 | register.rawValue
+            csPin?.low()
+            spi!.write(register)
+            ret = spi!.readByte()
+            csPin?.high()
         }
 
-        return data
+        switch ret {
+        case .success(let byte):
+            return byte
+        case .failure(let err):
+            print("error: \(#function) " + String(describing: err))
+            return nil
+        }
     }
 
-    private func readRegister(_ register: Register, count: Int) -> [UInt8] {
-        var data: [UInt8] = Array(repeating: 0, count: count)
+    private func readRegister(
+        _ register: Register, into buffer: inout [UInt8], count: Int
+    ) {
+        for i in 0..<buffer.count {
+            buffer[i] = 0
+        }
 
         if let i2c = i2c {
             i2c.write(register.rawValue, to: address!)
-            data = i2c.read(count: count, from: address!)
+            i2c.read(into: &buffer, count: count, from: address!)
         } else if let spi = spi {
-            spi.write(register.rawValue)
-            data = spi.read(count: count)
+            let register = 0b1100_0000 | register.rawValue
+            csPin?.low()
+            spi.write(register)
+            spi.read(into: &buffer, count: count)
+            csPin?.high()
         }
-
-        return data
     }
 
     private enum Register: UInt8 {
