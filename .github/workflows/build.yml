@@ -30,14 +30,15 @@ jobs:
         swift: ["5.4.0"]
     runs-on: ${{ matrix.os }}
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
       - name: Check action type
         run: |
           echo "OS: $RUNNER_OS"
           echo "Repository: $GITHUB_REPOSITORY"
           echo "Commit: $GITHUB_SHA"
-
-      - name: Checkout repository
-        uses: actions/checkout@v2
+          echo "Branch: `git rev-parse --abbrev-ref HEAD`"
 
       - name: Prepare Swift
         uses: fwal/setup-swift@v1
