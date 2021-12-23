@@ -23,6 +23,7 @@ final public class BMP280 {
     private let i2c: I2C?
     private let spi: SPI?
     private let address: UInt8?
+    private let csPin: DigitalOut?
 
     private var readBuffer = [UInt8](repeating: 0, count: 24)
 
@@ -45,6 +46,7 @@ final public class BMP280 {
     public init(_ i2c: I2C, address: UInt8 = 0x77) {
         self.i2c = i2c
         self.spi = nil
+        self.csPin = nil
         self.address = address
 
         tSampling = .x2
@@ -56,6 +58,56 @@ final public class BMP280 {
 
         guard let chipID = readRegister(.chipID), chipID == 0x58 else {
             fatalError(#function + ": cannot find BMP280 at address \(address)")
+        }
+
+        reset()
+        writeConfig()
+        writeCtrlMeas()
+        calibration = readCalibration()
+    }
+
+    /// Initialize the sensor using SPI communication.
+    ///
+    /// The maximum SPI clock speed is 10 MHz. The CPOL and CPHA of SPI
+    /// should be both true or both false. And the cs pin should be set only once.
+    /// You can set it when initializing an spi interface. If not, you need to
+    /// set the cs when initializing the sensor.
+    ///
+    /// - Parameters:
+    ///   - spi: **REQUIRED** The SPI interface that the sensor connects.
+    ///   - csPin: **OPTIONAL** The cs pin for the spi.
+    public init(_ spi: SPI, csPin: DigitalOut? = nil) {
+        self.spi = spi
+        self.csPin = csPin
+        self.i2c = nil
+        self.address = nil
+
+        _ = spi.readByte()
+        csPin?.high()
+
+        tSampling = .x2
+        pSampling = .x16
+        mode = .normal
+
+        standby = .ms05
+        filter = .x16
+
+        guard (spi.cs == false && csPin != nil && csPin!.getMode() == .pushPull)
+                || (spi.cs == true && csPin == nil) else {
+                    fatalError(#function + ": csPin isn't correct")
+        }
+
+        guard spi.getMode() == (true, true) ||
+                spi.getMode() == (false, false) else {
+            fatalError(#function + ": spi mode doesn't match for BMP280")
+        }
+
+        guard spi.getSpeed() <= 10_000_000 else {
+            fatalError(#function + ": cannot support spi speed faster than 10MHz")
+        }
+
+        guard let chipID = readRegister(.chipID), chipID == 0x58 else {
+            fatalError(#function + ": cannot find BMP280 via spi bus")
         }
 
         reset()
@@ -267,7 +319,10 @@ extension BMP280 {
         if let i2c = i2c {
             i2c.write([register.rawValue, value], to: address!)
         } else if let spi = spi {
-            spi.write([register.rawValue, value])
+            let register = register.rawValue & 0b0111_1111
+            csPin?.low()
+            spi.write([register, value])
+            csPin?.high()
         }
     }
 
@@ -278,8 +333,11 @@ extension BMP280 {
             i2c!.write(register.rawValue, to: address!)
             ret = i2c!.readByte(from: address!)
         } else {
-            spi!.write(register.rawValue)
+            let register = register.rawValue | 0b1000_0000
+            csPin?.low()
+            spi!.write(register)
             ret = spi!.readByte()
+            csPin?.high()
         }
 
         switch ret {
@@ -291,17 +349,20 @@ extension BMP280 {
         }
     }
 
-    private func readRegister(_ register: Register, count: Int) {
-        for i in 0..<24 {
-            readBuffer[i] = 0
+    private func readRegister(_ register: Register, into buffer: inout [UInt8], count: Int) {
+        for i in 0..<buffer.count {
+            buffer[i] = 0
         }
 
         if let i2c = i2c {
             i2c.write(register.rawValue, to: address!)
-            i2c.read(into: &readBuffer, from: address!)
+            i2c.read(into: &buffer, from: address!)
         } else if let spi = spi {
-            spi.write(register.rawValue)
-            spi.read(into: &readBuffer)
+            let register = register.rawValue | 0b1000_0000
+            csPin?.low()
+            spi.write(register)
+            spi.read(into: &buffer, count: count)
+            csPin?.high()
         }
     }
 
@@ -330,7 +391,7 @@ extension BMP280 {
 
     /// Read temperature or pressure raw value.
     private func readRawValue(_ register: Register) -> Double {
-        readRegister(register, count: 3)
+        readRegister(register, into: &readBuffer, count: 3)
         let raw = UInt32(readBuffer[0]) << 12 |
         UInt32(readBuffer[1]) << 4 | UInt32(readBuffer[2] >> 4)
 
@@ -338,7 +399,7 @@ extension BMP280 {
     }
 
     private func readCalibration() -> [Double] {
-        readRegister(.digT1, count: 24)
+        readRegister(.digT1, into: &readBuffer, count: 24)
 
         let t1 = Double(UInt16(readBuffer[0]) | (UInt16(readBuffer[1]) << 8))
         let t2 = Double(Int16(readBuffer[2]) | (Int16(readBuffer[3]) << 8))
