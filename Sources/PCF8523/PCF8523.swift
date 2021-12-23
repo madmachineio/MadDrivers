@@ -5,7 +5,6 @@
 //
 // Authors: Ines Zhou
 // Created: 11/20/2021
-// Updated: 11/20/2021
 //
 // See https://madmachine.io for more information
 //
