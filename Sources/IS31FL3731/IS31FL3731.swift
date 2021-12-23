@@ -5,7 +5,6 @@
 //
 // Authors: Andy Liu
 // Created: 07/29/2021
-// Updated: 10/26/2021
 //
 // See https://madmachine.io for more information
 //

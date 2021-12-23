@@ -5,7 +5,6 @@
 //
 // Authors: Jan Anstipp
 // Created: 10/28/2021
-// Updated: 11/6/2021
 //
 // See https://madmachine.io for more information
 //
