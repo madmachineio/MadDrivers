@@ -30,9 +30,15 @@ final public class DS3231 {
 
     /// Initialize the RTC.
     /// - Parameters:
-    ///   - i2c: **REQUIRED** The I2C interface the RTC connects to.
+    ///   - i2c: **REQUIRED** The I2C interface the RTC connects to. The maximum
+    ///   I2C speed is 400KHz.
     ///   - address: **OPTIONAL** The sensor's address. It has a default value.
     public init(_ i2c: I2C, _ address: UInt8 = 0x68) {
+        let speed = i2c.getSpeed()
+        guard speed == .standard || speed == .fast else {
+            fatalError(#function + ": DS3231 only supports 100kbps and 400kbps I2C speed")
+        }
+
         self.i2c = i2c
         self.address = address
     }
@@ -47,41 +53,28 @@ final public class DS3231 {
     ///   - time: Current time from year to second.
     ///   - update: Whether to update the time.
     public func setTime(_ time: Time, update: Bool = false) {
-        let reading = lostPower()
-        if let reading = reading {
-            if reading || update {
-                let data = [
-                    binToBcd(time.second), binToBcd(time.minute),
-                    binToBcd(time.hour), binToBcd(time.dayOfWeek),
-                    binToBcd(time.day), binToBcd(time.month),
-                    binToBcd(UInt8(time.year - 2000))]
+        if lostPower() || update {
+            let data = [
+                binToBcd(time.second), binToBcd(time.minute),
+                binToBcd(time.hour), binToBcd(time.dayOfWeek),
+                binToBcd(time.day), binToBcd(time.month),
+                binToBcd(UInt8(time.year - 2000))]
 
-                writeData(Register.second, data)
+            try? writeData(Register.second, data)
 
-                let value = readRegister(Register.status)
-                if let value = value {
-                    // Set OSF bit to 0, which means the RTC hasn't stopped
-                    // so far after the time is set.
-                    writeRegister(Register.status, value & 0b0111_1111)
-                } else {
-                    print("set time error")
-                }
-            }
+            var byte: UInt8 = 0
+            try? readRegister(Register.status, into: &byte)
+            // Set OSF bit to 0, which means the RTC hasn't stopped
+            // so far after the time is set.
+            try? writeRegister(Register.status, byte & 0b0111_1111)
         }
-    }
 
+    }
 
     /// Read current time.
     /// - Returns: The time info in a struct.
-    public func readCurrent() -> Time? {
-        i2c.write(Register.second.rawValue, to: address)
-
-        let ret = i2c.read(into: &readBuffer, from: address)
-
-        if case .failure(let err) = ret {
-            print("error: \(#function) " + String(describing: err))
-            return nil
-        }
+    public func readCurrent() -> Time {
+        try? readRegister(.second, into: &readBuffer, count: 7)
 
         let year = UInt16(bcdToBin(readBuffer[6])) + 2000
         // Make sure the bit for century is 0.
@@ -100,16 +93,8 @@ final public class DS3231 {
 
     /// Read current temperature.
     /// - Returns: Temperature in Celsius.
-    public func readTemperature() -> Float? {
-        i2c.write(Register.temperature.rawValue, to: address)
-
-        let ret = i2c.read(into: &readBuffer, count: 2, from: address)
-
-        if case .failure(let err) = ret {
-            print("error: \(#function) " + String(describing: err))
-            return nil
-        }
-
+    public func readTemperature() -> Float {
+        try? readRegister(.temperature, into: &readBuffer, count: 2)
         let temperature = Float(readBuffer[0]) + Float(readBuffer[1] >> 6) * 0.25
         return temperature
     }
@@ -164,15 +149,13 @@ final public class DS3231 {
         }
 
         let future = [second, minute, hour, day]
-        writeData(Register.alarm1, future)
+        try? writeData(Register.alarm1, future)
 
-        let data = readRegister(Register.control)
-        if let value = data {
-            if value & 0b0100 != 0 {
-                writeRegister(Register.control, value | 0b01)
-            }
-        } else {
-            print("set alarm1 error")
+        var byte: UInt8 = 0
+        try? readRegister(Register.control, into: &byte)
+
+        if byte & 0b0100 != 0 {
+            try? writeRegister(Register.control, byte | 0b01)
         }
     }
 
@@ -217,15 +200,12 @@ final public class DS3231 {
         }
 
         let future = [minute, hour, day]
-        writeData(Register.alarm2, future)
+        try? writeData(Register.alarm2, future)
 
-        let data = readRegister(Register.control)
-        if let value = data {
-            if value & 0b0100 != 0 {
-                writeRegister(Register.control, value | 0b10)
-            }
-        } else {
-            print("set alarm2 error")
+        var byte: UInt8 = 0
+        try? readRegister(Register.control, into: &byte)
+        if byte & 0b0100 != 0 {
+            try? writeRegister(Register.control, byte | 0b10)
         }
     }
 
@@ -242,25 +222,24 @@ final public class DS3231 {
         second: UInt8 = 0, mode: Alarm1Mode
     ) {
         let current = readCurrent()
-        if let current = current {
-            let futureSecond = (current.second + second) % 60
-            let futureMinute = (current.minute + minute) % 60 +
-                (current.second + second) / 60
-            let futureHour = (current.hour + hour) % 24 +
-                (current.minute + minute) / 60
 
-            if current.year % 4 == 0 {
-                daysInMonth[1] = 29
-            }
+        let futureSecond = (current.second + second) % 60
+        let futureMinute = (current.minute + minute) % 60 +
+        (current.second + second) / 60
+        let futureHour = (current.hour + hour) % 24 +
+        (current.minute + minute) / 60
 
-            let totalDays: UInt8 = daysInMonth[Int(current.month - 1)]
-
-            let futureDay = (current.day + day) % totalDays +
-                (current.hour + hour) / 24
-
-            setAlarm1(day: futureDay, hour: futureHour, minute: futureMinute,
-                      second: futureSecond, mode: mode)
+        if current.year % 4 == 0 {
+            daysInMonth[1] = 29
         }
+
+        let totalDays: UInt8 = daysInMonth[Int(current.month - 1)]
+
+        let futureDay = (current.day + day) % totalDays +
+        (current.hour + hour) / 24
+
+        setAlarm1(day: futureDay, hour: futureHour, minute: futureMinute,
+                  second: futureSecond, mode: mode)
     }
 
     /// The alarm2 will activate after a specified time interval. The time
@@ -274,59 +253,43 @@ final public class DS3231 {
         day: UInt8 = 0, hour: UInt8 = 0, minute: UInt8 = 0, mode: Alarm2Mode
     ) {
         let current = readCurrent()
-        if let current = current {
-            let futureMinute = (current.minute + minute) % 60
-            let futureHour = (current.hour + hour) % 24 +
-                (current.minute + minute) / 60
 
-            if current.year % 4 == 0 {
-                daysInMonth[1] = 29
-            }
+        let futureMinute = (current.minute + minute) % 60
+        let futureHour = (current.hour + hour) % 24 +
+        (current.minute + minute) / 60
 
-            let totalDays = daysInMonth[Int(current.month - 1)]
-
-            let futureDay = (current.day + day) % totalDays +
-                (current.hour + hour) / 24
-
-
-            setAlarm2(day: futureDay, hour: futureHour,
-                      minute: futureMinute, mode: mode)
+        if current.year % 4 == 0 {
+            daysInMonth[1] = 29
         }
+
+        let totalDays = daysInMonth[Int(current.month - 1)]
+
+        let futureDay = (current.day + day) % totalDays +
+        (current.hour + hour) / 24
+
+
+        setAlarm2(day: futureDay, hour: futureHour,
+                  minute: futureMinute, mode: mode)
     }
 
     /// Check if the specified alarm has been activated.
     /// If so, it returns true, if not, false.
     /// - Parameter alarm: The alarm 1 or 2.
     /// - Returns: A boolean value.
-    public func alarmed(_ alarm: Int) -> Bool? {
-        let data = readRegister(Register.status)
-        var alarmFlag: UInt8 = 2
-
-        if let data = data {
-            alarmFlag = (data >> (alarm - 1)) & 0b1
-        } else {
-            print("read alarm status error")
-            return nil
-        }
-
-        if alarmFlag == 1 {
-            return true
-        } else {
-            return false
-        }
+    public func alarmed(_ alarm: Int) -> Bool {
+        var byte: UInt8 = 0
+        try? readRegister(Register.status, into: &byte)
+        let alarmFlag = byte & (~(0b1 << (alarm - 1)))
+        return alarmFlag == 1
     }
 
     /// Clear the alarm status.
     /// - Parameter alarm: The alarm 1 or 2.
     public func clearAlarm(_ alarm: Int) {
-        let data = readRegister(Register.status)
+        var byte: UInt8 = 0
+        try? readRegister(Register.status, into: &byte)
+        try? writeRegister(Register.status, byte & (~(0b1 << (alarm - 1))))
 
-        if let data = data {
-            let value = data & (~(0b1 << (alarm - 1)))
-            writeRegister(Register.status, value)
-        } else {
-            print("clear alarm error")
-        }
     }
 
     /// The mode of alarm1.
@@ -361,7 +324,6 @@ final public class DS3231 {
         case dayOfWeek = 0x8
     }
 
-
     /// Store the time info.
     public struct Time {
         public let year: UInt16
@@ -389,62 +351,68 @@ final public class DS3231 {
 }
 
 extension DS3231 {
-    private func lostPower() -> Bool? {
-        let data = readRegister(Register.status)
-        var stopFlag: UInt8 = 2
-
-        if let data = data {
-            stopFlag = data >> 7
-        } else {
-            print("read power status error")
-            return nil
-        }
-
-        if stopFlag == 1 {
-            return true
-        } else {
-            return false
-        }
+    private func lostPower() -> Bool {
+        var byte: UInt8 = 0
+        try? readRegister(Register.status, into: &byte)
+        let stopFlag = byte >> 7
+        return stopFlag == 1
     }
 
     private func enable32K() {
-        let data = readRegister(Register.status)
-
-        if let data = data {
-            writeRegister(Register.status, data | 0b1000)
-        }
+        var byte: UInt8 = 0
+        try? readRegister(Register.status, into: &byte)
+        try? writeRegister(Register.status, byte | 0b1000)
     }
 
     private func disable32K() {
-        let data = readRegister(Register.status)
+        var byte: UInt8 = 0
+        try? readRegister(Register.status, into: &byte)
+        try? writeRegister(Register.status, byte & 0b0111)
+    }
 
-        if let data = data {
-            writeRegister(Register.status, data & 0b0111)
+    private func writeData(_ reg: Register, _ data: [UInt8]) throws {
+        var data = data
+        data.insert(reg.rawValue, at: 0)
+        let result = i2c.write(data, to: address)
+        if case .failure(let err) = result {
+            throw err
         }
     }
 
-    private func writeData(_ reg: Register, _ data: [UInt8]) {
-        var data = data
-        data.insert(reg.rawValue, at: 0)
-        i2c.write(data, to: address)
+    private func writeRegister(_ reg: Register, _ value: UInt8) throws {
+        let result = i2c.write([reg.rawValue, value], to: address)
+        if case .failure(let err) = result {
+            throw err
+        }
     }
 
+    private func readRegister(_ reg: Register, into byte: inout UInt8) throws {
+        var result = i2c.write(reg.rawValue, to: address)
+        if case .failure(let err) = result {
+            throw err
+        }
 
-    private func writeRegister(_ reg: Register, _ value: UInt8) {
-        i2c.write([reg.rawValue, value], to: address)
+        result = i2c.read(into: &byte, from: address)
+        if case .failure(let err) = result {
+            throw err
+        }
     }
 
-    private func readRegister(_ reg: Register) -> UInt8? {
-        i2c.write(reg.rawValue, to: address)
+    private func readRegister(
+        _ register: Register, into buffer: inout [UInt8], count: Int
+    ) throws {
+        for i in 0..<buffer.count {
+            buffer[i] = 0
+        }
 
-        let ret = i2c.readByte(from: address)
+        var result = i2c.write(register.rawValue, to: address)
+        if case .failure(let err) = result {
+            throw err
+        }
 
-        switch ret {
-        case .success(let byte):
-            return byte
-        case .failure(let err):
-            print("error: \(#function) " + String(describing: err))
-            return nil
+        result = i2c.read(into: &buffer, count: count, from: address)
+        if case .failure(let err) = result {
+            throw err
         }
     }
 
@@ -457,25 +425,15 @@ extension DS3231 {
     }
 
     private func setSqwMode(_ mode: SqwMode) {
-        let data = readRegister(Register.control)
-        if let data = data {
-            var value = data & 0b0011
-            value |= mode.rawValue
-            writeRegister(Register.control, value)
-        } else {
-            print("set SqwMode error")
-        }
+        var byte: UInt8 = 0
+        try? readRegister(Register.control, into: &byte)
+        try? writeRegister(Register.control, (byte & 0b0011) | mode.rawValue)
     }
 
     private func disableAlarm(_ alarm: Int) {
-        let data = readRegister(Register.control)
-
-        if let data = data {
-            let value = data & (~(0b1 << (alarm - 1)))
-            writeRegister(Register.control, value)
-        } else {
-            print("disable alarm error")
-        }
+        var byte: UInt8 = 0
+        try? readRegister(Register.control, into: &byte)
+        try? writeRegister(Register.control, byte & (~(0b1 << (alarm - 1))))
     }
 
     private enum Register: UInt8 {

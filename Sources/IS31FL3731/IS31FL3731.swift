@@ -56,10 +56,15 @@ public final class IS31FL3731 {
     /**
      Initialize the module to get it ready for lighting.
      - Parameter i2c: **REQUIRED** The I2C interface that the module connects.
+     The maximum I2C speed is 400KHz.
      - Parameter address: **OPTIONAL** The address of the module.
      */
     public init(i2c: I2C, address: UInt8 = 0x74) {
-        
+        let speed = i2c.getSpeed()
+        guard speed == .standard || speed == .fast else {
+            fatalError(#function + ": IS31FL3731 only supports 100kbps and 400kbps I2C speed")
+        }
+
         self.i2c = i2c
         self.address = address
         
@@ -93,7 +98,7 @@ public final class IS31FL3731 {
         selectPage(currentFrame)
 
         if show {
-            writeRegister(.pictureDisplay, currentFrame)
+            try? writeRegister(.pictureDisplay, currentFrame)
         }
     }
 
@@ -102,8 +107,8 @@ public final class IS31FL3731 {
     /// It will happen once. If you want the LEDs to breath continously, you
     /// can use it with `setAutoPlay`.
     public func startBreath() {
-        writeRegister(.breathControl1, 0b0100_0100)
-        writeRegister(.breathControl2, 0b0001_0100)
+        try? writeRegister(.breathControl1, 0b0100_0100)
+        try? writeRegister(.breathControl2, 0b0001_0100)
     }
 
 
@@ -146,8 +151,8 @@ public final class IS31FL3731 {
         let data = UInt8(loops) << 4 | UInt8(frames)
         let data2 = UInt8(delay % 64)
 
-        writeRegister(.autoPlayControl, data)
-        writeRegister(.autoPlayDelay, data2)
+        try? writeRegister(.autoPlayControl, data)
+        try? writeRegister(.autoPlayDelay, data2)
         setMode(.autoPlayMode)
     }
     
@@ -163,7 +168,7 @@ public final class IS31FL3731 {
     public func writePixel(_ number: Int, brightness: UInt8 = 255) {
         guard number < width * height && number >= 0 else { return }
         let data = [UInt8(number) + Offset.pwm.rawValue, brightness]
-        i2c.write(data, to: address)
+        try? writeData(data)
     }
     
     /**
@@ -177,11 +182,9 @@ public final class IS31FL3731 {
      */
     @inline(__always)
     public func writePixel(x: Int, y: Int, brightness: UInt8 = 255) {
-
         guard x <= width && y <= height else { return }
-        let reg = UInt8(y * width + x) + Offset.pwm.rawValue
-        let data = [reg, brightness]
-        i2c.write(data, to: address)
+        let data = [UInt8(y * width + x) + Offset.pwm.rawValue, brightness]
+        try? writeData(data)
     }
     
     /**
@@ -230,7 +233,7 @@ public final class IS31FL3731 {
                 rowPos += 1
             }
             rowData[0] = Offset.pwm.rawValue + UInt8(cY * self.width + x)
-            i2c.write(rowData, to: address)
+            try? writeData(rowData)
         }
     }
     
@@ -241,7 +244,7 @@ public final class IS31FL3731 {
     public func fill(_ brightness: UInt8 = 0x00) {
         var data = [UInt8](repeating: brightness, count: 144 + 1)
         data[0] = Offset.pwm.rawValue
-        i2c.write(data, to: address)
+        try? writeData(data)
     }
 }
 
@@ -281,40 +284,56 @@ extension IS31FL3731 {
 
 
     private func setMode(_ mode: Mode) {
-        writeRegister(FunctionRegister.modeConfiguration, mode.rawValue)
+        try? writeRegister(FunctionRegister.modeConfiguration, mode.rawValue)
     }
 
     private func selectPage(_ page: UInt8) {
         guard page < 8 || page == PageRegister.functionPage.rawValue else { return }
         let data = [PageRegister.command.rawValue, page]
-        i2c.write(data, to: address)
+        try? writeData(data)
     }
 
     
-    private func writeRegister(_ register: FunctionRegister, _ value: UInt8) {
+    private func writeRegister(
+        _ register: FunctionRegister, _ value: UInt8
+    ) throws {
         selectPage(PageRegister.functionPage.rawValue)
         let data = [register.rawValue, value]
-        i2c.write(data, to: address)
+        let result = i2c.write(data, to: address)
+        if case .failure(let err) = result {
+            throw err
+        }
         selectPage(currentFrame)
     }
-    
-    private func readRegister(_ register: FunctionRegister) -> UInt8 {
-        selectPage(PageRegister.functionPage.rawValue)
-        i2c.write(register.rawValue, to: address)
-        let ret = i2c.readByte(from: address)
-        selectPage(currentFrame)
 
-        switch ret {
-        case .success(let byte):
-            return byte
-        case .failure(let err):
-            print("error: \(#function) " + String(describing: err))
-            return 0
+    private func writeData(_ data: [UInt8]) throws {
+        let result = i2c.write(data, to: address)
+        if case .failure(let err) = result {
+            throw err
         }
+    }
+    
+    private func readRegister(
+        _ register: FunctionRegister, into byte: inout UInt8
+    ) throws {
+        selectPage(PageRegister.functionPage.rawValue)
+        
+        var result = i2c.write(register.rawValue, to: address)
+        if case .failure(let err) = result {
+            throw err
+        }
+
+        var byte: UInt8 = 0
+        result = i2c.read(into: &byte, from: address)
+        if case .failure(let err) = result {
+            throw err
+        }
+
+        selectPage(currentFrame)
     }
 
     private func stopBreath() {
-            writeRegister(.breathControl2, 0b0000_0000)
+        try? writeRegister(.breathControl2, 0b0000_0000)
     }
     
     private func controlRegInit(_ value: Bool) {
@@ -327,7 +346,7 @@ extension IS31FL3731 {
         }
         
         data[0] = Offset.ledControl.rawValue
-        i2c.write(data, to: address)
+        try? writeData(data)
     }
     
     private func blinkRegInit(_ value: Bool) {
@@ -340,16 +359,16 @@ extension IS31FL3731 {
         }
         
         data[0] = Offset.blink.rawValue
-        i2c.write(data, to: address)
+        try? writeData(data)
     }
     
     private func startup() {
-        writeRegister(FunctionRegister.shutdown, 1)
+        try? writeRegister(FunctionRegister.shutdown, 1)
         sleep(ms: 10)
     }
     
     private func shutdown() {
-        writeRegister(FunctionRegister.shutdown, 0)
+        try? writeRegister(FunctionRegister.shutdown, 0)
         sleep(ms: 10)
     }
     
