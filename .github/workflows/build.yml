@@ -14,10 +14,10 @@ on:
   schedule:
     - cron: '1 0 * * 4'
 
-env:
-  SDK_VERSION: '0.6.0'
-  LINUX_SDK: 'https://github.com/madmachineio/mm-sdk/releases/download/0.6.0-alpha.2/mm-sdk-0.6.0-alpha.2-ubuntu18.04-x64.tar.bz2'
-  MACOS_SDK: 'https://github.com/madmachineio/mm-sdk/releases/download/0.6.0-alpha.2/mm-sdk-0.6.0-alpha.2-macOS-x64.zip'
+# env:
+#   SDK_VERSION: '0.6.0'
+#   LINUX_SDK: 'https://github.com/madmachineio/mm-sdk/releases/download/0.6.0-alpha.3/mm-sdk-0.6.0-alpha.3-ubuntu18.04-x64.tar.bz2'
+#   MACOS_SDK: 'https://github.com/madmachineio/mm-sdk/releases/download/0.6.0-alpha.3/mm-sdk-0.6.0-alpha.3-macOS-x64.zip'
 
 jobs:
   build_default:
@@ -53,10 +53,10 @@ jobs:
         run: |
           echo "Get mm-sdk on $RUNNER_OS"
           if [ "$RUNNER_OS" == 'Linux' ];then
-            wget ${{ env.LINUX_SDK }} -O ~/sdk.tar.bz2
+            wget ${{ secrets.CI_LINUX_SDK }} -O ~/sdk.tar.bz2
             tar -jxvf ~/sdk.tar.bz2 -C ~/
           elif [ "$RUNNER_OS" == 'macOS' ];then
-            wget ${{ env.MACOS_SDK }} -O ~/sdk.zip
+            wget ${{ secrets.CI_MACOS_SDK }} -O ~/sdk.zip
             unzip ~/sdk.zip -d ~/
           else
             ehco "Unrecognized OS $RUNNER_OS"
@@ -65,9 +65,9 @@ jobs:
           echo "::set-output name=SDK_VERSION::$(~/mm-sdk/usr/mm/mm --version)"
       
       - name: Abort if mm-sdk version not match
-        if: ${{ steps.prepare-sdk.outputs.SDK_VERSION != env.SDK_VERSION }}
+        if: ${{ steps.prepare-sdk.outputs.SDK_VERSION != secrets.CI_SDK_VERSION }}
         run: |
-          echo "Required SDK version: ${{ env.SDK_VERSION }}"
+          echo "Required SDK version: ${{ secrets.CI_SDK_VERSION }}"
           echo "Current SDK version: ${{ steps.prepare-sdk.outputs.SDK_VERSION }}"
           exit 1
 
@@ -77,10 +77,12 @@ jobs:
           cd $GITHUB_WORKSPACE
           rm -rf .build
           rm -rf Package.resolved
-          ~/mm-sdk/usr/mm/mm build
-          echo "::set-output name=EXAMPLES::$(find . -maxdepth 1 -name "Examples")"
+          if [ -f "Package.swift" ]; then
+            ~/mm-sdk/usr/mm/mm build
+          fi
           rm -rf .build
           rm -rf Package.resolved
+          echo "::set-output name=EXAMPLES::$(find . -maxdepth 1 -name "Examples")"
 
       - name: Build default examples
         if: ${{ steps.build-project.outputs.EXAMPLES != '' }}
@@ -109,7 +111,9 @@ jobs:
           cd $GITHUB_WORKSPACE
           rm -rf .build
           rm -rf Package.resolved
-          ~/mm-sdk/usr/mm/mm cibuild
+          if [ -f "Package.swift" ]; then
+            ~/mm-sdk/usr/mm/mm cibuild
+          fi
           rm -rf .build
           rm -rf Package.resolved
 
