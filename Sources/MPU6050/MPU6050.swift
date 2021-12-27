@@ -71,16 +71,18 @@ final public class MPU6050 {
         accelRange = .g2
         gyroRange = .dps500
 
-        if readRegister(.whoAmI) != 0x68 {
-            print("MPU6050 not connected")
+        var byte: UInt8 = 0
+        try? readRegister(.whoAmI, into: &byte)
+        guard byte == 0x68 else {
+            fatalError(#function + ": cann't find MPU6050 at address \(address)")
         }
 
         reset()
 
         // Sets the sample rate.
-        writeRegister(.sampleRateDivider, 0)
+        try? writeRegister(.sampleRateDivider, 0)
         // Use X axis gyroscope as the clock reference.
-        writeRegister(.powerManagement1, 1)
+        try? writeRegister(.powerManagement1, 1)
 
         setFilterBandwidth(.hz260)
         setGyroRange(gyroRange)
@@ -91,17 +93,16 @@ final public class MPU6050 {
     /// Read current temperature.
     /// - Returns: The temperature in Celsius.
     public func readTemperature() -> Float {
-        readRegister(.tempOut, count: 2)
+        try? readRegister(.tempOut, into: &readBuffer, count: 2)
         let rawTemp = (Int16(readBuffer[0]) << 8) | Int16(readBuffer[1])
         return Float(rawTemp) / 340.0 + 36.53
     }
-
 
     /// Read x, y and z acceleration values in g (9.8m/s^2)
     /// within the selected range.
     /// - Returns: Accelerations on x, y, z-axes.
     public func readAcceleration() -> (x: Float, y: Float, z: Float) {
-        readRegister(.accelOut, count: 6)
+        try? readRegister(.accelOut, into: &readBuffer, count: 6)
         let rawX = (Int16(readBuffer[0]) << 8) | Int16(readBuffer[1])
         let rawY = (Int16(readBuffer[2]) << 8) | Int16(readBuffer[3])
         let rawZ = (Int16(readBuffer[4]) << 8) | Int16(readBuffer[5])
@@ -118,7 +119,7 @@ final public class MPU6050 {
     /// degree/sec.
     /// - Returns: Angular velocity on x, y, z-axes.
     public func readRotation() -> (x: Float, y: Float, z: Float) {
-        readRegister(.gyroOut, count: 6)
+        try? readRegister(.gyroOut, into: &readBuffer, count: 6)
         let rawX = (Int16(readBuffer[0]) << 8) | Int16(readBuffer[1])
         let rawY = (Int16(readBuffer[2]) << 8) | Int16(readBuffer[3])
         let rawZ = (Int16(readBuffer[4]) << 8) | Int16(readBuffer[5])
@@ -132,34 +133,27 @@ final public class MPU6050 {
 
     /// Get the bandwith of the digital low pass filter.
     /// - Returns: The bandwidth of the filter in `Bandwidth`.
-    public func getFilterBandwidth() -> Bandwidth? {
-        let value = readRegister(.config)
-        if let value = value {
-            return Bandwidth(rawValue: value & 0b0111)
-        } else {
-            return nil
-        }
+    public func getFilterBandwidth() -> Bandwidth {
+        var byte: UInt8 = 0
+        try? readRegister(.config, into: &byte)
+        return Bandwidth(rawValue: byte & 0b0111)!
     }
 
     /// Set the digital low pass filter bandwidth.
     /// - Parameter bandwidth: A specified `Bandwidth`.
     public func setFilterBandwidth(_ bandwidth: Bandwidth) {
-        let value = readRegister(.config)
-        if let value = value {
-            writeRegister(.config, (value & 0b1111_1000) | bandwidth.rawValue)
-        }
+        var byte: UInt8 = 0
+        try? readRegister(.config, into: &byte)
+        try? writeRegister(.config, (byte & 0b1111_1000) | bandwidth.rawValue)
     }
 
 
     /// Get the selected gyroscope range.
     /// - Returns: The measurement range of the gyroscope in `GyroRange`.
-    public func getGyroRange() -> GyroRange? {
-        let value = readRegister(.gyroConfig)
-        if let value = value {
-            return GyroRange(rawValue: value & 0b0001_1000)
-        } else {
-            return nil
-        }
+    public func getGyroRange() -> GyroRange {
+        var byte: UInt8 = 0
+        try? readRegister(.gyroConfig, into: &byte)
+        return GyroRange(rawValue: byte & 0b0001_1000)!
     }
 
     /// Set the gyroscope measurement range. It can be ±250, ±500, ±1000 or
@@ -167,21 +161,18 @@ final public class MPU6050 {
     /// - Parameter range: A specified `GyroRange`.
     public func setGyroRange(_ range: GyroRange) {
         gyroRange = range
-        let value = readRegister(.gyroConfig)
-        if let value = value {
-            writeRegister(.gyroConfig, (value & 0b1110_0111) | range.rawValue)
-        }
+        var byte: UInt8 = 0
+        try? readRegister(.gyroConfig, into: &byte)
+        try? writeRegister(.gyroConfig, (byte & 0b1110_0111) | range.rawValue)
+
     }
 
     /// Get the selected accelerometer range.
     /// - Returns: The measurement range of the accelerometer in `AccelRange`.
-    public func getAccelRange() -> AccelRange? {
-        let value = readRegister(.accelConfig)
-        if let value = value {
-            return AccelRange(rawValue: value & 0b0001_1000)
-        } else {
-            return nil
-        }
+    public func getAccelRange() -> AccelRange {
+        var byte: UInt8 = 0
+        try? readRegister(.accelConfig, into: &byte)
+        return AccelRange(rawValue: byte & 0b0001_1000)!
     }
 
     /// Set the accelerometer range. The supported ranges are ±2, ±4, ±8 and ±16g.
@@ -189,10 +180,9 @@ final public class MPU6050 {
     /// - Parameter range: A specified `AccelRange`.
     public func setAccelRange(_ range: AccelRange) {
         accelRange = range
-        let value = readRegister(.accelConfig)
-        if let value = value {
-            writeRegister(.accelConfig, (value & 0b1110_0111) | range.rawValue)
-        }
+        var byte: UInt8 = 0
+        try? readRegister(.accelConfig, into: &byte)
+        try? writeRegister(.accelConfig, (byte & 0b1110_0111) | range.rawValue)
     }
 
     /// The bandwidth of the Digital low pass filter.
@@ -248,42 +238,59 @@ extension MPU6050 {
     }
 
     private func reset() {
+        var byte: UInt8 = 0
+
         // Reset all internal registers to their default values.
-        writeRegister(.powerManagement1, 0b1000_0000)
-        let resetBit = readRegister(.powerManagement1)! >> 7
+        try? writeRegister(.powerManagement1, 0b1000_0000)
+        try? readRegister(.powerManagement1, into: &byte)
+
+        let resetBit = byte >> 7
         while resetBit != 0 {
             sleep(ms: 1)
         }
         sleep(ms: 100)
 
         // Reset the gyroscope, accelerometer, and temperature sensors.
-        writeRegister(.signalPathReset, 0b01111)
+        try? writeRegister(.signalPathReset, 0b01111)
         sleep(ms: 100)
     }
 
-    private func writeRegister(_ reg: Register, _ value: UInt8) {
-        i2c.write([reg.rawValue, value], to: address)
-    }
-
-    private func readRegister(_ reg: Register) -> UInt8? {
-        i2c.write(reg.rawValue, to: address)
-
-        let result = i2c.readByte(from: address)
-        switch result {
-        case .success(let byte):
-            return byte
-        case .failure(let err):
-            print(#function + String(describing: err))
-            return nil
+    private func writeRegister(_ register: Register, _ value: UInt8) throws {
+        let result = i2c.write([register.rawValue, value], to: address)
+        if case .failure(let err) = result {
+            throw err
         }
     }
 
-    private func readRegister(_ register: Register, count: Int) {
-        for i in 0..<6 {
-            readBuffer[i] = 0
+    private func readRegister(
+        _ register: Register, into byte: inout UInt8
+    ) throws {
+        var result = i2c.write(register.rawValue, to: address)
+        if case .failure(let err) = result {
+            throw err
         }
 
-        i2c.write(register.rawValue, to: address)
-        i2c.read(into: &readBuffer, count: count, from: address)
+        result = i2c.read(into: &byte, from: address)
+        if case .failure(let err) = result {
+            throw err
+        }
+    }
+
+    private func readRegister(
+        _ register: Register, into buffer: inout [UInt8], count: Int
+    ) throws {
+        for i in 0..<buffer.count {
+            buffer[i] = 0
+        }
+
+        var result = i2c.write(register.rawValue, to: address)
+        if case .failure(let err) = result {
+            throw err
+        }
+
+        result = i2c.read(into: &buffer, count: count, from: address)
+        if case .failure(let err) = result {
+            throw err
+        }
     }
 }

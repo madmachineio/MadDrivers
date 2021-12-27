@@ -12,7 +12,7 @@
 
 import SwiftIO
 
-/// This is the library for MCP4725 12-bit DAC ( (digital to analog converter).
+/// This is the library for MCP4725 12-bit DAC (digital to analog converter).
 ///
 /// You can use I2C to control it in order to get different output from 0
 /// to reference voltage.
@@ -25,16 +25,16 @@ import SwiftIO
 /// hardware module. Here are some possible addresses:
 /// 0x60, 0x61, 0x62, 0x63, 0x64, 0x65.
 final public class MCP4725 {
-    enum WriteType: UInt8 {
+    private enum WriteType: UInt8 {
         case writeDAC = 0x40
         case writeBothDACEEROM = 0x60
     }
     
-    let i2c: I2C
-    let referenceVoltage: Double
+    private let i2c: I2C
+    private let referenceVoltage: Double
     
-    let address: UInt8
-    let maxRawValue = Int(4095)
+    private let address: UInt8
+    private let maxRawValue = Int(4095)
 
     private var readBuffer = [UInt8](repeating: 0, count: 5)
     
@@ -96,7 +96,7 @@ final public class MCP4725 {
         data[1] = UInt8((value & 0x0FF0) >> 4)
         data[2] = UInt8((value & 0x000F) << 4)
         
-        i2c.write(data, to: address)
+        try? writeData(data)
     }
     
     /// Set the output voltage. The value is between 0 and reference voltage.
@@ -123,7 +123,7 @@ final public class MCP4725 {
         data[1] = UInt8((value & 0x0FF0) >> 4)
         data[2] = UInt8((value & 0x000F) << 4)
         
-        i2c.write(data, to: address)
+        try? writeData(data)
     }
     
     /// Set a series of voltage values to the device to obtain varying voltages.
@@ -138,18 +138,15 @@ final public class MCP4725 {
             data[index * 2] = UInt8(value >> 8)
             data[index * 2 + 1] = UInt8(value & 0xFF)
         }
-        
-        i2c.write(data, to: address)
+
+        try? writeData(data)
     }
 }
 
 
 extension MCP4725 {
-    func getEEROMValue() -> UInt16 {
-        for i in 0..<5 {
-            readBuffer[i] = 0
-        }
-        i2c.read(into: &readBuffer, from: address)
+    private func getEEROMValue() -> UInt16 {
+        try? readData(into: &readBuffer)
 
         let high = UInt16(readBuffer[3] & 0x0F) << 8
         let low = UInt16(readBuffer[4])
@@ -157,11 +154,8 @@ extension MCP4725 {
         return high | low
     }
     
-    func getOutputValue() -> UInt16 {
-        for i in 0..<5 {
-            readBuffer[i] = 0
-        }
-        i2c.read(into: &readBuffer, from: address)
+    private func getOutputValue() -> UInt16 {
+        try? readData(into: &readBuffer)
 
         let high = UInt16(readBuffer[1] & 0xF0) << 4
         let low = (UInt16(readBuffer[1] & 0x0F) << 4) |
@@ -169,5 +163,22 @@ extension MCP4725 {
         
         return high | low
     }
-    
+
+    private func readData(into buffer: inout [UInt8]) throws {
+        for i in 0..<buffer.count {
+            buffer[i] = 0
+        }
+
+        let result = i2c.read(into: &buffer, from: address)
+        if case .failure(let err) = result {
+            throw err
+        }
+    }
+
+    private func writeData(_ data: [UInt8]) throws {
+        let result = i2c.write(data, to: address)
+        if case .failure(let err) = result {
+            throw err
+        }
+    }
 }

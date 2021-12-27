@@ -12,7 +12,7 @@
 
 import SwiftIO
 
-/// This is the library for the ADXL345 3-axis accelerometer.
+/// This is the library for ADXL345 3-axis accelerometer.
 ///
 /// The sensor supports I2C and SPI protocol. You can choose either of them
 /// when initializing the sensor.
@@ -23,13 +23,10 @@ import SwiftIO
 /// change the internal capacitance of the sensor, thus changing the voltage
 /// in the circuit.
 ///
-/// The acceleration that the sensors reads is represented in g (9.8m/s^2).
-/// If the sensor is face-up on the table, the acceleration on the z-axis
-/// should be close to 1.
-///
-/// The sensor provides four ranges: ±2, ±4, ±8, or ±16g.
-/// The accelerations can be positive or negative. You may notice the note
-/// on your sensor that indicates the positive x, y, z-direction.
+/// The acceleration here is represented in gravitational acceleration or g,
+/// which is 9.8m/s^2, e.g. if the sensor is face-up on the table, the z axis
+/// acceleration should be close to 1. The sensor provides four sensitivity
+/// ranges: ±2, ±4, ±8, or ±16g.
 final public class ADXL345 {
     private let i2c: I2C?
     private let address: UInt8?
@@ -42,11 +39,13 @@ final public class ADXL345 {
 
     private var readBuffer = [UInt8](repeating: 0, count: 6)
 
-    /// Initialize the sensor using I2C communication. The g range will be
-    /// set to ±2g and the data rate will be 100Hz by default.
+    /// Initialize the sensor using I2C communication. The g range is set to
+    /// ±2g and the data rate is 100Hz by default.
+    /// And the sensor supports standard (100 kHz) and fast (400 kHz) i2c speed.
     /// - Parameters:
     ///   - i2c: **REQUIRED** The I2C interface that the sensor connects.
-    ///   - address: **OPTIONAL** The device address of the sensor.
+    ///   The maximum I2C speed is 400KHz.
+    ///   - address: **OPTIONAL** The device address of the sensor. 0x53 by default.
     public init(_ i2c: I2C, address: UInt8 = 0x53) {
         let speed = i2c.getSpeed()
         guard speed == .standard || speed == .fast else {
@@ -61,7 +60,7 @@ final public class ADXL345 {
         dataRate = .hz100
         gRange = .g2
 
-        guard let deviceId = getDeviceID(), deviceId == 0xE5 else {
+        guard getDeviceID() == 0xE5 else {
             fatalError(#function + ": cann't find ADXL345 at address \(address)")
         }
 
@@ -69,21 +68,22 @@ final public class ADXL345 {
         setRange(gRange)
 
         // Start to measure.
-        writeRegister(.powerCTL, 0x08)
+        try? writeRegister(.powerCTL, 0x08)
         // Disable the interrupt.
-        writeRegister(.intEnable, 0x00)
+        try? writeRegister(.intEnable, 0x00)
     }
 
-    /// Initialize the sensor using SPI communication.
-    ///
-    /// The maximum SPI clock speed is 5 MHz. Both the CPOL and CPHA of SPI
-    /// should be true. And the cs pin should be set only once. You can set it
-    /// when initializing an spi interface. If not, you need to set the cs when
-    /// initializing the sensor.
+    /// Initialize the sensor using SPI communication. The measurement range
+    /// is set to ±2g and the data rate is 100Hz by default.
     ///
     /// - Parameters:
     ///   - spi: **REQUIRED** The SPI interface that the sensor connects.
-    ///   - csPin: **OPTIONAL** The cs pin for the spi.
+    ///   The maximum SPI clock speed is **5MHz**. Both of the **CPOL and CPHA**
+    ///   should be **true**.
+    ///   - csPin: **OPTIONAL** The cs pin for the spi. If you set the cs when
+    ///   initializing the spi interface, `csPin` should be nil. If not, you
+    ///   need to set a digital output pin as the cs pin. And the mode of the pin
+    ///   should be **pushPull**.
     public init(_ spi: SPI, csPin: DigitalOut? = nil) {
         self.spi = spi
         self.csPin = csPin
@@ -97,15 +97,12 @@ final public class ADXL345 {
         // Set 2g as default g range.
         gRange = .g2
 
-        // Perform a reading to get spi ready for the following communication.
-        _ = spi.readByte()
-
         guard (spi.cs == false && csPin != nil && csPin!.getMode() == .pushPull)
                 || (spi.cs == true && csPin == nil) else {
-                    fatalError(#function + ": csPin isn't correct")
+                    fatalError(#function + ": csPin isn't correctly configured")
         }
 
-        guard spi.getMode() == (true, true) else {
+        guard spi.getMode() == (true, true, .MSB) else {
             fatalError(#function + ": spi mode doesn't match for ADXL345")
         }
 
@@ -113,7 +110,7 @@ final public class ADXL345 {
             fatalError(#function + ": cannot support spi speed faster than 5MHz")
         }
 
-        guard let deviceId = getDeviceID(), deviceId == 0xE5 else {
+        guard getDeviceID() == 0xE5 else {
             fatalError(#function + ": cann't find ADXL345 via spi bus")
         }
 
@@ -121,9 +118,9 @@ final public class ADXL345 {
         setRange(gRange)
 
         // Start to measure.
-        writeRegister(.powerCTL, 0x08)
+        try? writeRegister(.powerCTL, 0x08)
         // Disable the interrupt.
-        writeRegister(.intEnable, 0x00)
+        try? writeRegister(.intEnable, 0x00)
     }
 
 
@@ -141,89 +138,71 @@ final public class ADXL345 {
 
     /// Read the acceleration on x-axis represented in g (9.8m/s^2)
     /// within the selected range.
-    /// - Returns: A float representing the acceleration.
+    /// - Returns: A float representing the x-axis acceleration.
     public func readX() -> Float {
-        readRegister(.dataX0, into: &readBuffer, count: 2)
-        let x = Float(Int16(readBuffer[0]) | (Int16(readBuffer[1]) << 8)) * gScaleFactor
-        return x
+        try? readRegister(.dataX0, into: &readBuffer, count: 2)
+        let x = Float(Int16(readBuffer[0]) | (Int16(readBuffer[1]) << 8))
+        return x * gScaleFactor
     }
 
     /// Read the acceleration on y-axis represented in g (9.8m/s^2)
     /// within the selected range.
-    /// - Returns: A float representing the acceleration.
+    /// - Returns: A float representing the y-axis acceleration.
     public func readY() -> Float {
-        readRegister(.dataY0, into: &readBuffer, count: 2)
-        let y = Float(Int16(readBuffer[0]) | (Int16(readBuffer[1]) << 8)) * gScaleFactor
-        return y
+        try? readRegister(.dataY0, into: &readBuffer, count: 2)
+        let y = Float(Int16(readBuffer[0]) | (Int16(readBuffer[1]) << 8))
+        return y * gScaleFactor
     }
 
     /// Read the acceleration on z-axis represented in g (9.8m/s^2)
     /// within the selected range.
-    /// - Returns: A float representing the acceleration.
+    /// - Returns: A float representing the z-axis acceleration.
     public func readZ() -> Float {
-        readRegister(.dataZ0, into: &readBuffer, count: 2)
-        let z = Float(Int16(readBuffer[0]) | (Int16(readBuffer[1]) << 8)) * gScaleFactor
-        return z
+        try? readRegister(.dataZ0, into: &readBuffer, count: 2)
+        let z = Float(Int16(readBuffer[0]) | (Int16(readBuffer[1]) << 8))
+        return z * gScaleFactor
     }
 
     /// Get the selected g range for the measurement.
     /// - Returns: The current GRange: ±2, ±4, ±8, or ±16g
-    public func getRange() -> GRange? {
-        let data = readRegister(.dataFormat)
-        if let data = data {
-            let range = data & 0b0011
-            return GRange(rawValue: range)!
-        } else {
-            print("read range error")
-            return nil
-        }
+    public func getRange() -> GRange {
+        var byte: UInt8 = 0
+        try? readRegister(.dataFormat, into: &byte)
+        return GRange(rawValue: byte & 0b0011)!
     }
 
     /// Set the g range of the sensor.
     /// The supported ranges are ±2, ±4, ±8 and ±16g.
     /// - Parameter gRange: The selected GRange.
     public func setRange(_ gRange: GRange) {
-        let data = readRegister(.dataFormat)
-        if let data = data {
-            var value = data & 0b1111_0000
-            value = value | gRange.rawValue
-            value = value | 0b1000
-            writeRegister(.dataFormat, value)
-        } else {
-            print("read range error")
-        }
+        var byte: UInt8 = 0
+        try? readRegister(.dataFormat, into: &byte)
+
+        let value = (byte & 0b1111_0000) | gRange.rawValue | 0b1000
+        try? writeRegister(.dataFormat, value)
     }
 
     /// Get the device ID from the sensor to make sure if the sensor is connected.
     /// The ID you read from the device should be 0xE5.
     /// - Returns: The device ID.
-    public func getDeviceID() -> UInt8? {
-        let data = readRegister(.devID)
-        if let data = data {
-            return data
-        } else {
-            print("read devID error")
-            return nil
-        }
+    public func getDeviceID() -> UInt8 {
+        var byte: UInt8 = 0
+        try? readRegister(.devID, into: &byte)
+        return byte
     }
 
     /// Get current data rate.
     /// - Returns: The specified data rate.
-    public func getDataRate() -> DataRate? {
-        let data = readRegister(.bwRate)
-        if let data = data {
-            let dataRate = DataRate(rawValue: data & 0b1111)
-            return dataRate
-        } else {
-            print("read data rate error")
-            return nil
-        }
+    public func getDataRate() -> DataRate {
+        var byte: UInt8 = 0
+        try? readRegister(.bwRate, into: &byte)
+        return DataRate(rawValue: byte & 0b1111)!
     }
 
     /// Set the data rate of the sensor. The rate is from 0.1 to 3200Hz.
     /// - Parameter dataRate: The new data rate defined in `DataRate`.
     public func setDataRate(_ dataRate: DataRate) {
-        writeRegister(.bwRate, dataRate.rawValue)
+        try? writeRegister(.bwRate, dataRate.rawValue)
     }
 
     /// The output data rate of the sensor. The default rate is 100Hz.
@@ -267,7 +246,7 @@ final public class ADXL345 {
 
 extension ADXL345 {
     private func readRawValues() -> (x: Int16,y: Int16, z: Int16) {
-        readRegister(.dataX0, into: &readBuffer, count: 6)
+        try? readRegister(.dataX0, into: &readBuffer, count: 6)
 
         let x = Int16(readBuffer[0]) | (Int16(readBuffer[1]) << 8)
         let y = Int16(readBuffer[2]) | (Int16(readBuffer[3]) << 8)
@@ -275,53 +254,88 @@ extension ADXL345 {
         return (x, y, z)
     }
 
-    private func writeRegister(_ register: Register, _ value: UInt8) {
-        if let i2c = i2c {
-            i2c.write([register.rawValue, value], to: address!)
-        } else if let spi = spi {
+    private func writeRegister(_ register: Register, _ value: UInt8) throws {
+        var result: Result<(), Errno>
+
+        if i2c != nil {
+            result = i2c!.write([register.rawValue, value], to: address!)
+        } else {
             csPin?.low()
-            spi.write([register.rawValue, value])
+            result = spi!.write([register.rawValue, value])
             csPin?.high()
+        }
+
+        if case .failure(let err) = result {
+            throw err
         }
     }
 
-    private func readRegister(_ register: Register) -> UInt8? {
-        var ret: Result<UInt8, Errno>
-        if i2c != nil {
-            i2c!.write(register.rawValue, to: address!)
-            ret = i2c!.readByte(from: address!)
-        } else {
+    private func readRegister(
+    _ register: Register, into byte: inout UInt8
+    ) throws {
+        var result: Result<(), Errno>
+        var byte: UInt8 = 0
+
+        if let i2c = i2c {
+            result = i2c.write(register.rawValue, to: address!)
+            if case .failure(let err) = result {
+                throw err
+            }
+
+            result = i2c.read(into: &byte, from: address!)
+            if case .failure(let err) = result {
+                throw err
+            }
+        } else if let spi = spi {
             let register = 0b1000_0000 | register.rawValue
             csPin?.low()
-            spi!.write(register)
-            ret = spi!.readByte()
-            csPin?.high()
-        }
 
-        switch ret {
-        case .success(let byte):
-            return byte
-        case .failure(let err):
-            print("error: \(#function) " + String(describing: err))
-            return nil
+            result = spi.write(register)
+            if case .failure(let err) = result {
+                throw err
+            }
+
+            result = spi.read(into: &byte)
+            if case .failure(let err) = result {
+                throw err
+            }
+
+            csPin?.high()
         }
     }
 
     private func readRegister(
         _ register: Register, into buffer: inout [UInt8], count: Int
-    ) {
+    ) throws {
         for i in 0..<buffer.count {
             buffer[i] = 0
         }
 
+        var result: Result<(), Errno>
         if let i2c = i2c {
-            i2c.write(register.rawValue, to: address!)
-            i2c.read(into: &buffer, count: count, from: address!)
+            result = i2c.write(register.rawValue, to: address!)
+            if case .failure(let err) = result {
+                throw err
+            }
+
+            result = i2c.read(into: &buffer, count: count, from: address!)
+            if case .failure(let err) = result {
+                throw err
+            }
         } else if let spi = spi {
             let register = 0b1100_0000 | register.rawValue
             csPin?.low()
-            spi.write(register)
-            spi.read(into: &buffer, count: count)
+
+            result = spi.write(register)
+            if case .failure(let err) = result {
+                throw err
+            }
+
+            result = spi.read(into: &buffer, count: count)
+            if case .failure(let err) = result {
+                throw err
+            }
+
             csPin?.high()
         }
     }

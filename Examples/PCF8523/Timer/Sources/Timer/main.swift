@@ -22,10 +22,7 @@ while true {
 
     // When the interrupt happens, print the current time.
     if value {
-        let time = rtc.readCurrent()
-        if let time = time {
-            print(time)
-        }
+        print(rtc.readCurrent())
         value = false
     }
 }

@@ -1,4 +1,4 @@
-//=== BH1750.swift --------------------------------------------------------===//
+//=== BMP280.swift --------------------------------------------------------===//
 //
 // Copyright (c) MadMachine Limited
 // Licensed under MIT License
@@ -55,7 +55,7 @@ final public class BMP280 {
         standby = .ms05
         filter = .x16
 
-        guard let chipID = readRegister(.chipID), chipID == 0x58 else {
+        guard getDeviceID() == 0x58 else {
             fatalError(#function + ": cannot find BMP280 at address \(address)")
         }
 
@@ -67,13 +67,15 @@ final public class BMP280 {
 
     /// Initialize the sensor using SPI communication.
     ///
-    /// The maximum SPI clock speed is 10 MHz. The CPOL and CPHA of SPI
+    ///  The CPOL and CPHA of SPI
     /// should be both true or both false. And the cs pin should be set only once.
     /// You can set it when initializing an spi interface. If not, you need to
     /// set the cs when initializing the sensor.
     ///
     /// - Parameters:
     ///   - spi: **REQUIRED** The SPI interface that the sensor connects.
+    ///   The maximum SPI clock speed is **10MHz**. The **CPOL and CPHA**
+    ///   should be **both true** or **both false**.
     ///   - csPin: **OPTIONAL** The cs pin for the spi.
     public init(_ spi: SPI, csPin: DigitalOut? = nil) {
         self.spi = spi
@@ -81,7 +83,6 @@ final public class BMP280 {
         self.i2c = nil
         self.address = nil
 
-        _ = spi.readByte()
         csPin?.high()
 
         tSampling = .x2
@@ -96,8 +97,8 @@ final public class BMP280 {
                     fatalError(#function + ": csPin isn't correct")
         }
 
-        guard spi.getMode() == (true, true) ||
-                spi.getMode() == (false, false) else {
+        guard spi.getMode() == (true, true, .MSB) ||
+                spi.getMode() == (false, false, .MSB) else {
             fatalError(#function + ": spi mode doesn't match for BMP280")
         }
 
@@ -105,7 +106,7 @@ final public class BMP280 {
             fatalError(#function + ": cannot support spi speed faster than 10MHz")
         }
 
-        guard let chipID = readRegister(.chipID), chipID == 0x58 else {
+        guard getDeviceID() == 0x58 else {
             fatalError(#function + ": cannot find BMP280 via spi bus")
         }
 
@@ -115,12 +116,16 @@ final public class BMP280 {
         calibration = readCalibration()
     }
 
+
+
     /// Read current temperature in Celsius.
     /// - Returns: The temperature in Celsius.
     public func readTemperature() -> Double {
         if mode != .normal {
             setMode(.force)
-            while readRegister(.status)! >> 3 == 1 {
+            var byte: UInt8 = 0
+            try? readRegister(.status, into: &byte)
+            while byte >> 3 == 1 {
                 sleep(ms: 2)
             }
         }
@@ -248,7 +253,7 @@ final public class BMP280 {
 
     /// Reset the sensor.
     public func reset() {
-        writeRegister(.reset, 0xB6)
+        try? writeRegister(.reset, 0xB6)
         sleep(ms: 4)
     }
 
@@ -314,55 +319,88 @@ extension BMP280 {
         case temp = 0xFA
     }
 
-    private func writeRegister(_ register: Register, _ value: UInt8) {
-        if let i2c = i2c {
-            i2c.write([register.rawValue, value], to: address!)
-        } else if let spi = spi {
+    private func writeRegister(_ register: Register, _ value: UInt8) throws {
+        var result: Result<(), Errno>
+
+        if i2c != nil {
+            result = i2c!.write([register.rawValue, value], to: address!)
+        } else {
             let register = register.rawValue & 0b0111_1111
             csPin?.low()
-            spi.write([register, value])
+            result = spi!.write([register, value])
             csPin?.high()
+        }
+
+        if case .failure(let err) = result {
+            throw err
         }
     }
 
-    private func readRegister(_ register: Register) -> UInt8? {
-        var ret: Result<UInt8, Errno>
+    private func readRegister(
+        _ register: Register, into byte: inout UInt8
+    ) throws {
+        var result: Result<(), Errno>
 
         if i2c != nil {
-            i2c!.write(register.rawValue, to: address!)
-            ret = i2c!.readByte(from: address!)
+            result = i2c!.write(register.rawValue, to: address!)
+            if case .failure(let err) = result {
+                throw err
+            }
+            result = i2c!.read(into: &byte, from: address!)
+            if case .failure(let err) = result {
+                throw err
+            }
         } else {
             let register = register.rawValue | 0b1000_0000
             csPin?.low()
-            spi!.write(register)
-            ret = spi!.readByte()
+            result = spi!.write(register)
+            if case .failure(let err) = result {
+                throw err
+            }
+            result = spi!.read(into: &byte)
+            if case .failure(let err) = result {
+                throw err
+            }
             csPin?.high()
-        }
-
-        switch ret {
-        case .success(let byte):
-            return byte
-        case .failure(let err):
-            print("error: \(#function) " + String(describing: err))
-            return nil
         }
     }
 
-    private func readRegister(_ register: Register, into buffer: inout [UInt8], count: Int) {
+    private func readRegister(
+        _ register: Register, into buffer: inout [UInt8], count: Int
+    ) throws {
         for i in 0..<buffer.count {
             buffer[i] = 0
         }
 
+        var result: Result<(), Errno>
         if let i2c = i2c {
-            i2c.write(register.rawValue, to: address!)
-            i2c.read(into: &buffer, from: address!)
+            result = i2c.write(register.rawValue, to: address!)
+            if case .failure(let err) = result {
+                throw err
+            }
+            result = i2c.read(into: &buffer, from: address!)
+            if case .failure(let err) = result {
+                throw err
+            }
         } else if let spi = spi {
             let register = register.rawValue | 0b1000_0000
             csPin?.low()
-            spi.write(register)
-            spi.read(into: &buffer, count: count)
+            result = spi.write(register)
+            if case .failure(let err) = result {
+                throw err
+            }
+            result = spi.read(into: &buffer, count: count)
+            if case .failure(let err) = result {
+                throw err
+            }
             csPin?.high()
         }
+    }
+
+    private func getDeviceID() -> UInt8 {
+        var byte: UInt8 = 0
+        try? readRegister(.chipID, into: &byte)
+        return byte
     }
 
     /// Set standby duration and filter.
@@ -373,11 +411,11 @@ extension BMP280 {
             /// In normal mode, write to config register will be ingnored.
             setMode(.sleep)
             config = (standby.rawValue << 5) | filter.rawValue
-            writeRegister(.config, config)
+            try? writeRegister(.config, config)
             setMode(.normal)
         } else {
             config = filter.rawValue
-            writeRegister(.config, config)
+            try? writeRegister(.config, config)
         }
     }
 
@@ -385,12 +423,12 @@ extension BMP280 {
     /// temperature and pressure oversampling and mode.
     private func writeCtrlMeas() {
         let ctrlMeas = tSampling.rawValue << 5 | pSampling.rawValue << 2 | mode.rawValue
-        writeRegister(.ctrlMeas, ctrlMeas)
+        try? writeRegister(.ctrlMeas, ctrlMeas)
     }
 
     /// Read temperature or pressure raw value.
     private func readRawValue(_ register: Register) -> Double {
-        readRegister(register, into: &readBuffer, count: 3)
+        try? readRegister(register, into: &readBuffer, count: 3)
         let raw = UInt32(readBuffer[0]) << 12 |
         UInt32(readBuffer[1]) << 4 | UInt32(readBuffer[2] >> 4)
 
@@ -398,7 +436,7 @@ extension BMP280 {
     }
 
     private func readCalibration() -> [Double] {
-        readRegister(.digT1, into: &readBuffer, count: 24)
+        try? readRegister(.digT1, into: &readBuffer, count: 24)
 
         let t1 = Double(UInt16(readBuffer[0]) | (UInt16(readBuffer[1]) << 8))
         let t2 = Double(Int16(readBuffer[2]) | (Int16(readBuffer[3]) << 8))

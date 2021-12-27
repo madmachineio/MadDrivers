@@ -23,6 +23,11 @@ final public class PCF8523 {
     ///   - i2c: **REQUIRED** The I2C interface the RTC connects to.
     ///   - address: **OPTIONAL** The sensor's address. It has a default value.
     public init(_ i2c: I2C, _ address: UInt8 = 0x68) {
+        let speed = i2c.getSpeed()
+        guard speed == .standard || speed == .fast else {
+            fatalError(#function + ": PCF8523 only supports 100kbps and 400kbps I2C speed")
+        }
+
         self.i2c = i2c
         self.address = address
     }
@@ -41,32 +46,24 @@ final public class PCF8523 {
     ///   - update: Whether to update the time. If the RTC has lost power,
     ///     the time will be reset no matter its value.
     public func setTime(_ time: Time, update: Bool = false) {
-        let reading = lostPower()
-        if let reading = reading {
-            if reading || update {
-                let data = [
-                    binToBcd(time.second), binToBcd(time.minute),
-                    binToBcd(time.hour), binToBcd(time.day),
-                    binToBcd(time.dayOfWeek), binToBcd(time.month),
-                    binToBcd(UInt8(time.year - 2000))]
 
-                writeData(Register.secondStatus, data)
-                writeRegister(Register.control3, Command.batteryMode.rawValue)
-            }
+        if lostPower() || update {
+            let data = [
+                binToBcd(time.second), binToBcd(time.minute),
+                binToBcd(time.hour), binToBcd(time.day),
+                binToBcd(time.dayOfWeek), binToBcd(time.month),
+                binToBcd(UInt8(time.year - 2000))]
+
+            try? writeData(Register.secondStatus, data)
+            try? writeRegister(Register.control3, Command.batteryMode.rawValue)
         }
     }
 
     /// Read current time. The time info is stored in a struct including the
     /// year, month, day, hour, minute, second, dayOfWeek. 
     /// - Returns: A Time struct if the communication is stable. Or it will be nil.
-    public func readCurrent() -> Time? {
-        i2c.write(Register.secondStatus.rawValue, to: address)
-        let ret = i2c.read(into: &readBuffer, from: address)
-
-        if case .failure(let err) = ret {
-            print("error: \(#function) " + String(describing: err))
-            return nil
-        }
+    public func readCurrent() -> Time {
+        try? readRegister(.secondStatus, into: &readBuffer, count: 7)
 
         let year = UInt16(bcdToBin(readBuffer[6])) + 2000
         let month = bcdToBin(readBuffer[5])
@@ -84,31 +81,19 @@ final public class PCF8523 {
 
     /// Enable the 1 second timer and generate an interrupt each second.
     public func enable1SecondTimer() {
-        let timerStatus = readRegister(Register.clockoutControl)
+        var byte: UInt8 = 0
+        try? readRegister(Register.clockoutControl, into: &byte)
+        try? writeRegister(Register.clockoutControl, byte | 0b1011_1000)
 
-        if let timerStatus = timerStatus {
-            writeRegister(Register.clockoutControl, timerStatus | 0b1011_1000)
-        } else {
-            print("read clockoutControl register error")
-        }
-
-        let interruptStatus = readRegister(Register.control1)
-
-        if let interruptStatus = interruptStatus {
-            writeRegister(Register.control1, (interruptStatus | 0b0100))
-        } else {
-            print("read control1 register error")
-        }
+        try? readRegister(Register.control1, into: &byte)
+        try? writeRegister(Register.control1, byte | 0b0100)
     }
 
     /// Disable the 1 second timer until you restart it.
     public func disable1SecondTimer() {
-        let interruptStatus = readRegister(Register.control1)
-        if let interruptStatus = interruptStatus {
-            writeRegister(Register.control1, interruptStatus & 0b1111_1011)
-        } else {
-            print("read control1 register error")
-        }
+        var byte: UInt8 = 0
+        try? readRegister(Register.control1, into: &byte)
+        try? writeRegister(Register.control1, byte & 0b1111_1011)
     }
 
     /// Enable the countdown timer.
@@ -122,40 +107,27 @@ final public class PCF8523 {
     ///   - counts: The value from which the timer will start to count down.
     public func enableTimer(countPeriod: TimerCountPeriod, count: UInt8) {
         disable1SecondTimer()
-        writeRegister(Register.control2, 0)
-        writeRegister(Register.clockoutControl, 0)
-        writeRegister(Register.timerBFre, 0)
-        writeRegister(Register.timerBReg, 0)
+        try? writeRegister(Register.control2, 0)
+        try? writeRegister(Register.clockoutControl, 0)
+        try? writeRegister(Register.timerBFre, 0)
+        try? writeRegister(Register.timerBReg, 0)
 
-        let interruptStatus = readRegister(Register.control2)
-        let timerStatus = readRegister(Register.clockoutControl)
+        var interruptStatus: UInt8 = 0
+        try? readRegister(Register.control2, into: &interruptStatus)
+        var timerStatus: UInt8 = 0
+        try? readRegister(Register.clockoutControl, into: &timerStatus)
+        try? writeRegister(Register.control2, interruptStatus | 0b01)
 
-        if let interruptStatus = interruptStatus {
-            writeRegister(Register.control2, interruptStatus | 0b01)
-        } else {
-            print("read control2 register error")
-        }
-
-        let frequency = countPeriod.rawValue
-        writeRegister(Register.timerBFre, frequency)
-        writeRegister(Register.timerBReg, count)
-
-        if let timerStatus = timerStatus {
-            writeRegister(Register.clockoutControl, timerStatus | 0b0111_1001)
-        } else {
-            print("read clockoutControl register error")
-        }
+        try? writeRegister(Register.timerBFre, countPeriod.rawValue)
+        try? writeRegister(Register.timerBReg, count)
+        try? writeRegister(Register.clockoutControl, timerStatus | 0b0111_1001)
     }
 
     /// Disable the countdown timer.
     public func disableTimer() {
-        let timerStatus = readRegister(Register.clockoutControl)
-
-        if let timerStatus = timerStatus {
-            writeRegister(Register.clockoutControl, timerStatus & 0b1111_1110)
-        } else {
-            print("read clockoutControl register error")
-        }
+        var byte: UInt8 = 0
+        try? readRegister(Register.clockoutControl, into: &byte)
+        try? writeRegister(Register.clockoutControl, byte & 0b1111_1110)
     }
 
     /// The period of the countdown timer source clock, that is, the time
@@ -181,48 +153,32 @@ final public class PCF8523 {
     /// Check if the clock is running. If so, it returns true and the time is
     /// accurate. If it stops, it returns false.
     /// - Returns: Boolean value representing the status of the RTC.
-    public func isRunning() -> Bool? {
-        let data = readRegister(Register.control1)
-        var stopBit: UInt8 = 2
+    public func isRunning() -> Bool {
+        var byte: UInt8 = 0
+        try? readRegister(Register.control1, into: &byte)
+        let stopBit = byte >> 5 & 0b1
 
-        if let data = data {
-            stopBit = data >> 5 & 0b1
-        } else {
-            print("read power status error")
-            return nil
-        }
-
-        if stopBit == 1 {
-            return false
-        } else {
-            return true
-        }
+        return stopBit != 1
     }
 
     /// Make the clock start to work so the time will keep updated.
     public func start() {
-        let data = readRegister(Register.control1)
+        var byte: UInt8 = 0
+        try? readRegister(Register.control1, into: &byte)
 
-        if let data = data {
-            if data >> 5 & 0b1 == 1 {
-                writeRegister(Register.control1, data & (~(1 << 5)))
-            }
-        } else {
-            print("read stop bit error")
+        if byte >> 5 & 0b1 == 1 {
+            try? writeRegister(Register.control1, byte & (~(1 << 5)))
         }
     }
 
     /// Stop the internal clock, and the time you read from the RTC will not
     /// be accurate anymore.
     public func stop() {
-        let data = readRegister(Register.control1)
+        var byte: UInt8 = 0
+        try? readRegister(Register.control1, into: &byte)
 
-        if let data = data {
-            if data >> 5 & 0b1 == 0 {
-                writeRegister(Register.control1, data | (1 << 5))
-            }
-        } else {
-            print("read stop bit error")
+        if byte >> 5 & 0b1 == 0 {
+            try? writeRegister(Register.control1, byte | (1 << 5))
         }
     }
 
@@ -283,44 +239,58 @@ extension PCF8523 {
     }
 
 
-    private func writeData(_ reg: Register, _ data: [UInt8]) {
+    private func writeData(_ reg: Register, _ data: [UInt8]) throws {
         var data = data
         data.insert(reg.rawValue, at: 0)
-        i2c.write(data, to: address)
-    }
-
-    private func writeRegister(_ reg: Register, _ value: UInt8) {
-        i2c.write([reg.rawValue, value], to: address)
-    }
-
-    private func readRegister(_ reg: Register) -> UInt8? {
-        i2c.write(reg.rawValue, to: address)
-
-        let result = i2c.readByte(from: address)
-        switch result {
-        case .success(let byte):
-            return byte
-        case .failure(let err):
-            print(#function + String(describing: err))
-            return nil
+        let result = i2c.write(data, to: address)
+        if case .failure(let err) = result {
+            throw err
         }
     }
 
-    private func lostPower() -> Bool? {
-        let data = readRegister(Register.secondStatus)
-        var stopFlag: UInt8 = 2
+    private func writeRegister(_ reg: Register, _ value: UInt8) throws {
+        let result = i2c.write([reg.rawValue, value], to: address)
+        if case .failure(let err) = result {
+            throw err
+        }
+    }
 
-        if let data = data {
-            stopFlag = data >> 7
-        } else {
-            print("read power status error")
-            return nil
+    private func readRegister(
+        _ register: Register, into byte: inout UInt8
+    ) throws {
+        var result = i2c.write(register.rawValue, to: address)
+        if case .failure(let err) = result {
+            throw err
         }
 
-        if stopFlag == 1 {
-            return true
-        } else {
-            return false
+        result = i2c.read(into: &byte, from: address)
+        if case .failure(let err) = result {
+            throw err
         }
+    }
+
+    private func readRegister(
+        _ register: Register, into buffer: inout [UInt8], count: Int
+    ) throws {
+        for i in 0..<buffer.count {
+            buffer[i] = 0
+        }
+
+        var result = i2c.write(register.rawValue, to: address)
+        if case .failure(let err) = result {
+            throw err
+        }
+
+        result = i2c.read(into: &buffer, count: count, from: address)
+        if case .failure(let err) = result {
+            throw err
+        }
+    }
+
+    private func lostPower() -> Bool {
+        var byte: UInt8 = 0
+        try? readRegister(Register.secondStatus, into: &byte)
+        let stopFlag = byte >> 7
+        return stopFlag == 1
     }
 }

@@ -56,18 +56,18 @@ final public class LIS3DH {
         case Hz1K3LowPower5K    = 0b1001_0000
     }
     
-    let defaultWhoAmI  = UInt8(0x33)
+    private let defaultWhoAmI  = UInt8(0x33)
     
-    let i2c: I2C?
-    let address: UInt8?
-    let spi: SPI?
-    let csPin: DigitalOut?
+    private let i2c: I2C?
+    private let address: UInt8?
+    private let spi: SPI?
+    private let csPin: DigitalOut?
     
-    var gRange: GRange
-    var dataRate: DataRate
+    private var gRange: GRange
+    private var dataRate: DataRate
     
-    var rangeConfig: RangeConfig = []
-    var dataRateConfig: DataRateConfig = []
+    private var rangeConfig: RangeConfig = []
+    private var dataRateConfig: DataRateConfig = []
     
     var gCoefficient: Float {
         switch gRange {
@@ -82,7 +82,7 @@ final public class LIS3DH {
         }
     }
 
-    private var readBuffer = [UInt8](repeating: 0, count: 6)
+    private var readBuffer = [UInt8](repeating: 0, count: 6 + 1)
     
     
     /// Initialize the sensor using I2C communication.
@@ -92,9 +92,9 @@ final public class LIS3DH {
     public init(_ i2c: I2C, address: UInt8 = 0x18) {
         let speed = i2c.getSpeed()
         guard speed == .standard || speed == .fast else {
-            fatalError(#function + ": ADXL345 only supports 100kbps and 400kbps I2C speed")
+            fatalError(#function + ": LIS3DH only supports 100kbps and 400kbps I2C speed")
         }
-        
+
         self.i2c = i2c
         self.address = address
         self.spi = nil
@@ -109,10 +109,9 @@ final public class LIS3DH {
         guard getDeviceID() == defaultWhoAmI else {
             fatalError(#function + ": cann't find LIS3DH at address \(address)")
         }
-        
+
         setRange(gRange)
         setDataRate(dataRate)
-        
         sleep(ms: 10)
     }
 
@@ -127,12 +126,12 @@ final public class LIS3DH {
     ///   - spi: **REQUIRED** The SPI interface that the sensor connects.
     ///   - csPin: **OPTIONAL** The cs pin for the spi.
     public init(_ spi: SPI, csPin: DigitalOut? = nil) {
+
         self.spi = spi
         self.csPin = csPin
         self.i2c = nil
         self.address = nil
 
-        _ = spi.readByte()
         csPin?.high()
 
         rangeConfig = [.highResEnable]
@@ -150,7 +149,7 @@ final public class LIS3DH {
             fatalError(#function + ": cannot support spi speed faster than 10MHz")
         }
 
-        guard spi.getMode() == (true, true) else {
+        guard spi.getMode() == (true, true, .MSB) else {
             fatalError(#function + ": spi mode doesn't match for LIS3DH")
         }
 
@@ -168,7 +167,10 @@ final public class LIS3DH {
     /// It can be used to test if the sensor is connected. The ID should be 0x33.
     /// - Returns: The device ID.
     public func getDeviceID() -> UInt8 {
-        return readRegister(.WHO_AM_I)
+        var byte: UInt8 = 0
+        try? readRegister(.WHO_AM_I, into: &byte)
+        print("ID: \(byte)")
+        return byte
     }
     
     /// Set the scaling range of the sensor.
@@ -179,14 +181,15 @@ final public class LIS3DH {
         let newConfig = RangeConfig(rawValue: gRange.rawValue)
         rangeConfig.remove(.rangeMask)
         rangeConfig.insert(newConfig)
-        writeRegister(rangeConfig.rawValue, to: .CTRL4)
+        try? writeRegister(rangeConfig.rawValue, to: .CTRL4)
     }
     
     /// Get the selected scaling range of the sensor.
     /// - Returns: The current range of measurement.
     public func getRange() -> GRange {
-        let ret = readRegister(.CTRL4) & RangeConfig([.rangeMask]).rawValue
-        return GRange(rawValue: ret)!
+        var byte: UInt8 = 0
+        try? readRegister(.CTRL4, into: &byte)
+        return GRange(rawValue: byte & RangeConfig([.rangeMask]).rawValue)!
     }
     
     /// Set the data rate of the sensor.
@@ -197,21 +200,22 @@ final public class LIS3DH {
         dataRateConfig.remove(.dataRateMask)
         dataRateConfig.insert(newConfig)
         
-        writeRegister(dataRateConfig.rawValue, to: .CTRL1)
+        try? writeRegister(dataRateConfig.rawValue, to: .CTRL1)
     }
     
     /// Get current data rate.
     /// - Returns: The specified data rate.
     public func getDataRate() -> DataRate {
-        let ret = readRegister(.CTRL1) & DataRateConfig([.dataRateMask]).rawValue
-        return DataRate(rawValue: ret)!
+        var byte: UInt8 = 0
+        try? readRegister(.CTRL1, into: &byte)
+        return DataRate(rawValue: byte & DataRateConfig([.dataRateMask]).rawValue)!
     }
     
     
     /// Read raw values of acceleration on x, y, z-axes at once.
     /// - Returns: x, y, z values from -32768 to 32767.
     public func readRawValue() -> (x: Int16, y: Int16, z: Int16) {
-        readRegister(.OUT_X_L, into: &readBuffer, count: 6)
+        try? readRegister(.OUT_X_L, into: &readBuffer, count: 6)
 
         let x = Int16(readBuffer[0]) | (Int16(readBuffer[1]) << 8)
         let y = Int16(readBuffer[2]) | (Int16(readBuffer[3]) << 8)
@@ -226,6 +230,7 @@ final public class LIS3DH {
     /// - Returns: 3 float within the selected g range.
     public func readValue() -> (x: Float, y: Float, z: Float) {
         let (ix, iy, iz) = readRawValue()
+        print(ix, iy, iz)
         var value: (x: Float, y: Float, z: Float) =
             (Float(ix), Float(iy), Float(iz))
         
@@ -237,27 +242,27 @@ final public class LIS3DH {
     }
     
     /// Read the acceleration on x-axis.
-    /// - Returns: A float representing the acceleration.
+    /// - Returns: A float representing the x-axis acceleration.
     public func readX() -> Float {
-        readRegister(.OUT_X_L, into: &readBuffer, count: 2)
+        try? readRegister(.OUT_X_L, into: &readBuffer, count: 2)
         let ix = Int16(readBuffer[0]) | (Int16(readBuffer[1]) << 8)
         
         return Float(ix) / gCoefficient
     }
     
     /// Read the acceleration on y-axis.
-    /// - Returns: A float representing the acceleration.
+    /// - Returns: A float representing the y-axis acceleration.
     public func readY() -> Float {
-        readRegister(.OUT_Y_L, into: &readBuffer, count: 2)
+        try? readRegister(.OUT_Y_L, into: &readBuffer, count: 2)
         let iy = Int16(readBuffer[0]) | (Int16(readBuffer[1]) << 8)
         
         return Float(iy) / gCoefficient
     }
     
-    /// Read the acceleration on y-axis.
-    /// - Returns: A float representing the acceleration.
+    /// Read the acceleration on z-axis.
+    /// - Returns: A float representing the z-axis acceleration.
     public func readZ() -> Float {
-        readRegister(.OUT_Z_L, into: &readBuffer, count: 2)
+        try? readRegister(.OUT_Z_L, into: &readBuffer, count: 2)
         let iz = Int16(readBuffer[0]) | (Int16(readBuffer[1]) << 8)
         
         return Float(iz) / gCoefficient
@@ -266,7 +271,7 @@ final public class LIS3DH {
 
 
 extension LIS3DH {
-    enum Register: UInt8 {
+    private enum Register: UInt8 {
         case STATUS_AUX     = 0x07
         case OUT_ADC1_L     = 0x08
         case OUT_ADC1_H     = 0x09
@@ -316,7 +321,7 @@ extension LIS3DH {
         case ACT_DUR        = 0x3F
     }
     
-    struct RangeConfig: OptionSet {
+    private struct RangeConfig: OptionSet {
         let rawValue: UInt8
         
         static let rangeMask       = RangeConfig(rawValue: 0b0011_0000)
@@ -325,7 +330,7 @@ extension LIS3DH {
         static let highResEnable   = RangeConfig(rawValue: 0b1000)
     }
     
-    struct DataRateConfig: OptionSet {
+    private struct DataRateConfig: OptionSet {
         let rawValue: UInt8
         
         static let dataRateMask     = DataRateConfig(rawValue: 0b1111_0000)
@@ -338,37 +343,44 @@ extension LIS3DH {
         static let zEnable          = DataRateConfig(rawValue: 0b0100)
     }
     
-    func writeRegister(_ value: UInt8, to reg: Register) {
-        if let i2c = i2c {
-            i2c.write([reg.rawValue, value], to: address!)
-        } else if let spi = spi {
+    private func writeRegister(_ value: UInt8, to reg: Register) throws {
+        var result: Result<(), Errno>
+        if i2c != nil {
+            result = i2c!.write([reg.rawValue, value], to: address!)
+        } else {
+            let register = reg.rawValue & 0b0111_1111
             csPin?.low()
-            spi.write([reg.rawValue, value])
+            result = spi!.write([register, value])
             csPin?.high()
+        }
+
+        if case .failure(let err) = result {
+            throw err
         }
     }
     
-    func readRegister(_ reg: Register) -> UInt8 {
-        var byte: UInt8 = 0
-        var ret: Result<(), Errno>
-
+    private func readRegister(_ reg: Register, into byte: inout UInt8) throws {
+        var result: Result<(), Errno>
         if i2c != nil {
-            ret = i2c!.writeRead(reg.rawValue, into: &byte, address: address!)
+            result = i2c!.writeRead(reg.rawValue, into: &byte, address: address!)
         } else {
             let register = reg.rawValue | 0b1000_0000
+            var tempBuffer: [UInt8] = [0, 0]
             csPin?.low()
-            spi!.write(register)
-            ret = spi!.read(into: &byte)
+            result = spi!.transceive(register, into: &tempBuffer)
             csPin?.high()
+            byte = tempBuffer[1]
         }
-
-        if case .failure(let err) = ret {
-            print("error: \(#function) " + String(describing: err))
+        if case .failure(let err) = result {
+            throw err
         }
-        return byte
     }
     
-    func readRegister(_ beginReg: Register, into buffer: inout [UInt8], count: Int) {
+    private func readRegister(
+        _ beginReg: Register, into buffer: inout [UInt8], count: Int
+    ) throws {
+        var result: Result<(), Errno>
+
         var writeByte = beginReg.rawValue
         writeByte |= 0x80
 
@@ -376,16 +388,20 @@ extension LIS3DH {
             buffer[i] = 0
         }
 
-        if let i2c = i2c {
-            i2c.writeRead(writeByte, into: &readBuffer,
-                          readCount: count, address: address!)
-        } else if let spi = spi {
+        if i2c != nil {
+            result = i2c!.writeRead(writeByte, into: &buffer,
+                                   readCount: count, address: address!)
+        } else  {
             writeByte |= 0b1100_0000
             csPin?.low()
-            spi.write(writeByte)
-            spi.read(into: &buffer, count: count)
+            result = spi!.transceive(writeByte, into: &buffer, readCount: count + 1)
             csPin?.high()
+            for i in 0..<6 {
+                buffer[i] = buffer[i + 1]
+            }
         }
-
+        if case .failure(let err) = result {
+            throw err
+        }
     }
 }

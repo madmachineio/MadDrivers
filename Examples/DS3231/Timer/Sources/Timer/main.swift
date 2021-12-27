@@ -24,10 +24,7 @@ while true {
     // Clear the alarm. The alarm will continue to be activated when the time is up.
     if value {
         sensor.clearAlarm(1)
-        let time = sensor.readCurrent()
-        if let time = time {
-            print(time)
-        }
+        print(sensor.readCurrent())
         sensor.setTimer1(second: 10, mode: .second)
         value = false
     }

@@ -43,7 +43,8 @@ final public class BME680 {
     var heatValue: Double = 0
     var rangeSwitchingError: Double = 0
 
-    private var buffer = [UInt8](repeating: 0, count: 15)
+    private var readBuffer = [UInt8](repeating: 0, count: 15)
+    private var rawValues = [Double](repeating: 0, count: 6)
 
     private let lookupTable1 = [
         1, 1, 1, 1, 1, 0.99, 1, 0.992,
@@ -77,7 +78,7 @@ final public class BME680 {
 
         reset()
 
-        guard let chipID = readRegister(.chipID), chipID == 0x61 else {
+        guard getDeviceID() == 0x61 else {
             fatalError(#function + ": cannot find BME680 at address \(address)")
         }
 
@@ -91,16 +92,24 @@ final public class BME680 {
         // Set heater to 320 degree celsius for 150ms.
         setHeater(320, 150)
         // Enable gas conversion.
-        writeRegister(.ctrlGas1, 0x10)
+        try? writeRegister(.ctrlGas1, 0x10)
     }
 
+    /// Initialize the sensor using SPI communication.
+    /// - Parameters:
+    ///   - spi: **REQUIRED** The SPI interface that the sensor connects.
+    ///   The maximum SPI clock speed is **10MHz**. The **CPOL and CPHA** should
+    ///   be **both true** or **both false**.
+    ///   - csPin: The cs pin for the spi. If you set the cs when
+    ///   initializing the spi interface, `csPin` should be nil. If not, you
+    ///   need to set a digital output pin as the cs pin. And the mode of the pin
+    ///   should be **pushPull**.
     public init(_ spi: SPI, csPin: DigitalOut? = nil) {
         self.spi = spi
         self.csPin = csPin
         self.i2c = nil
         self.address = nil
 
-        _ = spi.readByte()
         csPin?.high()
 
         tSampling = .x8
@@ -111,11 +120,11 @@ final public class BME680 {
 
         guard (spi.cs == false && csPin != nil && csPin!.getMode() == .pushPull)
                 || (spi.cs == true && csPin == nil) else {
-                    fatalError(#function + ": csPin isn't correct")
+                    fatalError(#function + ": csPin isn't correctly configured")
         }
 
-        guard spi.getMode() == (true, true) ||
-                spi.getMode() == (false, false) else {
+        guard spi.getMode() == (true, true, .MSB) ||
+                spi.getMode() == (false, false, .MSB) else {
             fatalError(#function + ": spi mode doesn't match for BME680")
         }
 
@@ -125,7 +134,8 @@ final public class BME680 {
 
 
         reset()
-        guard let chipID = readRegister(.chipID), chipID == 0x61 else {
+
+        guard getDeviceID() == 0x61 else {
             fatalError(#function + ": cannot find BME680 via spi bus")
         }
 
@@ -141,23 +151,23 @@ final public class BME680 {
         setHeater(320, 150)
 
         // Enable gas conversion.
-        writeRegister(.ctrlGas1, 0x10)
+        try? writeRegister(.ctrlGas1, 0x10)
 
     }
 
     /// Read current temperature in Celsius.
     /// - Returns: The temperature in Celsius.
     public func readTemperature() -> Double {
-        let data = readRawValues()
-        let temp = data[5] / 5120
+        updateRawValues()
+        let temp = rawValues[5] / 5120
         return temp
     }
 
     /// Measure current barometric pressure in hPa.
     /// - Returns: The pressure in hPa.
     public func readPressure() -> Double {
-        let data = readRawValues()
-        let tFine = data[5]
+        updateRawValues()
+        let tFine = rawValues[5]
 
         var value1 = tFine / 2 - 64000
         var value2 = value1 * value1 * (pCoeff[5] / 131072)
@@ -166,7 +176,7 @@ final public class BME680 {
         value1 = ((pCoeff[2] * value1 * value1) / 16384 +
                   (pCoeff[1] * value1)) / 524288
         value1 = (1 + value1 / 32768) * pCoeff[0]
-        var pressure = 1048576 - data[0]
+        var pressure = 1048576 - rawValues[0]
 
         guard value1 != 0 else { return 0 }
 
@@ -196,10 +206,10 @@ final public class BME680 {
     /// Read current relative humidity.
     /// - Returns: The humidity in percentage.
     public func readHumidity() -> Double {
-        let data = readRawValues()
-        let temp = data[5] / 5120
+        updateRawValues()
+        let temp = rawValues[5] / 5120
 
-        let value1 = data[2] - (hCoeff[0] * 16 + hCoeff[2] / 2 * temp)
+        let value1 = rawValues[2] - (hCoeff[0] * 16 + hCoeff[2] / 2 * temp)
 
         let value2 = value1 * ((hCoeff[1] / 262144) *
                                (1 + hCoeff[3] / 16384 * temp +
@@ -220,9 +230,9 @@ final public class BME680 {
     /// If the resistance is higher, the air is cleaner.
     /// - Returns: The gas resistance in ohms.
     public func readGasResistance() -> Double {
-        let data = readRawValues()
-        let rawGas = data[3]
-        let gasRange = Int(data[4])
+        updateRawValues()
+        let rawGas = rawValues[3]
+        let gasRange = Int(rawValues[4])
 
         let value1 = (1340 + 5 * rangeSwitchingError) * lookupTable1[gasRange]
         let gas = value1 * lookupTable2[gasRange] / (rawGas - 512 + value1)
@@ -243,15 +253,15 @@ final public class BME680 {
         let gasWait = calGasWait(duration)
         let gasHeat = calGasHeat(temp)
 
-        writeRegister(.gasWait0, gasWait)
-        writeRegister(.resHeat0, gasHeat)
+        try? writeRegister(.gasWait0, gasWait)
+        try? writeRegister(.resHeat0, gasHeat)
     }
 
     /// Set oversampling rate for the humidity measurement.
     /// - Parameter hSampling: An Oversampling setting.
     public func setHumiditySampling(_ hSampling: Oversampling) {
         self.hSampling = hSampling
-        writeRegister(.ctrlHum, hSampling.rawValue)
+        try? writeRegister(.ctrlHum, hSampling.rawValue)
     }
 
     /// Set oversampling rate for the temperature measurement.
@@ -285,7 +295,7 @@ final public class BME680 {
     /// - Parameter filter: A filter setting in `Filter` enumeration.
     public func setFilter(_ filter: Filter) {
         self.filter = filter
-        writeRegister(.config, filter.rawValue << 2)
+        try? writeRegister(.config, filter.rawValue << 2)
     }
 
     /// Get IIR filter setting for the measurement.
@@ -344,10 +354,14 @@ extension BME680 {
 
     /// Set temperature and pressure oversampling settings and power mode.
     private func writeCtrlMeas() {
-        let ctrlMeas = tSampling.rawValue << 5 |
-        pSampling.rawValue << 2 | mode.rawValue
+        let ctrlMeas = tSampling.rawValue << 5 | pSampling.rawValue << 2 | mode.rawValue
+        try? writeRegister(.ctrlMeas, ctrlMeas)
+    }
 
-        writeRegister(.ctrlMeas, ctrlMeas)
+    private func getDeviceID() -> UInt8 {
+        var byte: UInt8 = 0
+        try? readRegister(.chipID, into: &byte)
+        return byte
     }
 
     private func setSPIMemPage(_ register: Register) {
@@ -355,30 +369,38 @@ extension BME680 {
         if register.rawValue < 0x80 {
             page = 0x10
         }
-        writeRegister(.status, page)
+        try? writeRegister(.status, page)
     }
 
-    private func writeRegister(_ register: Register, _ value: UInt8) {
-        if let i2c = i2c {
-            i2c.write([register.rawValue, value], to: address!)
-        } else if let spi = spi {
+    private func writeRegister(_ register: Register, _ value: UInt8) throws {
+        var result: Result<(), Errno>
+
+        if i2c != nil {
+            result = i2c!.write([register.rawValue, value], to: address!)
+        } else {
             if register != .status {
                 setSPIMemPage(register)
             }
 
             let register = register.rawValue & 0b0111_1111
             csPin?.low()
-            spi.write([register, value])
+            result = spi!.write([register, value])
             csPin?.high()
+        }
+
+        if case .failure(let err) = result {
+            throw err
         }
     }
 
-    private func readRegister(_ register: Register) -> UInt8? {
-        var ret: Result<UInt8, Errno>
+    private func readRegister(
+        _ register: Register, into byte: inout UInt8
+    ) throws {
+        var result: Result<(), Errno>
 
         if i2c != nil {
             i2c!.write(register.rawValue, to: address!)
-            ret = i2c!.readByte(from: address!)
+            result = i2c!.read(into: &byte, from: address!)
         } else {
             if register != .status {
                 setSPIMemPage(register)
@@ -387,36 +409,50 @@ extension BME680 {
             let register = register.rawValue | 0b1000_0000
             csPin?.low()
             spi!.write(register)
-            ret = spi!.readByte()
+            result = spi!.read(into: &byte)
             csPin?.high()
         }
 
-        switch ret {
-        case .success(let byte):
-            return byte
-        case .failure(let err):
-            print("error: \(#function) " + String(describing: err))
-            return nil
+        if case .failure(let err) = result {
+            throw err
         }
     }
 
-    private func readRegister(_ register: Register, into buffer: inout [UInt8], count: Int) {
+    private func readRegister(
+        _ register: Register, into buffer: inout [UInt8], count: Int
+    ) throws {
         for i in 0..<buffer.count {
             buffer[i] = 0
         }
+        var result: Result<(), Errno>
 
         if let i2c = i2c {
-            i2c.write(register.rawValue, to: address!)
-            i2c.read(into: &buffer, count: count, from: address!)
+            result = i2c.write(register.rawValue, to: address!)
+            if case .failure(let err) = result {
+                throw err
+            }
+
+            result = i2c.read(into: &buffer, count: count, from: address!)
+            if case .failure(let err) = result {
+                throw err
+            }
         } else if let spi = spi {
             if register != .status {
                 setSPIMemPage(register)
             }
             let register = register.rawValue | 0b1000_0000
-
             csPin?.low()
-            spi.write(register)
-            spi.read(into: &buffer, count: count)
+
+            result = spi.write(register)
+            if case .failure(let err) = result {
+                throw err
+            }
+
+            result = spi.read(into: &buffer, count: count)
+            if case .failure(let err) = result {
+                throw err
+            }
+            
             csPin?.high()
         }
     }
@@ -454,19 +490,19 @@ extension BME680 {
     }
 
     private func reset() {
-        writeRegister(.reset, 0xB6)
+        try? writeRegister(.reset, 0xB6)
         sleep(ms: 5)
     }
 
-    func readCalibration() {
+    private func readCalibration() {
         var coeff1 = [UInt8](repeating: 0, count: 23)
-        readRegister(.coeff1, into: &coeff1, count: 23)
+        try? readRegister(.coeff1, into: &coeff1, count: 23)
 
         var coeff2 = [UInt8](repeating: 0, count: 14)
-        readRegister(.coeff2, into: &coeff2, count: 14)
+        try? readRegister(.coeff2, into: &coeff2, count: 14)
 
         var coeff3 = [UInt8](repeating: 0, count: 5)
-        readRegister(.coeff3, into: &coeff3, count: 5)
+        try? readRegister(.coeff3, into: &coeff3, count: 5)
 
         let coefficient = coeff1 + coeff2 + coeff3
 
@@ -503,91 +539,96 @@ extension BME680 {
         let heatRange = 39
         let rangeSWErr = 41
 
-        let parT1 = calUInt16(coefficient, t1LSB)
-        let parT2 = calInt16(coefficient, t2LSB)
-        let parT3 = calInt8(coefficient, t3)
+        let parT1 = coefficient.calUInt16(t1LSB)
+        let parT2 = coefficient.calInt16(t2LSB)
+        let parT3 = coefficient.calInt8(t3)
         tCoeff = [parT1, parT2, parT3]
 
-        let parG1 = calInt8(coefficient, g1)
-        let parG2 = calInt16(coefficient, g2LSB)
-        let parG3 = calInt8(coefficient, g3)
+        let parG1 = coefficient.calInt8(g1)
+        let parG2 = coefficient.calInt16(g2LSB)
+        let parG3 = coefficient.calInt8(g3)
         gCoeff = [parG1, parG2, parG3]
 
         let parH1 = Double(UInt16(coefficient[h1MSB]) << 4 |
                            UInt16(coefficient[h1LSB]) & 0x0f)
         let parH2 = Double(UInt16(coefficient[h2MSB]) << 4 |
                            UInt16(coefficient[h2LSB]) >> 4)
-        let parH3 = calInt8(coefficient, h3)
-        let parH4 = calInt8(coefficient, h4)
-        let parH5 = calInt8(coefficient, h5)
+        let parH3 = coefficient.calInt8(h3)
+        let parH4 = coefficient.calInt8(h4)
+        let parH5 = coefficient.calInt8(h5)
         let parH6 = Double(coefficient[h6])
-        let parH7 = calInt8(coefficient, h7)
+        let parH7 = coefficient.calInt8(h7)
         hCoeff = [parH1, parH2, parH3, parH4, parH5, parH6, parH7]
 
-        let parP1 = calUInt16(coefficient, p1LSB)
-        let parP2 = calInt16(coefficient, p2LSB)
-        let parP3 = calInt8(coefficient, p3)
-        let parP4 = calInt16(coefficient, p4LSB)
-        let parP5 = calInt16(coefficient, p5LSB)
-        let parP6 = calInt8(coefficient, p6)
-        let parP7 = calInt8(coefficient, p7)
-        let parP8 = calInt16(coefficient, p8LSB)
-        let parP9 = calInt16(coefficient, p9LSB)
+        let parP1 = coefficient.calUInt16(p1LSB)
+        let parP2 = coefficient.calInt16(p2LSB)
+        let parP3 = coefficient.calInt8(p3)
+        let parP4 = coefficient.calInt16(p4LSB)
+        let parP5 = coefficient.calInt16(p5LSB)
+        let parP6 = coefficient.calInt8(p6)
+        let parP7 = coefficient.calInt8(p7)
+        let parP8 = coefficient.calInt16(p8LSB)
+        let parP9 = coefficient.calInt16(p9LSB)
         let parP10 = Double(coefficient[p10])
         pCoeff = [parP1, parP2, parP3, parP4, parP5,
                   parP6, parP7, parP8, parP9, parP10]
 
-        heatValue = calInt8(coefficient, heatVal)
+        heatValue = coefficient.calInt8(heatVal)
         heaterRange = Double((coefficient[heatRange] & 0x30) >> 4)
         rangeSwitchingError = Double(Int8(
             truncatingIfNeeded: coefficient[rangeSWErr] & 0xF0) >> 4)
     }
 
-    func calInt16(_ data: [UInt8] , _ lowIndex: Int) -> Double {
-        let low = data[lowIndex]
-        let high = data[lowIndex + 1]
-        return Double(Int16(high) << 8 | Int16(low))
-    }
-
-    func calUInt16(_ data: [UInt8] , _ lowIndex: Int) -> Double {
-        let low = data[lowIndex]
-        let high = data[lowIndex + 1]
-        return Double(UInt16(high) << 8 | UInt16(low))
-    }
-
-    func calInt8(_ data: [UInt8] , _ index: Int) -> Double {
-        return Double(Int8(truncatingIfNeeded: data[index]))
-    }
-
-    private func readRawValues() -> [Double] {
+    private func updateRawValues() {
         mode = .force
         writeCtrlMeas()
 
         var newData = false
         while !newData {
-            readRegister(.measStatus0, into: &buffer, count: 15)
+            try? readRegister(.measStatus0, into: &readBuffer, count: 15)
 
-            let measStatus = buffer[0] & 0x80
+            let measStatus = readBuffer[0] & 0x80
             if measStatus != 0 {
                 newData = true
             }
             sleep(ms: 5)
         }
 
-        let rawPressure = Double(UInt32(buffer[2]) << 12 |
-                                 UInt32(buffer[3]) << 4 | UInt32(buffer[4]) >> 4)
-        let rawTemp = Double(UInt32(buffer[5]) << 12 | UInt32(buffer[6]) << 4 |
-                             UInt32(buffer[7]) >> 4)
-        let rawHum = Double(UInt16(buffer[8]) << 8 | UInt16(buffer[9]))
-        let rawGas = Double(UInt16(buffer[13]) << 2 | UInt16(buffer[14]) >> 6)
-        let gasRange = Double(buffer[14] & 0x0F)
+        let rawPressure = Double(UInt32(readBuffer[2]) << 12 |
+                                 UInt32(readBuffer[3]) << 4 |
+                                 UInt32(readBuffer[4]) >> 4)
+        let rawTemp = Double(UInt32(readBuffer[5]) << 12 |
+                             UInt32(readBuffer[6]) << 4 |
+                             UInt32(readBuffer[7]) >> 4)
+        let rawHum = Double(UInt16(readBuffer[8]) << 8 |
+                            UInt16(readBuffer[9]))
+        let rawGas = Double(UInt16(readBuffer[13]) << 2 |
+                            UInt16(readBuffer[14]) >> 6)
+        let gasRange = Double(readBuffer[14] & 0x0F)
 
         let value1 = (rawTemp / 16384 - tCoeff[0] / 1024) * tCoeff[1]
         let value2 = (rawTemp / 131072 - tCoeff[0] / 8192) *
         (rawTemp / 131072 - tCoeff[0] / 8192) * (tCoeff[2] * 16)
-
         let tFine = value1 + value2
 
-        return [rawPressure, rawTemp, rawHum, rawGas, gasRange, tFine]
+        rawValues = [rawPressure, rawTemp, rawHum, rawGas, gasRange, tFine]
+    }
+}
+
+private extension Array where Element == UInt8 {
+    func calInt16(_ lowIndex: Int) -> Double {
+        let low = self[lowIndex]
+        let high = self[lowIndex + 1]
+        return Double(Int16(high) << 8 | Int16(low))
+    }
+
+    func calUInt16(_ lowIndex: Int) -> Double {
+        let low = self[lowIndex]
+        let high = self[lowIndex + 1]
+        return Double(UInt16(high) << 8 | UInt16(low))
+    }
+
+    func calInt8(_ index: Int) -> Double {
+        return Double(Int8(truncatingIfNeeded: self[index]))
     }
 }
