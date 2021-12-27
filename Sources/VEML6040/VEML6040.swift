@@ -116,7 +116,7 @@ final public class VEML6040 {
         configValue.remove(.integrationTimeMask)
         configValue.insert(newConfig)
         
-        writeConfig(configValue)
+        try? writeConfig(configValue)
     }
     
     
@@ -129,25 +129,29 @@ final public class VEML6040 {
     /// Read the raw value of red light.
     /// - Returns: Value of red light between 0 and 65535.
     public func readRedRawValue() -> UInt16 {
-        return readRegister(.redData)
+        try? readRegister(.redData, into: &readBuffer)
+        return calUInt16(readBuffer)
     }
     
     /// Read the raw value of green light.
     /// - Returns: Value of green light between 0 and 65535.
     public func readGreenRawValue() -> UInt16 {
-        return readRegister(.greenData)
+        try? readRegister(.greenData, into: &readBuffer)
+        return calUInt16(readBuffer)
     }
     
     /// Read the raw value of blue light.
     /// - Returns: Value of blue light between 0 and 65535.
     public func readBlueRawValue() -> UInt16 {
-        return readRegister(.blueData)
+        try? readRegister(.blueData, into: &readBuffer)
+        return calUInt16(readBuffer)
     }
     
     /// Read the raw value of white light.
     /// - Returns: Value of white light between 0 and 65535.
     public func readWhiteRawValue() -> UInt16 {
-        return readRegister(.whiteData)
+        try? readRegister(.whiteData, into: &readBuffer)
+        return (UInt16(readBuffer[1]) << 8) | UInt16(readBuffer[0])
     }
     
     /// Read intensity of the ambient light. The value is measured in lux.
@@ -156,7 +160,6 @@ final public class VEML6040 {
     /// - Returns: An integer that represent the intensity in lux.
     public func readAmbientLight() -> Int {
         return Int(Float(readGreenRawValue()) * sensitivity)
-
     }
 }
 
@@ -188,19 +191,22 @@ extension VEML6040 {
     
     // Split the 16-bit data into two 8-bit data.
     // Write the data to the default address of the sensor.
-    private func writeConfig(_ value: Config) {
+    private func writeConfig(_ value: Config) throws {
         let array: [UInt8] = [Reg.config.rawValue, value.rawValue, 0]
-        i2c.write(array, to: address)
+        let result = i2c.write(array, to: address)
+        if case .failure(let err) = result {
+            throw err
+        }
     }
     
-    private func readRegister(_ reg: Reg) -> UInt16 {
-        let ret = i2c.writeRead(reg.rawValue, into: &readBuffer, address: address)
-
-        if case .failure(let err) = ret {
-            print("error: \(#function) " + String(describing: err))
-            return 0
+    private func readRegister(_ reg: Reg, into buffer: inout [UInt8]) throws {
+        let result = i2c.writeRead(reg.rawValue, into: &buffer, address: address)
+        if case .failure(let err) = result {
+            throw err
         }
-        
-        return (UInt16(readBuffer[1]) << 8) | UInt16(readBuffer[0])
+    }
+
+    private func calUInt16(_ data: [UInt8]) -> UInt16 {
+        return (UInt16(data[1]) << 8) | UInt16(data[0])
     }
 }

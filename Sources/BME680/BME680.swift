@@ -110,7 +110,6 @@ final public class BME680 {
         self.i2c = nil
         self.address = nil
 
-        _ = spi.readByte()
         csPin?.high()
 
         tSampling = .x8
@@ -124,8 +123,8 @@ final public class BME680 {
                     fatalError(#function + ": csPin isn't correctly configured")
         }
 
-        guard spi.getMode() == (true, true) ||
-                spi.getMode() == (false, false) else {
+        guard spi.getMode() == (true, true, .MSB) ||
+                spi.getMode() == (false, false, .MSB) else {
             fatalError(#function + ": spi mode doesn't match for BME680")
         }
 
@@ -159,16 +158,16 @@ final public class BME680 {
     /// Read current temperature in Celsius.
     /// - Returns: The temperature in Celsius.
     public func readTemperature() -> Double {
-        let data = readRawValues()
-        let temp = data[5] / 5120
+        updateRawValues()
+        let temp = rawValues[5] / 5120
         return temp
     }
 
     /// Measure current barometric pressure in hPa.
     /// - Returns: The pressure in hPa.
     public func readPressure() -> Double {
-        let data = readRawValues()
-        let tFine = data[5]
+        updateRawValues()
+        let tFine = rawValues[5]
 
         var value1 = tFine / 2 - 64000
         var value2 = value1 * value1 * (pCoeff[5] / 131072)
@@ -177,7 +176,7 @@ final public class BME680 {
         value1 = ((pCoeff[2] * value1 * value1) / 16384 +
                   (pCoeff[1] * value1)) / 524288
         value1 = (1 + value1 / 32768) * pCoeff[0]
-        var pressure = 1048576 - data[0]
+        var pressure = 1048576 - rawValues[0]
 
         guard value1 != 0 else { return 0 }
 
@@ -207,10 +206,10 @@ final public class BME680 {
     /// Read current relative humidity.
     /// - Returns: The humidity in percentage.
     public func readHumidity() -> Double {
-        let data = readRawValues()
-        let temp = data[5] / 5120
+        updateRawValues()
+        let temp = rawValues[5] / 5120
 
-        let value1 = data[2] - (hCoeff[0] * 16 + hCoeff[2] / 2 * temp)
+        let value1 = rawValues[2] - (hCoeff[0] * 16 + hCoeff[2] / 2 * temp)
 
         let value2 = value1 * ((hCoeff[1] / 262144) *
                                (1 + hCoeff[3] / 16384 * temp +
@@ -231,9 +230,9 @@ final public class BME680 {
     /// If the resistance is higher, the air is cleaner.
     /// - Returns: The gas resistance in ohms.
     public func readGasResistance() -> Double {
-        let data = readRawValues()
-        let rawGas = data[3]
-        let gasRange = Int(data[4])
+        updateRawValues()
+        let rawGas = rawValues[3]
+        let gasRange = Int(rawValues[4])
 
         let value1 = (1340 + 5 * rangeSwitchingError) * lookupTable1[gasRange]
         let gas = value1 * lookupTable2[gasRange] / (rawGas - 512 + value1)
@@ -376,16 +375,16 @@ extension BME680 {
     private func writeRegister(_ register: Register, _ value: UInt8) throws {
         var result: Result<(), Errno>
 
-        if let i2c = i2c {
-            result = i2c.write([register.rawValue, value], to: address!)
-        } else if let spi = spi {
+        if i2c != nil {
+            result = i2c!.write([register.rawValue, value], to: address!)
+        } else {
             if register != .status {
                 setSPIMemPage(register)
             }
 
             let register = register.rawValue & 0b0111_1111
             csPin?.low()
-            result = spi.write([register, value])
+            result = spi!.write([register, value])
             csPin?.high()
         }
 
@@ -397,11 +396,11 @@ extension BME680 {
     private func readRegister(
         _ register: Register, into byte: inout UInt8
     ) throws {
-        var result: Result<UInt8, Errno>
+        var result: Result<(), Errno>
 
         if i2c != nil {
             i2c!.write(register.rawValue, to: address!)
-            result = i2c!.readByte(from: address!)
+            result = i2c!.read(into: &byte, from: address!)
         } else {
             if register != .status {
                 setSPIMemPage(register)
@@ -410,7 +409,7 @@ extension BME680 {
             let register = register.rawValue | 0b1000_0000
             csPin?.low()
             spi!.write(register)
-            result = spi!.readByte()
+            result = spi!.read(into: &byte)
             csPin?.high()
         }
 

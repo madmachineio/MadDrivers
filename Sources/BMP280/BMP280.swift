@@ -83,7 +83,6 @@ final public class BMP280 {
         self.i2c = nil
         self.address = nil
 
-        _ = spi.readByte()
         csPin?.high()
 
         tSampling = .x2
@@ -98,8 +97,8 @@ final public class BMP280 {
                     fatalError(#function + ": csPin isn't correct")
         }
 
-        guard spi.getMode() == (true, true) ||
-                spi.getMode() == (false, false) else {
+        guard spi.getMode() == (true, true, .MSB) ||
+                spi.getMode() == (false, false, .MSB) else {
             fatalError(#function + ": spi mode doesn't match for BMP280")
         }
 

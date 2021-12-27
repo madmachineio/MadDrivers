@@ -56,18 +56,18 @@ final public class LIS3DH {
         case Hz1K3LowPower5K    = 0b1001_0000
     }
     
-    let defaultWhoAmI  = UInt8(0x33)
+    private let defaultWhoAmI  = UInt8(0x33)
     
-    let i2c: I2C?
-    let address: UInt8?
-    let spi: SPI?
-    let csPin: DigitalOut?
+    private let i2c: I2C?
+    private let address: UInt8?
+    private let spi: SPI?
+    private let csPin: DigitalOut?
     
-    var gRange: GRange
-    var dataRate: DataRate
+    private var gRange: GRange
+    private var dataRate: DataRate
     
-    var rangeConfig: RangeConfig = []
-    var dataRateConfig: DataRateConfig = []
+    private var rangeConfig: RangeConfig = []
+    private var dataRateConfig: DataRateConfig = []
     
     var gCoefficient: Float {
         switch gRange {
@@ -271,7 +271,7 @@ final public class LIS3DH {
 
 
 extension LIS3DH {
-    enum Register: UInt8 {
+    private enum Register: UInt8 {
         case STATUS_AUX     = 0x07
         case OUT_ADC1_L     = 0x08
         case OUT_ADC1_H     = 0x09
@@ -321,7 +321,7 @@ extension LIS3DH {
         case ACT_DUR        = 0x3F
     }
     
-    struct RangeConfig: OptionSet {
+    private struct RangeConfig: OptionSet {
         let rawValue: UInt8
         
         static let rangeMask       = RangeConfig(rawValue: 0b0011_0000)
@@ -330,7 +330,7 @@ extension LIS3DH {
         static let highResEnable   = RangeConfig(rawValue: 0b1000)
     }
     
-    struct DataRateConfig: OptionSet {
+    private struct DataRateConfig: OptionSet {
         let rawValue: UInt8
         
         static let dataRateMask     = DataRateConfig(rawValue: 0b1111_0000)
@@ -343,7 +343,7 @@ extension LIS3DH {
         static let zEnable          = DataRateConfig(rawValue: 0b0100)
     }
     
-    func writeRegister(_ value: UInt8, to reg: Register) throws {
+    private func writeRegister(_ value: UInt8, to reg: Register) throws {
         var result: Result<(), Errno>
         if i2c != nil {
             result = i2c!.write([reg.rawValue, value], to: address!)
@@ -359,7 +359,7 @@ extension LIS3DH {
         }
     }
     
-    func readRegister(_ reg: Register, into byte: inout UInt8) throws {
+    private func readRegister(_ reg: Register, into byte: inout UInt8) throws {
         var result: Result<(), Errno>
         if i2c != nil {
             result = i2c!.writeRead(reg.rawValue, into: &byte, address: address!)
@@ -376,7 +376,7 @@ extension LIS3DH {
         }
     }
     
-    func readRegister(
+    private func readRegister(
         _ beginReg: Register, into buffer: inout [UInt8], count: Int
     ) throws {
         var result: Result<(), Errno>

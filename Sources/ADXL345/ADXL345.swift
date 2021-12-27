@@ -97,15 +97,12 @@ final public class ADXL345 {
         // Set 2g as default g range.
         gRange = .g2
 
-        // Perform a reading to get spi ready for the following communication.
-        _ = spi.readByte()
-
         guard (spi.cs == false && csPin != nil && csPin!.getMode() == .pushPull)
                 || (spi.cs == true && csPin == nil) else {
                     fatalError(#function + ": csPin isn't correctly configured")
         }
 
-        guard spi.getMode() == (true, true) else {
+        guard spi.getMode() == (true, true, .MSB) else {
             fatalError(#function + ": spi mode doesn't match for ADXL345")
         }
 
