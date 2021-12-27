@@ -16,10 +16,6 @@ sensor.setTime(current)
 
 while true {
     // Read current time. It returns a optional value and you need to unwrap it.
-    let time = sensor.readCurrent()
-    if let time = time {
-        print(time)
-    }
-    
+    print(sensor.readCurrent())
     sleep(ms: 2000)
 }

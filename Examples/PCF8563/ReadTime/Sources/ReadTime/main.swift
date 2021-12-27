@@ -14,10 +14,7 @@ rtc.setTime(current)
 
 while true {
     // Read current time. It returns a optional value and you need to unwrap it.
-    let reading = rtc.readCurrent()
-    if let reading = reading {
-        print(reading)
-    }
+    print(rtc.readCurrent())
     sleep(ms: 2000)
 }
 
