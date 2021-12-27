@@ -82,7 +82,7 @@ final public class LIS3DH {
         }
     }
 
-    private var readBuffer = [UInt8](repeating: 0, count: 6)
+    private var readBuffer = [UInt8](repeating: 0, count: 6 + 1)
     
     
     /// Initialize the sensor using I2C communication.
@@ -149,7 +149,7 @@ final public class LIS3DH {
             fatalError(#function + ": cannot support spi speed faster than 10MHz")
         }
 
-        guard spi.getMode() == (true, true) else {
+        guard spi.getMode() == (true, true, .MSB) else {
             fatalError(#function + ": spi mode doesn't match for LIS3DH")
         }
 
@@ -167,10 +167,8 @@ final public class LIS3DH {
     /// It can be used to test if the sensor is connected. The ID should be 0x33.
     /// - Returns: The device ID.
     public func getDeviceID() -> UInt8 {
-        print("\(#function) line \(#line)")
         var byte: UInt8 = 0
         try? readRegister(.WHO_AM_I, into: &byte)
-        print("\(self).\(#function) line \(#line)")
         print("ID: \(byte)")
         return byte
     }
@@ -347,12 +345,11 @@ extension LIS3DH {
     
     func writeRegister(_ value: UInt8, to reg: Register) throws {
         var result: Result<(), Errno>
-
         if i2c != nil {
             result = i2c!.write([reg.rawValue, value], to: address!)
         } else {
-            csPin?.low()
             let register = reg.rawValue & 0b0111_1111
+            csPin?.low()
             result = spi!.write([register, value])
             csPin?.high()
         }
@@ -364,32 +361,26 @@ extension LIS3DH {
     
     func readRegister(_ reg: Register, into byte: inout UInt8) throws {
         var result: Result<(), Errno>
-
         if i2c != nil {
             result = i2c!.writeRead(reg.rawValue, into: &byte, address: address!)
-            if case .failure(let err) = result {
-                throw err
-            }
         } else {
             let register = reg.rawValue | 0b1000_0000
+            var tempBuffer: [UInt8] = [0, 0]
             csPin?.low()
-            result = spi!.write(register)
-            if case .failure(let err) = result {
-                throw err
-            }
-
-            result = spi!.read(into: &byte)
-            if case .failure(let err) = result {
-                throw err
-            }
-
+            result = spi!.transceive(register, into: &tempBuffer)
             csPin?.high()
+            byte = tempBuffer[1]
+        }
+        if case .failure(let err) = result {
+            throw err
         }
     }
     
     func readRegister(
         _ beginReg: Register, into buffer: inout [UInt8], count: Int
     ) throws {
+        var result: Result<(), Errno>
+
         var writeByte = beginReg.rawValue
         writeByte |= 0x80
 
@@ -397,26 +388,20 @@ extension LIS3DH {
             buffer[i] = 0
         }
 
-        var result: Result<(), Errno>
-
-        if let i2c = i2c {
-            result = i2c.writeRead(writeByte, into: &buffer,
+        if i2c != nil {
+            result = i2c!.writeRead(writeByte, into: &buffer,
                                    readCount: count, address: address!)
-            if case .failure(let err) = result {
-                throw err
-            }
-        } else if let spi = spi {
+        } else  {
             writeByte |= 0b1100_0000
             csPin?.low()
-            result = spi.write(writeByte)
-            if case .failure(let err) = result {
-                throw err
-            }
-            result = spi.read(into: &buffer, count: count)
-            if case .failure(let err) = result {
-                throw err
-            }
+            result = spi!.transceive(writeByte, into: &buffer, readCount: count + 1)
             csPin?.high()
+            for i in 0..<6 {
+                buffer[i] = buffer[i + 1]
+            }
+        }
+        if case .failure(let err) = result {
+            throw err
         }
     }
 }
