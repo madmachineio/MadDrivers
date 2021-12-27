@@ -14,11 +14,6 @@ on:
   schedule:
     - cron: '1 0 * * 4'
 
-# env:
-#   SDK_VERSION: '0.6.0'
-#   LINUX_SDK: 'https://github.com/madmachineio/mm-sdk/releases/download/0.6.0-alpha.3/mm-sdk-0.6.0-alpha.3-ubuntu18.04-x64.tar.bz2'
-#   MACOS_SDK: 'https://github.com/madmachineio/mm-sdk/releases/download/0.6.0-alpha.3/mm-sdk-0.6.0-alpha.3-macOS-x64.zip'
-
 env:
    SDK_VERSION: ${{ secrets.CI_SDK_VERSION }}
    LINUX_SDK: ${{ secrets.CI_LINUX_SDK }}
