@@ -232,6 +232,7 @@ final public class LIS3DH {
     /// - Returns: 3 float within the selected g range.
     public func readValue() -> (x: Float, y: Float, z: Float) {
         let (ix, iy, iz) = readRawValue()
+        print(ix, iy, iz)
         var value: (x: Float, y: Float, z: Float) =
             (Float(ix), Float(iy), Float(iz))
         
@@ -362,10 +363,7 @@ extension LIS3DH {
     }
     
     func readRegister(_ reg: Register, into byte: inout UInt8) throws {
-        var byte: UInt8 = 0
         var result: Result<(), Errno>
-
-        print("\(#function) line \(#line)")
 
         if i2c != nil {
             result = i2c!.writeRead(reg.rawValue, into: &byte, address: address!)
@@ -373,24 +371,20 @@ extension LIS3DH {
                 throw err
             }
         } else {
-            print("\(#function) line \(#line)")
             let register = reg.rawValue | 0b1000_0000
             csPin?.low()
             result = spi!.write(register)
             if case .failure(let err) = result {
                 throw err
             }
-            print("\(#function) line \(#line)")
+
             result = spi!.read(into: &byte)
             if case .failure(let err) = result {
                 throw err
             }
-            print("\(#function) line \(#line)")
+
             csPin?.high()
         }
-        print("\(#function) line \(#line)")
-
-
     }
     
     func readRegister(
