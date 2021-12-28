@@ -24,7 +24,7 @@ final public class BMP280 {
     private let address: UInt8?
     private let csPin: DigitalOut?
 
-    private var readBuffer = [UInt8](repeating: 0, count: 24)
+    private var readBuffer = [UInt8](repeating: 0, count: 24 + 1)
 
     private var tSampling: Oversampling
     private var pSampling: Oversampling
@@ -347,21 +347,17 @@ extension BMP280 {
                 throw err
             }
             result = i2c!.read(into: &byte, from: address!)
-            if case .failure(let err) = result {
-                throw err
-            }
         } else {
             let register = register.rawValue | 0b1000_0000
+            var tempBuffer: [UInt8] = [0, 0]
             csPin?.low()
-            result = spi!.write(register)
-            if case .failure(let err) = result {
-                throw err
-            }
-            result = spi!.read(into: &byte)
-            if case .failure(let err) = result {
-                throw err
-            }
+            result = spi!.transceive(register, into: &tempBuffer)
             csPin?.high()
+            byte = tempBuffer[1]
+        }
+
+        if case .failure(let err) = result {
+            throw err
         }
     }
 
@@ -373,27 +369,24 @@ extension BMP280 {
         }
 
         var result: Result<(), Errno>
-        if let i2c = i2c {
-            result = i2c.write(register.rawValue, to: address!)
+        if i2c != nil {
+            result = i2c!.write(register.rawValue, to: address!)
             if case .failure(let err) = result {
                 throw err
             }
-            result = i2c.read(into: &buffer, from: address!)
-            if case .failure(let err) = result {
-                throw err
-            }
-        } else if let spi = spi {
+            result = i2c!.read(into: &buffer, from: address!)
+        } else {
             let register = register.rawValue | 0b1000_0000
             csPin?.low()
-            result = spi.write(register)
-            if case .failure(let err) = result {
-                throw err
-            }
-            result = spi.read(into: &buffer, count: count)
-            if case .failure(let err) = result {
-                throw err
-            }
+            result = spi!.transceive(register, into: &buffer, readCount: count + 1)
             csPin?.high()
+            for i in 0..<count {
+                buffer[i] = buffer[i+1]
+            }
+        }
+
+        if case .failure(let err) = result {
+            throw err
         }
     }
 

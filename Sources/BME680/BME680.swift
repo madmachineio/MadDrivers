@@ -17,12 +17,11 @@ import RealModule
 /// The sensor measures multiple VOC gases, like ethanol, carbon monoxide,
 /// etc, but cannot tell which one is changing. It will heat the hot plate inside
 /// it to a target temperature for some time before its measurement.
-/// Then the oxygen would be absorbed on its sensitive layer and finally
-/// change its resistance. More VOC gases in the air will
-/// cause a lower resistance.
+/// Then the oxygen would be absorbed on its sensitive layer and finally change
+/// its resistance. More VOC gases in the air will cause a lower resistance.
 ///
-/// Because of the sensor will produce heat during measurement, the temperature
-/// returned may be a little higher than the actual value.
+/// Since the sensor produces heat during measurement, the temperature and
+/// humidity reading may need an offset manually.
 final public class BME680 {
     private let i2c: I2C?
     private let address: UInt8?
@@ -43,7 +42,7 @@ final public class BME680 {
     var heatValue: Double = 0
     var rangeSwitchingError: Double = 0
 
-    private var readBuffer = [UInt8](repeating: 0, count: 15)
+    private var readBuffer = [UInt8](repeating: 0, count: 15 + 1)
     private var rawValues = [Double](repeating: 0, count: 6)
 
     private let lookupTable1 = [
@@ -186,7 +185,6 @@ final public class BME680 {
         let value3 = (pressure / 256) * (pressure / 256) *
                     (pressure / 256) * (pCoeff[9] / 131072)
         pressure = pressure + (value1 + value2 + value3 + pCoeff[6] * 128) / 16
-
         return pressure / 100
     }
 
@@ -208,13 +206,10 @@ final public class BME680 {
     public func readHumidity() -> Double {
         updateRawValues()
         let temp = rawValues[5] / 5120
-
         let value1 = rawValues[2] - (hCoeff[0] * 16 + hCoeff[2] / 2 * temp)
-
         let value2 = value1 * ((hCoeff[1] / 262144) *
                                (1 + hCoeff[3] / 16384 * temp +
                                 hCoeff[4] / 1048576 * temp * temp))
-
         let value3 = hCoeff[5] / 16384
         let value4 = hCoeff[6] / 2097152
         var hum = value2 + (value3 + value4 * temp) * value2 * value2
@@ -407,10 +402,11 @@ extension BME680 {
             }
 
             let register = register.rawValue | 0b1000_0000
+            var tempBuffer: [UInt8] = [0, 0]
             csPin?.low()
-            spi!.write(register)
-            result = spi!.read(into: &byte)
+            result = spi!.transceive(register, into: &tempBuffer)
             csPin?.high()
+            byte = tempBuffer[1]
         }
 
         if case .failure(let err) = result {
@@ -426,34 +422,30 @@ extension BME680 {
         }
         var result: Result<(), Errno>
 
-        if let i2c = i2c {
-            result = i2c.write(register.rawValue, to: address!)
+        if i2c != nil {
+            result = i2c!.write(register.rawValue, to: address!)
             if case .failure(let err) = result {
                 throw err
             }
 
-            result = i2c.read(into: &buffer, count: count, from: address!)
-            if case .failure(let err) = result {
-                throw err
-            }
-        } else if let spi = spi {
+            result = i2c!.read(into: &buffer, count: count, from: address!)
+        } else {
             if register != .status {
                 setSPIMemPage(register)
             }
             let register = register.rawValue | 0b1000_0000
             csPin?.low()
-
-            result = spi.write(register)
-            if case .failure(let err) = result {
-                throw err
-            }
-
-            result = spi.read(into: &buffer, count: count)
-            if case .failure(let err) = result {
-                throw err
-            }
-            
+            result = spi!.transceive(register, into: &buffer, readCount: count + 1)
             csPin?.high()
+
+            for i in 0..<count {
+                buffer[i] = buffer[i + 1]
+            }
+
+        }
+
+        if case .failure(let err) = result {
+            throw err
         }
     }
 
@@ -495,14 +487,17 @@ extension BME680 {
     }
 
     private func readCalibration() {
-        var coeff1 = [UInt8](repeating: 0, count: 23)
+        var coeff1 = [UInt8](repeating: 0, count: 23 + 1)
         try? readRegister(.coeff1, into: &coeff1, count: 23)
+        coeff1.remove(at: 23)
 
-        var coeff2 = [UInt8](repeating: 0, count: 14)
+        var coeff2 = [UInt8](repeating: 0, count: 14 + 1)
         try? readRegister(.coeff2, into: &coeff2, count: 14)
+        coeff2.remove(at: 14)
 
-        var coeff3 = [UInt8](repeating: 0, count: 5)
+        var coeff3 = [UInt8](repeating: 0, count: 5 + 1)
         try? readRegister(.coeff3, into: &coeff3, count: 5)
+        coeff3.remove(at: 5)
 
         let coefficient = coeff1 + coeff2 + coeff3
 
@@ -593,6 +588,7 @@ extension BME680 {
             }
             sleep(ms: 5)
         }
+
 
         let rawPressure = Double(UInt32(readBuffer[2]) << 12 |
                                  UInt32(readBuffer[3]) << 4 |
