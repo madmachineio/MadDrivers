@@ -47,6 +47,10 @@ final public class BH1750 {
     private var readBuffer = [UInt8](repeating: 0, count: 2)
 
     /// Initialize the light sensor.
+    ///
+    /// The sensor provides two options for the address. If the pin ADDR is
+    /// low voltage, the address is 0x23. If it is high voltage,
+    /// the address is 0x5C.
     /// - Parameters:
     ///   - i2c: **REQUIRED** An I2C pin for the communication. The maximum
     ///   I2C speed is 400KHz.

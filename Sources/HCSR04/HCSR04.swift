@@ -21,7 +21,7 @@ import SwiftIO
 ///
 /// - Attention: Make sure to use the sensor that requires 3.3V,
 /// or it might return a wrong value and even do damage to your board.
-final public class HCSR40 {
+final public class HCSR04 {
     private let trig: DigitalOut
     private let echo: DigitalIn
     

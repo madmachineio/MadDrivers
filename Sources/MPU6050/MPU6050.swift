@@ -61,7 +61,11 @@ final public class MPU6050 {
         }
     }
 
-    /// Initialize the sensor using I2C communication..
+    /// Initialize the sensor using I2C communication.
+    ///
+    /// The sensor provides two options for the address. If the pin AD0 is
+    /// low voltage, the address is 0x68. If it is high voltage,
+    /// the address is 0x69.
     /// - Parameters:
     ///   - i2c: **REQUIRED** The I2C interface that the sensor connects.
     ///   - address: **OPTIONAL** The device address of the sensor.

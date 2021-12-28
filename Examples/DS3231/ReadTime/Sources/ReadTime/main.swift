@@ -16,6 +16,6 @@ sensor.setTime(current)
 
 while true {
     // Read current time. It returns a optional value and you need to unwrap it.
-    print(sensor.readCurrent())
+    print(sensor.readTime())
     sleep(ms: 2000)
 }

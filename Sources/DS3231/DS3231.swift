@@ -32,7 +32,7 @@ final public class DS3231 {
     /// - Parameters:
     ///   - i2c: **REQUIRED** The I2C interface the RTC connects to. The maximum
     ///   I2C speed is 400KHz.
-    ///   - address: **OPTIONAL** The sensor's address. It has a default value.
+    ///   - address: **OPTIONAL** The sensor's address. It has a default value 0x68.
     public init(_ i2c: I2C, _ address: UInt8 = 0x68) {
         let speed = i2c.getSpeed()
         guard speed == .standard || speed == .fast else {
@@ -73,7 +73,7 @@ final public class DS3231 {
 
     /// Read current time.
     /// - Returns: The time info in a struct.
-    public func readCurrent() -> Time {
+    public func readTime() -> Time {
         try? readRegister(.second, into: &readBuffer, count: 7)
 
         let year = UInt16(bcdToBin(readBuffer[6])) + 2000
@@ -221,7 +221,7 @@ final public class DS3231 {
         day: UInt8 = 0, hour: UInt8 = 0, minute: UInt8 = 0,
         second: UInt8 = 0, mode: Alarm1Mode
     ) {
-        let current = readCurrent()
+        let current = readTime()
 
         let futureSecond = (current.second + second) % 60
         let futureMinute = (current.minute + minute) % 60 +
@@ -252,7 +252,7 @@ final public class DS3231 {
     public func setTimer2(
         day: UInt8 = 0, hour: UInt8 = 0, minute: UInt8 = 0, mode: Alarm2Mode
     ) {
-        let current = readCurrent()
+        let current = readTime()
 
         let futureMinute = (current.minute + minute) % 60
         let futureHour = (current.hour + hour) % 24 +

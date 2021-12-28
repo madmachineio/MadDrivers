@@ -169,7 +169,6 @@ final public class LIS3DH {
     public func getDeviceID() -> UInt8 {
         var byte: UInt8 = 0
         try? readRegister(.WHO_AM_I, into: &byte)
-        print("ID: \(byte)")
         return byte
     }
     
@@ -230,7 +229,6 @@ final public class LIS3DH {
     /// - Returns: 3 float within the selected g range.
     public func readValue() -> (x: Float, y: Float, z: Float) {
         let (ix, iy, iz) = readRawValue()
-        print(ix, iy, iz)
         var value: (x: Float, y: Float, z: Float) =
             (Float(ix), Float(iy), Float(iz))
         
@@ -371,6 +369,7 @@ extension LIS3DH {
             csPin?.high()
             byte = tempBuffer[1]
         }
+
         if case .failure(let err) = result {
             throw err
         }
