@@ -209,25 +209,11 @@ final public class LIS3DH {
         try? readRegister(.CTRL1, into: &byte)
         return DataRate(rawValue: byte & DataRateConfig([.dataRateMask]).rawValue)!
     }
-    
-    
-    /// Read raw values of acceleration on x, y, z-axes at once.
-    /// - Returns: x, y, z values from -32768 to 32767.
-    public func readRawValue() -> (x: Int16, y: Int16, z: Int16) {
-        try? readRegister(.OUT_X_L, into: &readBuffer, count: 6)
 
-        let x = Int16(readBuffer[0]) | (Int16(readBuffer[1]) << 8)
-        let y = Int16(readBuffer[2]) | (Int16(readBuffer[3]) << 8)
-        let z = Int16(readBuffer[4]) | (Int16(readBuffer[5]) << 8)
-        
-        return (x, y, z)
-    }
-    
-    
     /// Read x, y, z acceleration values represented in g (9.8m/s^2)
     /// within the selected range.
     /// - Returns: 3 float within the selected g range.
-    public func readValue() -> (x: Float, y: Float, z: Float) {
+    public func readXYZ() -> (x: Float, y: Float, z: Float) {
         let (ix, iy, iz) = readRawValue()
         var value: (x: Float, y: Float, z: Float) =
             (Float(ix), Float(iy), Float(iz))
@@ -402,5 +388,17 @@ extension LIS3DH {
         if case .failure(let err) = result {
             throw err
         }
+    }
+
+    /// Read raw values of acceleration on x, y, z-axes at once.
+    /// - Returns: x, y, z values from -32768 to 32767.
+    private func readRawValue() -> (x: Int16, y: Int16, z: Int16) {
+        try? readRegister(.OUT_X_L, into: &readBuffer, count: 6)
+
+        let x = Int16(readBuffer[0]) | (Int16(readBuffer[1]) << 8)
+        let y = Int16(readBuffer[2]) | (Int16(readBuffer[3]) << 8)
+        let z = Int16(readBuffer[4]) | (Int16(readBuffer[5]) << 8)
+
+        return (x, y, z)
     }
 }

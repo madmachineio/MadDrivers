@@ -4,7 +4,7 @@ import IS31FL3731
 import MadDisplay
 
 let i2c = I2C(Id.I2C0)
-let led = IS31FL3731(i2c: i2c)
+let led = IS31FL3731(i2c)
 
 for f in 0..<8 {
     led.setToFrame(f, show: false)

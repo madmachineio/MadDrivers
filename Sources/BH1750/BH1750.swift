@@ -82,15 +82,15 @@ final public class BH1750 {
         case .continuous:
             /// In this mode, the sensor measures the light continuously,
             /// so you can read directly.
-            try? readRawValues(into: &readBuffer, count: 2)
+            try? readValue(into: &readBuffer, count: 2)
         case .oneTime:
             /// In this mode, every time the sensor finishes the reading,
             /// the sensor will move to power down mode.
             /// You need to resend the command for a new reading.
             let configValue = mode.rawValue | resolution.rawValue
-            try? writeCommand(configValue)
+            try? writeValue(configValue)
             sleep(ms: measurementTime)
-            try? readRawValues(into: &readBuffer, count: 2)
+            try? readValue(into: &readBuffer, count: 2)
         }
 
         let rawValue =  UInt16(readBuffer[0]) << 8 | UInt16(readBuffer[1])
@@ -101,7 +101,7 @@ final public class BH1750 {
     /// - Parameter resolution: The resolution: `.high`, `.middle` or `.low`.
     public func setResolution(_ resolution: Resolution) {
         self.resolution = resolution
-        try? writeCommand(mode.rawValue | resolution.rawValue)
+        try? writeValue(mode.rawValue | resolution.rawValue)
         sleep(ms: measurementTime)
     }
 
@@ -126,24 +126,24 @@ final public class BH1750 {
 }
 
 extension BH1750 {
-    private enum Setting: UInt8 {
+    private enum Command: UInt8 {
         case powerOn = 0b0001
         case reset = 0b0111
     }
 
     private func reset() {
-        try? writeCommand(Setting.powerOn.rawValue)
-        try? writeCommand(Setting.reset.rawValue)
+        try? writeValue(Command.powerOn.rawValue)
+        try? writeValue(Command.reset.rawValue)
     }
 
-    private func writeCommand(_ value: UInt8) throws {
+    private func writeValue(_ value: UInt8) throws {
         let result = i2c.write(value, to: address)
         if case .failure(let err) = result {
             throw err
         }
     }
 
-    private func readRawValues(into buffer: inout [UInt8], count: Int) throws {
+    private func readValue(into buffer: inout [UInt8], count: Int) throws {
         for i in 0..<buffer.count {
             buffer[i] = 0
         }

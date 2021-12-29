@@ -49,7 +49,7 @@ final public class ADXL345 {
     public init(_ i2c: I2C, address: UInt8 = 0x53) {
         let speed = i2c.getSpeed()
         guard speed == .standard || speed == .fast else {
-            fatalError(#function + ": ADXL345 only supports 100kbps and 400kbps I2C speed")
+            fatalError(#function + ": ADXL345 only supports 100kHz (standard) and 400kHz (fast) I2C speed")
         }
 
         self.i2c = i2c
@@ -61,7 +61,7 @@ final public class ADXL345 {
         gRange = .g2
 
         guard getDeviceID() == 0xE5 else {
-            fatalError(#function + ": cann't find ADXL345 at address \(address)")
+            fatalError(#function + ": Fail to find ADXL345 at address \(address)")
         }
 
         setDataRate(dataRate)
@@ -107,11 +107,11 @@ final public class ADXL345 {
         }
 
         guard spi.getSpeed() <= 5_000_000 else {
-            fatalError(#function + ": cannot support SPI speed faster than 5MHz")
+            fatalError(#function + ": ADXL345 cannot support SPI speed faster than 5MHz")
         }
 
         guard getDeviceID() == 0xE5 else {
-            fatalError(#function + ": the device ID read from ADXL345 via SPI doesn't match the default ID")
+            fatalError(#function + ": Fail to find ADXL345 with default ID via SPI")
         }
 
         setDataRate(dataRate)
@@ -127,11 +127,13 @@ final public class ADXL345 {
     /// Read x, y, z acceleration values represented in g (9.8m/s^2)
     /// within the selected range.
     /// - Returns: 3 float within the selected g range.
-    public func readValues() -> (x: Float, y: Float, z: Float) {
-        let rawValues = readRawValues()
-        let x = Float(rawValues.x) * gScaleFactor
-        let y = Float(rawValues.y) * gScaleFactor
-        let z = Float(rawValues.z) * gScaleFactor
+    public func readXYZ() -> (x: Float, y: Float, z: Float) {
+        try? readRegister(.dataX0, into: &readBuffer, count: 6)
+
+        let x = Float(Int16(readBuffer[0]) | (Int16(readBuffer[1]) << 8)) * gScaleFactor
+        let y = Float(Int16(readBuffer[2]) | (Int16(readBuffer[3]) << 8)) * gScaleFactor
+        let z = Float(Int16(readBuffer[4]) | (Int16(readBuffer[5]) << 8)) * gScaleFactor
+
         return (x, y, z)
     }
 
@@ -244,15 +246,6 @@ final public class ADXL345 {
 }
 
 extension ADXL345 {
-    private func readRawValues() -> (x: Int16,y: Int16, z: Int16) {
-        try? readRegister(.dataX0, into: &readBuffer, count: 6)
-
-        let x = Int16(readBuffer[0]) | (Int16(readBuffer[1]) << 8)
-        let y = Int16(readBuffer[2]) | (Int16(readBuffer[3]) << 8)
-        let z = Int16(readBuffer[4]) | (Int16(readBuffer[5]) << 8)
-        return (x, y, z)
-    }
-
     private func writeRegister(_ register: Register, _ value: UInt8) throws {
         var result: Result<(), Errno>
 

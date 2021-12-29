@@ -41,31 +41,30 @@ final public class SHT3x {
     /// Reset the sensor.
     public func reset() {
         sleep(ms: 2)
-        try? writeCommand(.softReset)
+        try? writeValue(.softReset)
         sleep(ms: 2)
     }
     
     /// Get the temperature in Celcius.
     /// - Returns: A float representing the current temperature
     public func readCelsius() -> Float {
-        try? readRawValue(into: &readBuffer)
+        try? getSensorData(into: &readBuffer)
         let rawTemp = UInt16(readBuffer[0]) << 8 | UInt16(readBuffer[1])
         return 175.0 * Float(rawTemp) / 65535.0 - 45.0
     }
-    
-    
+
     /// Read the temperature in Fahrenheit.
     /// - Returns: A float representing the temperature.
     public func readFahrenheit() -> Float {
-        try? readRawValue(into: &readBuffer)
+        try? getSensorData(into: &readBuffer)
         let rawTemp = UInt16(readBuffer[0]) << 8 | UInt16(readBuffer[1])
         return 315.0 * Float(rawTemp) / 65535.0 - 49.0
     }
- 
+
     /// Read the current relative humidity.
     /// - Returns: A float between 0 and 1 representing the humidity.
     public func readHumidity() -> Float {
-        try? readRawValue(into: &readBuffer)
+        try? getSensorData(into: &readBuffer)
         let rawHumi = UInt16(readBuffer[3]) << 8 | UInt16(readBuffer[4])
         return 100.0 * Float(rawHumi) / 65535.0
     }
@@ -89,9 +88,9 @@ extension SHT3x {
         case measureStretchLow      = 0x2C10
     }
     
-    // Split the 16-bit data into two 8-bit data. 
+    // Split the 16-bit data into two 8-bit data.
     // Write the data to the default address of the sensor.
-    private func writeCommand(_ command: Command) throws {
+    private func writeValue(_ command: Command) throws {
         let value = command.rawValue
         let result = i2c.write([UInt8(value >> 8), UInt8(value & 0xFF)], to: address)
         if case .failure(let err) = result {
@@ -99,17 +98,19 @@ extension SHT3x {
         }
     }
 
-    private func readRawValue(into buffer: inout [UInt8]) throws {
+    private func readValue(into buffer: inout [UInt8]) throws {
         for i in 0..<buffer.count {
             buffer[i] = 0
         }
-
-        try? writeCommand(.measureMedium)
-        sleep(ms: 8)
-
         let result = i2c.read(into: &buffer, from: address)
         if case .failure(let err) = result {
             throw err
         }
+    }
+
+    private func getSensorData(into buffer: inout [UInt8]) throws {
+        try writeValue(.measureMedium)
+        sleep(ms: 8)
+        try readValue(into: &buffer)
     }
 }

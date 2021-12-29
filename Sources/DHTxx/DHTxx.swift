@@ -46,7 +46,7 @@ public final class DHTxx {
 
     /// Get the relative humidity and the temperature.
     /// - Returns: Two floats representing humidity and temperature respectively.
-    public func readValues() -> (Float, Float)? {
+    public func read() -> (Float, Float)? {
         var data: (Float, Float)? = nil
         do {
             data = try readRawValue()

@@ -60,7 +60,7 @@ final public class DS3231 {
                 binToBcd(time.day), binToBcd(time.month),
                 binToBcd(UInt8(time.year - 2000))]
 
-            try? writeData(Register.second, data)
+            try? writeRegister(Register.second, data)
 
             var byte: UInt8 = 0
             try? readRegister(Register.status, into: &byte)
@@ -149,7 +149,7 @@ final public class DS3231 {
         }
 
         let future = [second, minute, hour, day]
-        try? writeData(Register.alarm1, future)
+        try? writeRegister(Register.alarm1, future)
 
         var byte: UInt8 = 0
         try? readRegister(Register.control, into: &byte)
@@ -200,7 +200,7 @@ final public class DS3231 {
         }
 
         let future = [minute, hour, day]
-        try? writeData(Register.alarm2, future)
+        try? writeRegister(Register.alarm2, future)
 
         var byte: UInt8 = 0
         try? readRegister(Register.control, into: &byte)
@@ -351,26 +351,25 @@ final public class DS3231 {
 }
 
 extension DS3231 {
-    private func lostPower() -> Bool {
-        var byte: UInt8 = 0
-        try? readRegister(Register.status, into: &byte)
-        let stopFlag = byte >> 7
-        return stopFlag == 1
+    private enum Register: UInt8 {
+        case second = 0x00
+        case agingOffset = 0x10
+        case alarm2 = 0x0B
+        case alarm1 = 0x07
+        case status = 0x0F
+        case control = 0x0E
+        case temperature = 0x11
     }
 
-    private func enable32K() {
-        var byte: UInt8 = 0
-        try? readRegister(Register.status, into: &byte)
-        try? writeRegister(Register.status, byte | 0b1000)
+    private enum SqwMode: UInt8 {
+      case off = 0x1C
+      case hz1 = 0x00
+      case kHz1 = 0x08
+      case kHz4 = 0x10
+      case kHz8 = 0x18
     }
 
-    private func disable32K() {
-        var byte: UInt8 = 0
-        try? readRegister(Register.status, into: &byte)
-        try? writeRegister(Register.status, byte & 0b0111)
-    }
-
-    private func writeData(_ reg: Register, _ data: [UInt8]) throws {
+    private func writeRegister(_ reg: Register, _ data: [UInt8]) throws {
         var data = data
         data.insert(reg.rawValue, at: 0)
         let result = i2c.write(data, to: address)
@@ -416,6 +415,25 @@ extension DS3231 {
         }
     }
 
+    private func lostPower() -> Bool {
+        var byte: UInt8 = 0
+        try? readRegister(Register.status, into: &byte)
+        let stopFlag = byte >> 7
+        return stopFlag == 1
+    }
+
+    private func enable32K() {
+        var byte: UInt8 = 0
+        try? readRegister(Register.status, into: &byte)
+        try? writeRegister(Register.status, byte | 0b1000)
+    }
+
+    private func disable32K() {
+        var byte: UInt8 = 0
+        try? readRegister(Register.status, into: &byte)
+        try? writeRegister(Register.status, byte & 0b0111)
+    }
+
     private func bcdToBin(_ value: UInt8) -> UInt8 {
         return value - 6 * (value >> 4)
     }
@@ -434,23 +452,5 @@ extension DS3231 {
         var byte: UInt8 = 0
         try? readRegister(Register.control, into: &byte)
         try? writeRegister(Register.control, byte & (~(0b1 << (alarm - 1))))
-    }
-
-    private enum Register: UInt8 {
-        case second = 0x00
-        case agingOffset = 0x10
-        case alarm2 = 0x0B
-        case alarm1 = 0x07
-        case status = 0x0F
-        case control = 0x0E
-        case temperature = 0x11
-    }
-
-    private enum SqwMode: UInt8 {
-      case off = 0x1C
-      case hz1 = 0x00
-      case kHz1 = 0x08
-      case kHz4 = 0x10
-      case kHz8 = 0x18
     }
 }

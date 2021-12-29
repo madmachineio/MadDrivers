@@ -4,7 +4,7 @@ import IS31FL3731
 import MadDisplay
 
 let i2c = I2C(Id.I2C0)
-let led = IS31FL3731(i2c: i2c)
+let led = IS31FL3731(i2c)
 let display = MadDisplay(screen: led)
 let group = Group()
 

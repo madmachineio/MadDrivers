@@ -52,14 +52,15 @@ public final class IS31FL3731 {
 #if canImport(MadDisplay)
     public private(set) var colorSpace = ColorSpace()
 #endif
-    
+
+    private var writeBuffer = [UInt8](repeating: 0, count: 145)
     /**
      Initialize the module to get it ready for lighting.
      - Parameter i2c: **REQUIRED** The I2C interface that the module connects.
      The maximum I2C speed is 400KHz.
      - Parameter address: **OPTIONAL** The address of the module.
      */
-    public init(i2c: I2C, address: UInt8 = 0x74) {
+    public init(_ i2c: I2C, address: UInt8 = 0x74) {
         let speed = i2c.getSpeed()
         guard speed == .standard || speed == .fast else {
             fatalError(#function + ": IS31FL3731 only supports 100kbps and 400kbps I2C speed")
@@ -72,11 +73,10 @@ public final class IS31FL3731 {
         colorSpace.depth = 8
         colorSpace.grayscale = true
 #endif
-        
         shutdown()
         stopBreath()
         setMode(.picutreMode)
-        
+
         for frame in 0..<8 {
             selectPage(UInt8(frame))
             controlRegInit(true)
@@ -167,8 +167,9 @@ public final class IS31FL3731 {
     @inline(__always)
     public func writePixel(_ number: Int, brightness: UInt8 = 255) {
         guard number < width * height && number >= 0 else { return }
-        let data = [UInt8(number) + Offset.pwm.rawValue, brightness]
-        try? writeData(data)
+        writeBuffer[0] = UInt8(number) + Offset.pwm.rawValue
+        writeBuffer[1] = brightness
+        try? writeValue(writeBuffer, count: 2)
     }
     
     /**
@@ -183,8 +184,9 @@ public final class IS31FL3731 {
     @inline(__always)
     public func writePixel(x: Int, y: Int, brightness: UInt8 = 255) {
         guard x <= width && y <= height else { return }
-        let data = [UInt8(y * width + x) + Offset.pwm.rawValue, brightness]
-        try? writeData(data)
+        writeBuffer[0] = UInt8(y * width + x) + Offset.pwm.rawValue
+        writeBuffer[1] = brightness
+        try? writeValue(writeBuffer, count: 2)
     }
     
     /**
@@ -222,18 +224,17 @@ public final class IS31FL3731 {
         } else {
             bitmapHeight = self.height - y
         }
-        
-        var rowData = [UInt8](repeating: 0x00, count: bitmapWidth + 1)
+
         
         for cY in y..<y + bitmapHeight {
             var rowPos = 1
             for cX in x..<x + bitmapWidth {
                 let pos = (cY - y) * width + (cX - x)
-                rowData[rowPos] = data[pos]
+                writeBuffer[rowPos] = data[pos]
                 rowPos += 1
             }
-            rowData[0] = Offset.pwm.rawValue + UInt8(cY * self.width + x)
-            try? writeData(rowData)
+            writeBuffer[0] = Offset.pwm.rawValue + UInt8(cY * self.width + x)
+            try? writeValue(writeBuffer, count: bitmapWidth + 1)
         }
     }
     
@@ -242,9 +243,11 @@ public final class IS31FL3731 {
     /// - Parameter brightness: The level between 0 and 255.
     ///     By default, all LEDs are off.
     public func fill(_ brightness: UInt8 = 0x00) {
-        var data = [UInt8](repeating: brightness, count: 144 + 1)
-        data[0] = Offset.pwm.rawValue
-        try? writeData(data)
+        for i in 0..<145 {
+            writeBuffer[i] = brightness
+        }
+        writeBuffer[0] = Offset.pwm.rawValue
+        try? writeValue(writeBuffer, count: 145)
     }
 }
 
@@ -289,8 +292,9 @@ extension IS31FL3731 {
 
     private func selectPage(_ page: UInt8) {
         guard page < 8 || page == PageRegister.functionPage.rawValue else { return }
-        let data = [PageRegister.command.rawValue, page]
-        try? writeData(data)
+        writeBuffer[0] = PageRegister.command.rawValue
+        writeBuffer[1] = page
+        try? writeValue(writeBuffer, count: 2)
     }
 
     
@@ -306,8 +310,8 @@ extension IS31FL3731 {
         selectPage(currentFrame)
     }
 
-    private func writeData(_ data: [UInt8]) throws {
-        let result = i2c.write(data, to: address)
+    private func writeValue(_ data: [UInt8], count: Int) throws {
+        let result = i2c.write(data, count: count, to: address)
         if case .failure(let err) = result {
             throw err
         }
@@ -337,29 +341,34 @@ extension IS31FL3731 {
     }
     
     private func controlRegInit(_ value: Bool) {
-        var data: [UInt8]
-        
+        let count = 0x12 + 1
         if value {
-            data = [UInt8](repeating: 0xFF, count: 0x12 + 1)
+            for i in 0..<count {
+                writeBuffer[i] = 0xFF
+            }
         } else {
-            data = [UInt8](repeating: 0x00, count: 0x12 + 1)
+            for i in 0..<count {
+                writeBuffer[i] = 0x00
+            }
         }
-        
-        data[0] = Offset.ledControl.rawValue
-        try? writeData(data)
+        writeBuffer[0] = Offset.ledControl.rawValue
+        try? writeValue(writeBuffer, count: count)
     }
     
     private func blinkRegInit(_ value: Bool) {
-        var data: [UInt8]
-        
+        let count = 0x12 + 1
         if value {
-            data = [UInt8](repeating: 0xFF, count: 0x12 + 1)
+            for i in 0..<count {
+                writeBuffer[i] = 0xFF
+            }
         } else {
-            data = [UInt8](repeating: 0x00, count: 0x12 + 1)
+            for i in 0..<count {
+                writeBuffer[i] = 0x00
+            }
         }
         
-        data[0] = Offset.blink.rawValue
-        try? writeData(data)
+        writeBuffer[0] = Offset.blink.rawValue
+        try? writeValue(writeBuffer, count: count)
     }
     
     private func startup() {

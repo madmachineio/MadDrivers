@@ -95,6 +95,11 @@ final public class VEML6040 {
     ///   - i2c: **REQUIRED** The I2C interface that the sensor connects.
     ///   - address: **OPTIONAL** The sensor's address. It has a default value.
     public init(_ i2c: I2C, address: UInt8 = 0x10) {
+        let speed = i2c.getSpeed()
+        guard speed == .standard || speed == .fast else {
+            fatalError(#function + ": VEML6040 only supports 100kHz (standard) and 400kHz (fast) I2C speed")
+        }
+
         self.i2c = i2c
         self.address = address
         
@@ -151,14 +156,14 @@ final public class VEML6040 {
     /// - Returns: Value of white light between 0 and 65535.
     public func readWhiteRawValue() -> UInt16 {
         try? readRegister(.whiteData, into: &readBuffer)
-        return (UInt16(readBuffer[1]) << 8) | UInt16(readBuffer[0])
+        return calUInt16(readBuffer)
     }
     
     /// Read intensity of the ambient light. The value is measured in lux.
     /// The spectral characteristics of green light matches well to the human
     /// eye. So the ambient light intensity is based on green channel.
     /// - Returns: An integer that represent the intensity in lux.
-    public func readAmbientLight() -> Int {
+    public func readLux() -> Int {
         return Int(Float(readGreenRawValue()) * sensitivity)
     }
 }
@@ -191,9 +196,12 @@ extension VEML6040 {
     
     // Split the 16-bit data into two 8-bit data.
     // Write the data to the default address of the sensor.
-    private func writeConfig(_ value: Config) throws {
-        let array: [UInt8] = [Reg.config.rawValue, value.rawValue, 0]
-        let result = i2c.write(array, to: address)
+    private func writeConfig(_ config: Config) throws {
+        try writeRegister(.config, config.rawValue)
+    }
+
+    private func writeRegister(_ reg: Reg, _ value: UInt8) throws {
+        let result = i2c.write([reg.rawValue, value, 0], to: address)
         if case .failure(let err) = result {
             throw err
         }

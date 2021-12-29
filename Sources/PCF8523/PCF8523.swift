@@ -54,8 +54,8 @@ final public class PCF8523 {
                 binToBcd(time.dayOfWeek), binToBcd(time.month),
                 binToBcd(UInt8(time.year - 2000))]
 
-            try? writeData(Register.secondStatus, data)
-            try? writeRegister(Register.control3, Command.batteryMode.rawValue)
+            try? writeRegister(.secondStatus, data)
+            try? writeRegister(.control3, Command.batteryMode.rawValue)
         }
     }
 
@@ -82,18 +82,18 @@ final public class PCF8523 {
     /// Enable the 1 second timer and generate an interrupt each second.
     public func enable1SecondTimer() {
         var byte: UInt8 = 0
-        try? readRegister(Register.clockoutControl, into: &byte)
-        try? writeRegister(Register.clockoutControl, byte | 0b1011_1000)
+        try? readRegister(.clockoutControl, into: &byte)
+        try? writeRegister(.clockoutControl, byte | 0b1011_1000)
 
-        try? readRegister(Register.control1, into: &byte)
-        try? writeRegister(Register.control1, byte | 0b0100)
+        try? readRegister(.control1, into: &byte)
+        try? writeRegister(.control1, byte | 0b0100)
     }
 
     /// Disable the 1 second timer until you restart it.
     public func disable1SecondTimer() {
         var byte: UInt8 = 0
-        try? readRegister(Register.control1, into: &byte)
-        try? writeRegister(Register.control1, byte & 0b1111_1011)
+        try? readRegister(.control1, into: &byte)
+        try? writeRegister(.control1, byte & 0b1111_1011)
     }
 
     /// Enable the countdown timer.
@@ -107,27 +107,27 @@ final public class PCF8523 {
     ///   - counts: The value from which the timer will start to count down.
     public func enableTimer(countPeriod: TimerCountPeriod, count: UInt8) {
         disable1SecondTimer()
-        try? writeRegister(Register.control2, 0)
-        try? writeRegister(Register.clockoutControl, 0)
-        try? writeRegister(Register.timerBFre, 0)
-        try? writeRegister(Register.timerBReg, 0)
+        try? writeRegister(.control2, 0)
+        try? writeRegister(.clockoutControl, 0)
+        try? writeRegister(.timerBFre, 0)
+        try? writeRegister(.timerBReg, 0)
 
         var interruptStatus: UInt8 = 0
-        try? readRegister(Register.control2, into: &interruptStatus)
+        try? readRegister(.control2, into: &interruptStatus)
         var timerStatus: UInt8 = 0
-        try? readRegister(Register.clockoutControl, into: &timerStatus)
-        try? writeRegister(Register.control2, interruptStatus | 0b01)
+        try? readRegister(.clockoutControl, into: &timerStatus)
+        try? writeRegister(.control2, interruptStatus | 0b01)
 
-        try? writeRegister(Register.timerBFre, countPeriod.rawValue)
-        try? writeRegister(Register.timerBReg, count)
-        try? writeRegister(Register.clockoutControl, timerStatus | 0b0111_1001)
+        try? writeRegister(.timerBFre, countPeriod.rawValue)
+        try? writeRegister(.timerBReg, count)
+        try? writeRegister(.clockoutControl, timerStatus | 0b0111_1001)
     }
 
     /// Disable the countdown timer.
     public func disableTimer() {
         var byte: UInt8 = 0
-        try? readRegister(Register.clockoutControl, into: &byte)
-        try? writeRegister(Register.clockoutControl, byte & 0b1111_1110)
+        try? readRegister(.clockoutControl, into: &byte)
+        try? writeRegister(.clockoutControl, byte & 0b1111_1110)
     }
 
     /// The period of the countdown timer source clock, that is, the time
@@ -155,7 +155,7 @@ final public class PCF8523 {
     /// - Returns: Boolean value representing the status of the RTC.
     public func isRunning() -> Bool {
         var byte: UInt8 = 0
-        try? readRegister(Register.control1, into: &byte)
+        try? readRegister(.control1, into: &byte)
         let stopBit = byte >> 5 & 0b1
 
         return stopBit != 1
@@ -164,10 +164,10 @@ final public class PCF8523 {
     /// Make the clock start to work so the time will keep updated.
     public func start() {
         var byte: UInt8 = 0
-        try? readRegister(Register.control1, into: &byte)
+        try? readRegister(.control1, into: &byte)
 
         if byte >> 5 & 0b1 == 1 {
-            try? writeRegister(Register.control1, byte & (~(1 << 5)))
+            try? writeRegister(.control1, byte & (~(1 << 5)))
         }
     }
 
@@ -175,10 +175,10 @@ final public class PCF8523 {
     /// be accurate anymore.
     public func stop() {
         var byte: UInt8 = 0
-        try? readRegister(Register.control1, into: &byte)
+        try? readRegister(.control1, into: &byte)
 
         if byte >> 5 & 0b1 == 0 {
-            try? writeRegister(Register.control1, byte | (1 << 5))
+            try? writeRegister(.control1, byte | (1 << 5))
         }
     }
 
@@ -239,7 +239,7 @@ extension PCF8523 {
     }
 
 
-    private func writeData(_ reg: Register, _ data: [UInt8]) throws {
+    private func writeRegister(_ reg: Register, _ data: [UInt8]) throws {
         var data = data
         data.insert(reg.rawValue, at: 0)
         let result = i2c.write(data, to: address)
@@ -289,7 +289,7 @@ extension PCF8523 {
 
     private func lostPower() -> Bool {
         var byte: UInt8 = 0
-        try? readRegister(Register.secondStatus, into: &byte)
+        try? readRegister(.secondStatus, into: &byte)
         let stopFlag = byte >> 7
         return stopFlag == 1
     }
