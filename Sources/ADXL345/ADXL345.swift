@@ -103,7 +103,7 @@ final public class ADXL345 {
         }
 
         guard spi.getMode() == (true, true, .MSB) else {
-            fatalError(#function + ": spi mode doesn't match for ADXL345. CPOL and CPHA should be true and bitOrder should be .MSB")
+            fatalError(#function + ": SPI mode doesn't match for ADXL345. CPOL and CPHA should be true and bitOrder should be .MSB")
         }
 
         guard spi.getSpeed() <= 5_000_000 else {

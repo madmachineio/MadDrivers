@@ -25,7 +25,7 @@ final public class PCF8523 {
     public init(_ i2c: I2C, _ address: UInt8 = 0x68) {
         let speed = i2c.getSpeed()
         guard speed == .standard || speed == .fast else {
-            fatalError(#function + ": PCF8523 only supports 100kbps and 400kbps I2C speed")
+            fatalError(#function + ": PCF8523 only supports 100kHz (standard) and 400kHz (fast) I2C speed")
         }
 
         self.i2c = i2c

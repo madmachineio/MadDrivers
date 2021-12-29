@@ -12,12 +12,11 @@
 
 import SwiftIO
 
-/// This is the library for the BH1750 light sensor
-/// used to measure light intensity.
+/// This is the library for the BH1750 light sensor.
 ///
 /// The sensor communicates with your board via an I2C bus.
-/// It provides 16-bit resolution to sense the amount of ambiant light.
-/// The light will be 0 to 65535 lux (lx).
+/// It provides 16-bit resolution to sense the amount of ambient light.
+/// The light intensity is measured in lux.
 final public class BH1750 {
     
     private let i2c: I2C
@@ -49,8 +48,7 @@ final public class BH1750 {
     /// Initialize the light sensor.
     ///
     /// The sensor provides two options for the address. If the pin ADDR is
-    /// low voltage, the address is 0x23. If it is high voltage,
-    /// the address is 0x5C.
+    /// low, the address is 0x23. If it is high, the address is 0x5C.
     /// - Parameters:
     ///   - i2c: **REQUIRED** An I2C pin for the communication. The maximum
     ///   I2C speed is 400KHz.
@@ -63,7 +61,7 @@ final public class BH1750 {
                 mode: Mode = .continuous, resolution: Resolution = .middle) {
         let speed = i2c.getSpeed()
         guard speed == .standard || speed == .fast else {
-            fatalError(#function + ": BH1750 only supports 100kbps and 400kbps I2C speed")
+            fatalError(#function + ": BH1750 only supports 100kHz (standard) and 400kHz (fast) I2C speed")
         }
 
         self.i2c = i2c
@@ -109,7 +107,7 @@ final public class BH1750 {
     public enum Mode: UInt8 {
         /// The sensor will read the ambient light continuously.
         case continuous = 0b0001_0000
-        /// The sensor will read once and move to powered down mode
+        /// The sensor will read once and move to power-down mode
         /// until the next reading.
         case oneTime = 0b0010_0000
     }

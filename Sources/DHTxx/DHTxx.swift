@@ -18,9 +18,9 @@ import SwiftIO
  for sensing relative humidity and temperature. These are digital sensors which
  use a single wire/bus protocol for communication.
 
- They consist of a humidity sensing component and thermistor. When the
+ The sensors consist of a humidity sensing component and thermistor. When the
  temperature or humidity changes, the corresponding components change their
- resistance.
+ resistance and thus change the voltage.
 
  - Attention: The sampling rate should be no less than 1s for DHT11 and 2s
  for DHT22.
@@ -34,7 +34,7 @@ public final class DHTxx {
     private let signal: DigitalInOut
     
     /**
-     Initialize a DHTxx signal to a specified pin.
+     Initialize a DHTxx signal to a specified DigitalInOut pin.
      - parameter signal: **REQUIRED** The DigitalInOut pin id on the board.
      See Id for reference.
      */
@@ -68,7 +68,7 @@ public final class DHTxx {
         return temperature
     }
 
-    /// Read the relatice humidity.
+    /// Read the relative humidity.
     /// - Returns: Current humidity.
     public func readHumidity() -> Float? {
         var humidity: Float? = nil

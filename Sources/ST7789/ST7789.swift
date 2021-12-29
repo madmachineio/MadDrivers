@@ -84,7 +84,7 @@ public final class ST7789 {
     
     /// Initialize all the necessary pins and set the parameters of the screen.
     /// The ST7789 chip can drive 240x240 and 240x320 screens.
-    /// By default, 240x240 is set.
+    /// 240x240 by default.
     /// - Parameters:
     ///   - spi: **REQUIRED** SPI interface. The communication speed between
     ///     two devices should be as fast as possible within the range,

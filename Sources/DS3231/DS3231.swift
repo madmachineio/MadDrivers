@@ -17,7 +17,7 @@ import SwiftIO
 /// You can read the time information including year, month, day, hour,
 /// minute, second from it. It comes with a battery so the time will always
 /// keep updated. Once powered off, the RTC needs a calibration. The RTC also
-/// has two alarms and you can set them to alarm at a specified time.
+/// has two alarms, you can set them to alarm at a specified time.
 final public class DS3231 {
     private let i2c: I2C
     private let address: UInt8
@@ -36,7 +36,7 @@ final public class DS3231 {
     public init(_ i2c: I2C, _ address: UInt8 = 0x68) {
         let speed = i2c.getSpeed()
         guard speed == .standard || speed == .fast else {
-            fatalError(#function + ": DS3231 only supports 100kbps and 400kbps I2C speed")
+            fatalError(#function + ": DS3231 only supports 100kHz (standard) and 400kHz (fast) I2C speed")
         }
 
         self.i2c = i2c

@@ -78,7 +78,7 @@ final public class BME680 {
         reset()
 
         guard getDeviceID() == 0x61 else {
-            fatalError(#function + ": cannot find BME680 at address \(address)")
+            fatalError(#function + ": Fail to find BME680 at address \(address)")
         }
 
         readCalibration()
@@ -124,18 +124,17 @@ final public class BME680 {
 
         guard spi.getMode() == (true, true, .MSB) ||
                 spi.getMode() == (false, false, .MSB) else {
-            fatalError(#function + ": spi mode doesn't match for BME680")
+            fatalError(#function + ": SPI mode doesn't match for BME680. CPOL and CPHA should be both true or both false and bitOrder should be .MSB")
         }
 
         guard spi.getSpeed() <= 10_000_000 else {
-            fatalError(#function + ": cannot support spi speed faster than 10MHz")
+            fatalError(#function + ": BME680 cannot support spi speed faster than 10MHz")
         }
-
 
         reset()
 
         guard getDeviceID() == 0x61 else {
-            fatalError(#function + ": cannot find BME680 via spi bus")
+            fatalError(#function + ": Fail to find BME680 with default ID via SPI")
         }
 
         readCalibration()

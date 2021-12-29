@@ -63,7 +63,7 @@ public final class IS31FL3731 {
     public init(_ i2c: I2C, address: UInt8 = 0x74) {
         let speed = i2c.getSpeed()
         guard speed == .standard || speed == .fast else {
-            fatalError(#function + ": IS31FL3731 only supports 100kbps and 400kbps I2C speed")
+            fatalError(#function + ": IS31FL3731 only supports 100kHz (standard) and 400kHz (fast) I2C speed")
         }
 
         self.i2c = i2c

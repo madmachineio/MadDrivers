@@ -56,7 +56,7 @@ final public class BMP280 {
         filter = .x16
 
         guard getDeviceID() == 0x58 else {
-            fatalError(#function + ": cannot find BMP280 at address \(address)")
+            fatalError(#function + ": Fail to find BMP280 at address \(address)")
         }
 
         reset()
@@ -94,20 +94,20 @@ final public class BMP280 {
 
         guard (spi.cs == false && csPin != nil && csPin!.getMode() == .pushPull)
                 || (spi.cs == true && csPin == nil) else {
-                    fatalError(#function + ": csPin isn't correct")
+                    fatalError(#function + ": csPin isn't correctly configured")
         }
 
         guard spi.getMode() == (true, true, .MSB) ||
                 spi.getMode() == (false, false, .MSB) else {
-            fatalError(#function + ": spi mode doesn't match for BMP280")
+            fatalError(#function + ": SPI mode doesn't match for BMP280. CPOL and CPHA should be both true or both false and bitOrder should be .MSB")
         }
 
         guard spi.getSpeed() <= 10_000_000 else {
-            fatalError(#function + ": cannot support spi speed faster than 10MHz")
+            fatalError(#function + ": BMP280 cannot support spi speed faster than 10MHz")
         }
 
         guard getDeviceID() == 0x58 else {
-            fatalError(#function + ": cannot find BMP280 via spi bus")
+            fatalError(#function + ": Fail to find BMP280 with default ID via SPI")
         }
 
         reset()
