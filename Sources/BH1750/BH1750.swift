@@ -12,12 +12,11 @@
 
 import SwiftIO
 
-/// This is the library for the BH1750 light sensor
-/// used to measure light intensity.
+/// This is the library for the BH1750 light sensor.
 ///
 /// The sensor communicates with your board via an I2C bus.
-/// It provides 16-bit resolution to sense the amount of ambiant light.
-/// The light will be 0 to 65535 lux (lx).
+/// It provides 16-bit resolution to sense the amount of ambient light.
+/// The light intensity is measured in lux.
 final public class BH1750 {
     
     private let i2c: I2C
@@ -47,6 +46,9 @@ final public class BH1750 {
     private var readBuffer = [UInt8](repeating: 0, count: 2)
 
     /// Initialize the light sensor.
+    ///
+    /// The sensor provides two options for the address. If the pin ADDR is
+    /// low, the address is 0x23. If it is high, the address is 0x5C.
     /// - Parameters:
     ///   - i2c: **REQUIRED** An I2C pin for the communication. The maximum
     ///   I2C speed is 400KHz.
@@ -59,7 +61,7 @@ final public class BH1750 {
                 mode: Mode = .continuous, resolution: Resolution = .middle) {
         let speed = i2c.getSpeed()
         guard speed == .standard || speed == .fast else {
-            fatalError(#function + ": BH1750 only supports 100kbps and 400kbps I2C speed")
+            fatalError(#function + ": BH1750 only supports 100kHz (standard) and 400kHz (fast) I2C speed")
         }
 
         self.i2c = i2c
@@ -78,15 +80,15 @@ final public class BH1750 {
         case .continuous:
             /// In this mode, the sensor measures the light continuously,
             /// so you can read directly.
-            try? readRawValues(into: &readBuffer, count: 2)
+            try? readValue(into: &readBuffer, count: 2)
         case .oneTime:
             /// In this mode, every time the sensor finishes the reading,
             /// the sensor will move to power down mode.
             /// You need to resend the command for a new reading.
             let configValue = mode.rawValue | resolution.rawValue
-            try? writeCommand(configValue)
+            try? writeValue(configValue)
             sleep(ms: measurementTime)
-            try? readRawValues(into: &readBuffer, count: 2)
+            try? readValue(into: &readBuffer, count: 2)
         }
 
         let rawValue =  UInt16(readBuffer[0]) << 8 | UInt16(readBuffer[1])
@@ -97,7 +99,7 @@ final public class BH1750 {
     /// - Parameter resolution: The resolution: `.high`, `.middle` or `.low`.
     public func setResolution(_ resolution: Resolution) {
         self.resolution = resolution
-        try? writeCommand(mode.rawValue | resolution.rawValue)
+        try? writeValue(mode.rawValue | resolution.rawValue)
         sleep(ms: measurementTime)
     }
 
@@ -105,7 +107,7 @@ final public class BH1750 {
     public enum Mode: UInt8 {
         /// The sensor will read the ambient light continuously.
         case continuous = 0b0001_0000
-        /// The sensor will read once and move to powered down mode
+        /// The sensor will read once and move to power-down mode
         /// until the next reading.
         case oneTime = 0b0010_0000
     }
@@ -122,24 +124,24 @@ final public class BH1750 {
 }
 
 extension BH1750 {
-    private enum Setting: UInt8 {
+    private enum Command: UInt8 {
         case powerOn = 0b0001
         case reset = 0b0111
     }
 
     private func reset() {
-        try? writeCommand(Setting.powerOn.rawValue)
-        try? writeCommand(Setting.reset.rawValue)
+        try? writeValue(Command.powerOn.rawValue)
+        try? writeValue(Command.reset.rawValue)
     }
 
-    private func writeCommand(_ value: UInt8) throws {
+    private func writeValue(_ value: UInt8) throws {
         let result = i2c.write(value, to: address)
         if case .failure(let err) = result {
             throw err
         }
     }
 
-    private func readRawValues(into buffer: inout [UInt8], count: Int) throws {
+    private func readValue(into buffer: inout [UInt8], count: Int) throws {
         for i in 0..<buffer.count {
             buffer[i] = 0
         }

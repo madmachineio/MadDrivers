@@ -3,7 +3,7 @@ import MadBoard
 import IS31FL3731
 
 let i2c = I2C(Id.I2C0)
-let led = IS31FL3731(i2c: i2c)
+let led = IS31FL3731(i2c)
 
 // Draw the first and last row of the matrix.
 for x in 0..<16 {

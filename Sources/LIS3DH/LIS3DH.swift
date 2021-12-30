@@ -92,7 +92,7 @@ final public class LIS3DH {
     public init(_ i2c: I2C, address: UInt8 = 0x18) {
         let speed = i2c.getSpeed()
         guard speed == .standard || speed == .fast else {
-            fatalError(#function + ": LIS3DH only supports 100kbps and 400kbps I2C speed")
+            fatalError(#function + ": LIS3DH only supports 100kHz (standard) and 400kHz (fast) I2C speed")
         }
 
         self.i2c = i2c
@@ -107,7 +107,7 @@ final public class LIS3DH {
         dataRate = .Hz400
 
         guard getDeviceID() == defaultWhoAmI else {
-            fatalError(#function + ": cann't find LIS3DH at address \(address)")
+            fatalError(#function + ": Fail to find LIS3DH at address \(address)")
         }
 
         setRange(gRange)
@@ -142,19 +142,19 @@ final public class LIS3DH {
 
         guard (spi.cs == false && csPin != nil && csPin!.getMode() == .pushPull)
                 || (spi.cs == true && csPin == nil) else {
-                    fatalError(#function + ": csPin isn't correct")
+                    fatalError(#function + ": csPin isn't correctly configured")
         }
 
         guard spi.getSpeed() <= 10_000_000 else {
-            fatalError(#function + ": cannot support spi speed faster than 10MHz")
+            fatalError(#function + ": LIS3DH cannot support SPI speed faster than 10MHz")
         }
 
         guard spi.getMode() == (true, true, .MSB) else {
-            fatalError(#function + ": spi mode doesn't match for LIS3DH")
+            fatalError(#function + ": SPI mode doesn't match for LIS3DH. CPOL and CPHA should be true and bitOrder should be .MSB")
         }
 
         guard getDeviceID() == defaultWhoAmI else {
-            fatalError(#function + ": cannot find LIS3DH via spi bus")
+            fatalError(#function + ": Fail to find LIS3DH with default ID via SPI")
         }
 
         setRange(gRange)
@@ -169,7 +169,6 @@ final public class LIS3DH {
     public func getDeviceID() -> UInt8 {
         var byte: UInt8 = 0
         try? readRegister(.WHO_AM_I, into: &byte)
-        print("ID: \(byte)")
         return byte
     }
     
@@ -210,27 +209,12 @@ final public class LIS3DH {
         try? readRegister(.CTRL1, into: &byte)
         return DataRate(rawValue: byte & DataRateConfig([.dataRateMask]).rawValue)!
     }
-    
-    
-    /// Read raw values of acceleration on x, y, z-axes at once.
-    /// - Returns: x, y, z values from -32768 to 32767.
-    public func readRawValue() -> (x: Int16, y: Int16, z: Int16) {
-        try? readRegister(.OUT_X_L, into: &readBuffer, count: 6)
 
-        let x = Int16(readBuffer[0]) | (Int16(readBuffer[1]) << 8)
-        let y = Int16(readBuffer[2]) | (Int16(readBuffer[3]) << 8)
-        let z = Int16(readBuffer[4]) | (Int16(readBuffer[5]) << 8)
-        
-        return (x, y, z)
-    }
-    
-    
     /// Read x, y, z acceleration values represented in g (9.8m/s^2)
     /// within the selected range.
     /// - Returns: 3 float within the selected g range.
-    public func readValue() -> (x: Float, y: Float, z: Float) {
+    public func readXYZ() -> (x: Float, y: Float, z: Float) {
         let (ix, iy, iz) = readRawValue()
-        print(ix, iy, iz)
         var value: (x: Float, y: Float, z: Float) =
             (Float(ix), Float(iy), Float(iz))
         
@@ -371,6 +355,7 @@ extension LIS3DH {
             csPin?.high()
             byte = tempBuffer[1]
         }
+
         if case .failure(let err) = result {
             throw err
         }
@@ -403,5 +388,17 @@ extension LIS3DH {
         if case .failure(let err) = result {
             throw err
         }
+    }
+
+    /// Read raw values of acceleration on x, y, z-axes at once.
+    /// - Returns: x, y, z values from -32768 to 32767.
+    private func readRawValue() -> (x: Int16, y: Int16, z: Int16) {
+        try? readRegister(.OUT_X_L, into: &readBuffer, count: 6)
+
+        let x = Int16(readBuffer[0]) | (Int16(readBuffer[1]) << 8)
+        let y = Int16(readBuffer[2]) | (Int16(readBuffer[3]) << 8)
+        let z = Int16(readBuffer[4]) | (Int16(readBuffer[5]) << 8)
+
+        return (x, y, z)
     }
 }

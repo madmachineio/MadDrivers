@@ -14,7 +14,7 @@ rtc.setTime(current)
 
 while true {
     // Read current time. It returns a optional value and you need to unwrap it.
-    print(rtc.readCurrent())
+    print(rtc.readTime())
     sleep(ms: 2000)
 }
 

@@ -61,11 +61,20 @@ final public class MPU6050 {
         }
     }
 
-    /// Initialize the sensor using I2C communication..
+    /// Initialize the sensor using I2C communication.
+    ///
+    /// The sensor provides two options for the address. If the pin AD0 is
+    /// low voltage, the address is 0x68. If it is high voltage,
+    /// the address is 0x69.
     /// - Parameters:
     ///   - i2c: **REQUIRED** The I2C interface that the sensor connects.
     ///   - address: **OPTIONAL** The device address of the sensor.
     public init(_ i2c: I2C, address: UInt8 = 0x68) {
+        let speed = i2c.getSpeed()
+        guard speed == .standard || speed == .fast else {
+            fatalError(#function + ": MPU6050 only supports 100kHz (standard) and 400kHz (fast) I2C speed")
+        }
+
         self.i2c = i2c
         self.address = address
         accelRange = .g2
@@ -74,7 +83,7 @@ final public class MPU6050 {
         var byte: UInt8 = 0
         try? readRegister(.whoAmI, into: &byte)
         guard byte == 0x68 else {
-            fatalError(#function + ": cann't find MPU6050 at address \(address)")
+            fatalError(#function + ": Fail to find MPU6050 at address \(address)")
         }
 
         reset()

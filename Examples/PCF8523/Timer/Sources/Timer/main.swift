@@ -22,7 +22,7 @@ while true {
 
     // When the interrupt happens, print the current time.
     if value {
-        print(rtc.readCurrent())
+        print(rtc.readTime())
         value = false
     }
 }

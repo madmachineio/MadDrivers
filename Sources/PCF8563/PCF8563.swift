@@ -27,6 +27,11 @@ final public class PCF8563 {
     ///   - i2c: **REQUIRED** The I2C interface the RTC connects to.
     ///   - address: **OPTIONAL** The sensor's address. It has a default value.
     public init(_ i2c: I2C, _ address: UInt8 = 0x51) {
+        let speed = i2c.getSpeed()
+        guard speed == .standard || speed == .fast else {
+            fatalError(#function + ": PCF8563 only supports 100kHz (standard) and 400kHz (fast) I2C speed")
+        }
+
         self.i2c = i2c
         self.address = address
     }
@@ -51,14 +56,14 @@ final public class PCF8563 {
                 binToBcd(time.dayOfWeek), binToBcd(time.month),
                 binToBcd(UInt8(time.year - 2000))]
 
-            try? writeData(Register.vlSecond, data)
+            try? writeRegister(.vlSecond, data)
         }
     }
 
     /// Read current time. The time info is stored in a struct including the
     /// year, month, day, hour, minute, second, dayOfWeek. 
     /// - Returns: A Time struct if the communication is stable. Or it will be nil.
-    public func readCurrent() -> Time {
+    public func readTime() -> Time {
         try? readRegister(.vlSecond, into: &readBuffer, count: 7)
 
         let year = UInt16(bcdToBin(readBuffer[6])) + 2000
@@ -80,7 +85,7 @@ final public class PCF8563 {
     /// - Returns: Boolean value representing the status of the RTC.
     public func isRunning() -> Bool {
         var byte: UInt8 = 0
-        try? readRegister(Register.control1, into: &byte)
+        try? readRegister(.control1, into: &byte)
         let stopBit = byte >> 5 & 0b1
         return stopBit != 1
     }
@@ -88,10 +93,10 @@ final public class PCF8563 {
     /// Make the clock start to work so the time will keep updated.
     public func start() {
         var byte: UInt8 = 0
-        try? readRegister(Register.control1, into: &byte)
+        try? readRegister(.control1, into: &byte)
 
         if byte >> 5 & 0b1 == 1 {
-            try? writeRegister(Register.control1, byte & (~(1 << 5)))
+            try? writeRegister(.control1, byte & (~(1 << 5)))
         }
     }
 
@@ -99,10 +104,10 @@ final public class PCF8563 {
     /// be accurate anymore.
     public func stop() {
         var byte: UInt8 = 0
-        try? readRegister(Register.control1, into: &byte)
+        try? readRegister(.control1, into: &byte)
 
         if byte >> 5 & 0b1 == 0 {
-            try? writeRegister(Register.control1, byte | (1 << 5))
+            try? writeRegister(.control1, byte | (1 << 5))
         }
     }
 
@@ -156,12 +161,12 @@ extension PCF8563 {
 
     private func lostPower() -> Bool {
         var byte: UInt8 = 0
-        try? readRegister(Register.vlSecond, into: &byte)
+        try? readRegister(.vlSecond, into: &byte)
         let vl = byte >> 7
         return vl == 1
     }
 
-    private func writeData(_ reg: Register, _ data: [UInt8]) throws {
+    private func writeRegister(_ reg: Register, _ data: [UInt8]) throws {
         var data = data
         data.insert(reg.rawValue, at: 0)
         let result = i2c.write(data, to: address)

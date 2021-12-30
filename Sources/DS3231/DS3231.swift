@@ -17,7 +17,7 @@ import SwiftIO
 /// You can read the time information including year, month, day, hour,
 /// minute, second from it. It comes with a battery so the time will always
 /// keep updated. Once powered off, the RTC needs a calibration. The RTC also
-/// has two alarms and you can set them to alarm at a specified time.
+/// has two alarms, you can set them to alarm at a specified time.
 final public class DS3231 {
     private let i2c: I2C
     private let address: UInt8
@@ -32,11 +32,11 @@ final public class DS3231 {
     /// - Parameters:
     ///   - i2c: **REQUIRED** The I2C interface the RTC connects to. The maximum
     ///   I2C speed is 400KHz.
-    ///   - address: **OPTIONAL** The sensor's address. It has a default value.
+    ///   - address: **OPTIONAL** The sensor's address. It has a default value 0x68.
     public init(_ i2c: I2C, _ address: UInt8 = 0x68) {
         let speed = i2c.getSpeed()
         guard speed == .standard || speed == .fast else {
-            fatalError(#function + ": DS3231 only supports 100kbps and 400kbps I2C speed")
+            fatalError(#function + ": DS3231 only supports 100kHz (standard) and 400kHz (fast) I2C speed")
         }
 
         self.i2c = i2c
@@ -60,7 +60,7 @@ final public class DS3231 {
                 binToBcd(time.day), binToBcd(time.month),
                 binToBcd(UInt8(time.year - 2000))]
 
-            try? writeData(Register.second, data)
+            try? writeRegister(Register.second, data)
 
             var byte: UInt8 = 0
             try? readRegister(Register.status, into: &byte)
@@ -73,7 +73,7 @@ final public class DS3231 {
 
     /// Read current time.
     /// - Returns: The time info in a struct.
-    public func readCurrent() -> Time {
+    public func readTime() -> Time {
         try? readRegister(.second, into: &readBuffer, count: 7)
 
         let year = UInt16(bcdToBin(readBuffer[6])) + 2000
@@ -149,7 +149,7 @@ final public class DS3231 {
         }
 
         let future = [second, minute, hour, day]
-        try? writeData(Register.alarm1, future)
+        try? writeRegister(Register.alarm1, future)
 
         var byte: UInt8 = 0
         try? readRegister(Register.control, into: &byte)
@@ -200,7 +200,7 @@ final public class DS3231 {
         }
 
         let future = [minute, hour, day]
-        try? writeData(Register.alarm2, future)
+        try? writeRegister(Register.alarm2, future)
 
         var byte: UInt8 = 0
         try? readRegister(Register.control, into: &byte)
@@ -221,7 +221,7 @@ final public class DS3231 {
         day: UInt8 = 0, hour: UInt8 = 0, minute: UInt8 = 0,
         second: UInt8 = 0, mode: Alarm1Mode
     ) {
-        let current = readCurrent()
+        let current = readTime()
 
         let futureSecond = (current.second + second) % 60
         let futureMinute = (current.minute + minute) % 60 +
@@ -252,7 +252,7 @@ final public class DS3231 {
     public func setTimer2(
         day: UInt8 = 0, hour: UInt8 = 0, minute: UInt8 = 0, mode: Alarm2Mode
     ) {
-        let current = readCurrent()
+        let current = readTime()
 
         let futureMinute = (current.minute + minute) % 60
         let futureHour = (current.hour + hour) % 24 +
@@ -351,26 +351,25 @@ final public class DS3231 {
 }
 
 extension DS3231 {
-    private func lostPower() -> Bool {
-        var byte: UInt8 = 0
-        try? readRegister(Register.status, into: &byte)
-        let stopFlag = byte >> 7
-        return stopFlag == 1
+    private enum Register: UInt8 {
+        case second = 0x00
+        case agingOffset = 0x10
+        case alarm2 = 0x0B
+        case alarm1 = 0x07
+        case status = 0x0F
+        case control = 0x0E
+        case temperature = 0x11
     }
 
-    private func enable32K() {
-        var byte: UInt8 = 0
-        try? readRegister(Register.status, into: &byte)
-        try? writeRegister(Register.status, byte | 0b1000)
+    private enum SqwMode: UInt8 {
+      case off = 0x1C
+      case hz1 = 0x00
+      case kHz1 = 0x08
+      case kHz4 = 0x10
+      case kHz8 = 0x18
     }
 
-    private func disable32K() {
-        var byte: UInt8 = 0
-        try? readRegister(Register.status, into: &byte)
-        try? writeRegister(Register.status, byte & 0b0111)
-    }
-
-    private func writeData(_ reg: Register, _ data: [UInt8]) throws {
+    private func writeRegister(_ reg: Register, _ data: [UInt8]) throws {
         var data = data
         data.insert(reg.rawValue, at: 0)
         let result = i2c.write(data, to: address)
@@ -416,6 +415,25 @@ extension DS3231 {
         }
     }
 
+    private func lostPower() -> Bool {
+        var byte: UInt8 = 0
+        try? readRegister(Register.status, into: &byte)
+        let stopFlag = byte >> 7
+        return stopFlag == 1
+    }
+
+    private func enable32K() {
+        var byte: UInt8 = 0
+        try? readRegister(Register.status, into: &byte)
+        try? writeRegister(Register.status, byte | 0b1000)
+    }
+
+    private func disable32K() {
+        var byte: UInt8 = 0
+        try? readRegister(Register.status, into: &byte)
+        try? writeRegister(Register.status, byte & 0b0111)
+    }
+
     private func bcdToBin(_ value: UInt8) -> UInt8 {
         return value - 6 * (value >> 4)
     }
@@ -434,23 +452,5 @@ extension DS3231 {
         var byte: UInt8 = 0
         try? readRegister(Register.control, into: &byte)
         try? writeRegister(Register.control, byte & (~(0b1 << (alarm - 1))))
-    }
-
-    private enum Register: UInt8 {
-        case second = 0x00
-        case agingOffset = 0x10
-        case alarm2 = 0x0B
-        case alarm1 = 0x07
-        case status = 0x0F
-        case control = 0x0E
-        case temperature = 0x11
-    }
-
-    private enum SqwMode: UInt8 {
-      case off = 0x1C
-      case hz1 = 0x00
-      case kHz1 = 0x08
-      case kHz4 = 0x10
-      case kHz8 = 0x18
     }
 }

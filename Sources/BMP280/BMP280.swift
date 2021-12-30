@@ -24,7 +24,7 @@ final public class BMP280 {
     private let address: UInt8?
     private let csPin: DigitalOut?
 
-    private var readBuffer = [UInt8](repeating: 0, count: 24)
+    private var readBuffer = [UInt8](repeating: 0, count: 24 + 1)
 
     private var tSampling: Oversampling
     private var pSampling: Oversampling
@@ -56,7 +56,7 @@ final public class BMP280 {
         filter = .x16
 
         guard getDeviceID() == 0x58 else {
-            fatalError(#function + ": cannot find BMP280 at address \(address)")
+            fatalError(#function + ": Fail to find BMP280 at address \(address)")
         }
 
         reset()
@@ -94,20 +94,20 @@ final public class BMP280 {
 
         guard (spi.cs == false && csPin != nil && csPin!.getMode() == .pushPull)
                 || (spi.cs == true && csPin == nil) else {
-                    fatalError(#function + ": csPin isn't correct")
+                    fatalError(#function + ": csPin isn't correctly configured")
         }
 
         guard spi.getMode() == (true, true, .MSB) ||
                 spi.getMode() == (false, false, .MSB) else {
-            fatalError(#function + ": spi mode doesn't match for BMP280")
+            fatalError(#function + ": SPI mode doesn't match for BMP280. CPOL and CPHA should be both true or both false and bitOrder should be .MSB")
         }
 
         guard spi.getSpeed() <= 10_000_000 else {
-            fatalError(#function + ": cannot support spi speed faster than 10MHz")
+            fatalError(#function + ": BMP280 cannot support spi speed faster than 10MHz")
         }
 
         guard getDeviceID() == 0x58 else {
-            fatalError(#function + ": cannot find BMP280 via spi bus")
+            fatalError(#function + ": Fail to find BMP280 with default ID via SPI")
         }
 
         reset()
@@ -347,21 +347,17 @@ extension BMP280 {
                 throw err
             }
             result = i2c!.read(into: &byte, from: address!)
-            if case .failure(let err) = result {
-                throw err
-            }
         } else {
             let register = register.rawValue | 0b1000_0000
+            var tempBuffer: [UInt8] = [0, 0]
             csPin?.low()
-            result = spi!.write(register)
-            if case .failure(let err) = result {
-                throw err
-            }
-            result = spi!.read(into: &byte)
-            if case .failure(let err) = result {
-                throw err
-            }
+            result = spi!.transceive(register, into: &tempBuffer)
             csPin?.high()
+            byte = tempBuffer[1]
+        }
+
+        if case .failure(let err) = result {
+            throw err
         }
     }
 
@@ -373,27 +369,24 @@ extension BMP280 {
         }
 
         var result: Result<(), Errno>
-        if let i2c = i2c {
-            result = i2c.write(register.rawValue, to: address!)
+        if i2c != nil {
+            result = i2c!.write(register.rawValue, to: address!)
             if case .failure(let err) = result {
                 throw err
             }
-            result = i2c.read(into: &buffer, from: address!)
-            if case .failure(let err) = result {
-                throw err
-            }
-        } else if let spi = spi {
+            result = i2c!.read(into: &buffer, from: address!)
+        } else {
             let register = register.rawValue | 0b1000_0000
             csPin?.low()
-            result = spi.write(register)
-            if case .failure(let err) = result {
-                throw err
-            }
-            result = spi.read(into: &buffer, count: count)
-            if case .failure(let err) = result {
-                throw err
-            }
+            result = spi!.transceive(register, into: &buffer, readCount: count + 1)
             csPin?.high()
+            for i in 0..<count {
+                buffer[i] = buffer[i+1]
+            }
+        }
+
+        if case .failure(let err) = result {
+            throw err
         }
     }
 

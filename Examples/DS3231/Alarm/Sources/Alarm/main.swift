@@ -24,7 +24,7 @@ while true {
     // Clear the alarm. The alarm will continue to be activated when the time is up.
     if value {
         sensor.clearAlarm(1)
-        print(sensor.readCurrent())
+        print(sensor.readTime())
         value = false
     }
 

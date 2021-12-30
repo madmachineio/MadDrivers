@@ -96,7 +96,7 @@ final public class MCP4725 {
         data[1] = UInt8((value & 0x0FF0) >> 4)
         data[2] = UInt8((value & 0x000F) << 4)
         
-        try? writeData(data)
+        try? writeValue(data)
     }
     
     /// Set the output voltage. The value is between 0 and reference voltage.
@@ -123,7 +123,7 @@ final public class MCP4725 {
         data[1] = UInt8((value & 0x0FF0) >> 4)
         data[2] = UInt8((value & 0x000F) << 4)
         
-        try? writeData(data)
+        try? writeValue(data)
     }
     
     /// Set a series of voltage values to the device to obtain varying voltages.
@@ -139,14 +139,14 @@ final public class MCP4725 {
             data[index * 2 + 1] = UInt8(value & 0xFF)
         }
 
-        try? writeData(data)
+        try? writeValue(data)
     }
 }
 
 
 extension MCP4725 {
     private func getEEROMValue() -> UInt16 {
-        try? readData(into: &readBuffer)
+        try? readValue(into: &readBuffer)
 
         let high = UInt16(readBuffer[3] & 0x0F) << 8
         let low = UInt16(readBuffer[4])
@@ -155,7 +155,7 @@ extension MCP4725 {
     }
     
     private func getOutputValue() -> UInt16 {
-        try? readData(into: &readBuffer)
+        try? readValue(into: &readBuffer)
 
         let high = UInt16(readBuffer[1] & 0xF0) << 4
         let low = (UInt16(readBuffer[1] & 0x0F) << 4) |
@@ -164,7 +164,7 @@ extension MCP4725 {
         return high | low
     }
 
-    private func readData(into buffer: inout [UInt8]) throws {
+    private func readValue(into buffer: inout [UInt8]) throws {
         for i in 0..<buffer.count {
             buffer[i] = 0
         }
@@ -175,7 +175,7 @@ extension MCP4725 {
         }
     }
 
-    private func writeData(_ data: [UInt8]) throws {
+    private func writeValue(_ data: [UInt8]) throws {
         let result = i2c.write(data, to: address)
         if case .failure(let err) = result {
             throw err

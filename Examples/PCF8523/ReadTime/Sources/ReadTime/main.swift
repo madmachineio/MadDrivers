@@ -15,5 +15,5 @@ rtc.setTime(time)
 // Read the current time and print it every 3s.
 while true {
     sleep(ms: 3000)
-    print(rtc.readCurrent())
+    print(rtc.readTime())
 }

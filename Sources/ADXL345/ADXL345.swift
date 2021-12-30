@@ -37,7 +37,7 @@ final public class ADXL345 {
     private let gScaleFactor: Float = 0.004
     private var dataRate: DataRate
 
-    private var readBuffer = [UInt8](repeating: 0, count: 6)
+    private var readBuffer = [UInt8](repeating: 0, count: 6 + 1)
 
     /// Initialize the sensor using I2C communication. The g range is set to
     /// ±2g and the data rate is 100Hz by default.
@@ -49,7 +49,7 @@ final public class ADXL345 {
     public init(_ i2c: I2C, address: UInt8 = 0x53) {
         let speed = i2c.getSpeed()
         guard speed == .standard || speed == .fast else {
-            fatalError(#function + ": ADXL345 only supports 100kbps and 400kbps I2C speed")
+            fatalError(#function + ": ADXL345 only supports 100kHz (standard) and 400kHz (fast) I2C speed")
         }
 
         self.i2c = i2c
@@ -61,7 +61,7 @@ final public class ADXL345 {
         gRange = .g2
 
         guard getDeviceID() == 0xE5 else {
-            fatalError(#function + ": cann't find ADXL345 at address \(address)")
+            fatalError(#function + ": Fail to find ADXL345 at address \(address)")
         }
 
         setDataRate(dataRate)
@@ -103,15 +103,15 @@ final public class ADXL345 {
         }
 
         guard spi.getMode() == (true, true, .MSB) else {
-            fatalError(#function + ": spi mode doesn't match for ADXL345")
+            fatalError(#function + ": SPI mode doesn't match for ADXL345. CPOL and CPHA should be true and bitOrder should be .MSB")
         }
 
         guard spi.getSpeed() <= 5_000_000 else {
-            fatalError(#function + ": cannot support spi speed faster than 5MHz")
+            fatalError(#function + ": ADXL345 cannot support SPI speed faster than 5MHz")
         }
 
         guard getDeviceID() == 0xE5 else {
-            fatalError(#function + ": cann't find ADXL345 via spi bus")
+            fatalError(#function + ": Fail to find ADXL345 with default ID via SPI")
         }
 
         setDataRate(dataRate)
@@ -127,12 +127,13 @@ final public class ADXL345 {
     /// Read x, y, z acceleration values represented in g (9.8m/s^2)
     /// within the selected range.
     /// - Returns: 3 float within the selected g range.
-    public func readValues() -> (x: Float, y: Float, z: Float) {
-        let rawValues = readRawValues()
+    public func readXYZ() -> (x: Float, y: Float, z: Float) {
+        try? readRegister(.dataX0, into: &readBuffer, count: 6)
 
-        let x = Float(rawValues.x) * gScaleFactor
-        let y = Float(rawValues.y) * gScaleFactor
-        let z = Float(rawValues.z) * gScaleFactor
+        let x = Float(Int16(readBuffer[0]) | (Int16(readBuffer[1]) << 8)) * gScaleFactor
+        let y = Float(Int16(readBuffer[2]) | (Int16(readBuffer[3]) << 8)) * gScaleFactor
+        let z = Float(Int16(readBuffer[4]) | (Int16(readBuffer[5]) << 8)) * gScaleFactor
+
         return (x, y, z)
     }
 
@@ -245,15 +246,6 @@ final public class ADXL345 {
 }
 
 extension ADXL345 {
-    private func readRawValues() -> (x: Int16,y: Int16, z: Int16) {
-        try? readRegister(.dataX0, into: &readBuffer, count: 6)
-
-        let x = Int16(readBuffer[0]) | (Int16(readBuffer[1]) << 8)
-        let y = Int16(readBuffer[2]) | (Int16(readBuffer[3]) << 8)
-        let z = Int16(readBuffer[4]) | (Int16(readBuffer[5]) << 8)
-        return (x, y, z)
-    }
-
     private func writeRegister(_ register: Register, _ value: UInt8) throws {
         var result: Result<(), Errno>
 
@@ -274,69 +266,56 @@ extension ADXL345 {
     _ register: Register, into byte: inout UInt8
     ) throws {
         var result: Result<(), Errno>
-        var byte: UInt8 = 0
 
-        if let i2c = i2c {
-            result = i2c.write(register.rawValue, to: address!)
+        if i2c != nil {
+            result = i2c!.write(register.rawValue, to: address!)
             if case .failure(let err) = result {
                 throw err
             }
 
-            result = i2c.read(into: &byte, from: address!)
-            if case .failure(let err) = result {
-                throw err
-            }
-        } else if let spi = spi {
+            result = i2c!.read(into: &byte, from: address!)
+        } else {
             let register = 0b1000_0000 | register.rawValue
+            var tempBuffer: [UInt8] = [0, 0]
+
             csPin?.low()
-
-            result = spi.write(register)
-            if case .failure(let err) = result {
-                throw err
-            }
-
-            result = spi.read(into: &byte)
-            if case .failure(let err) = result {
-                throw err
-            }
-
+            result = spi!.transceive(register, into: &tempBuffer)
             csPin?.high()
+            byte = tempBuffer[1]
+        }
+
+        if case .failure(let err) = result {
+            throw err
         }
     }
 
     private func readRegister(
         _ register: Register, into buffer: inout [UInt8], count: Int
     ) throws {
+        var result: Result<(), Errno>
         for i in 0..<buffer.count {
             buffer[i] = 0
         }
 
-        var result: Result<(), Errno>
-        if let i2c = i2c {
-            result = i2c.write(register.rawValue, to: address!)
+        if i2c != nil {
+            result = i2c!.write(register.rawValue, to: address!)
             if case .failure(let err) = result {
                 throw err
             }
-
-            result = i2c.read(into: &buffer, count: count, from: address!)
-            if case .failure(let err) = result {
-                throw err
-            }
-        } else if let spi = spi {
+            result = i2c!.read(into: &buffer, count: count, from: address!)
+        } else {
             let register = 0b1100_0000 | register.rawValue
             csPin?.low()
-
-            result = spi.write(register)
-            if case .failure(let err) = result {
-                throw err
-            }
-
-            result = spi.read(into: &buffer, count: count)
-            if case .failure(let err) = result {
-                throw err
-            }
-
+            result = spi!.transceive(register, into: &buffer, readCount: count + 1)
             csPin?.high()
+
+            for i in 0..<count {
+                buffer[i] = buffer[i + 1]
+            }
+        }
+
+        if case .failure(let err) = result {
+            throw err
         }
     }
 
