@@ -12,6 +12,11 @@
 
 import SwiftIO
 
+/// The library for PCF8523 real time clock.
+///
+/// You can read the time information including year, month, day, hour,
+/// minute, second from it. It comes with a battery so the time will always
+/// keep updated. Once powered off, the RTC needs a calibration.
 final public class PCF8523 {
     private let i2c: I2C
     private let address: UInt8
