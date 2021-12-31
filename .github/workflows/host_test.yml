@@ -1,0 +1,19 @@
+name: host test
+
+on:
+  push:
+    branches:
+      - main
+      - 'fix/**'
+      - 'feature/**'
+      - 'release/**'
+  pull_request:
+    branches:
+      - main
+      - 'release/**'
+  schedule:
+    - cron: '1 0 * * 4'
+
+jobs:
+  host_test:
+    uses: madmachineio/actions/.github/workflows/host_test.yml@main
