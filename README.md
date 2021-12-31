@@ -2,7 +2,7 @@
 
 ![build](https://github.com/madmachineio/MadDrivers/actions/workflows/build.yml/badge.svg)
 ![test](https://github.com/madmachineio/MadDrivers/actions/workflows/host_test.yml/badge.svg)
-[![codecov](https://codecov.io/gh/madmachineio/MadDrivers/branch/main/graph/badge.svg?token=CiL37B327S)](https://codecov.io/gh/madmachineio/MadDrivers)
+[![codecov](https://codecov.io/gh/madmachineio/MadDrivers/branch/main/graph/badge.svg?token=PHBKJXWHPN)](https://codecov.io/gh/madmachineio/MadDrivers)
 [![Discord](https://img.shields.io/discord/592743353049808899?&logo=Discord&colorB=7289da)](https://madmachine.io/discord)
 [![twitter](https://img.shields.io/twitter/follow/madmachineio?label=%40madmachineio&style=social)](https://twitter.com/madmachineio)
 
