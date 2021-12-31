@@ -73,8 +73,8 @@
 
 
         func test25Degree() {
-            let de25 = UInt16(26214)
-            let tempData = [UInt8(truncatingIfNeeded: de25 >> 8), UInt8(truncatingIfNeeded: de25)]
+            let de25: UInt16 = 26214
+            let tempData = de25.getBytes()
 
             i2c.expectRead = tempData + [0, 0, 0, 0]
             XCTAssertEqual(sht.readCelsius(), 25.0)
@@ -84,8 +84,8 @@
         }
 
         func test0Degree() {
-            let de0 = UInt16(16852)
-            let tempData = [UInt8(truncatingIfNeeded: de0 >> 8), UInt8(truncatingIfNeeded: de0)]
+            let de0: UInt16 = 16852
+            let tempData = de0.getBytes()
 
             i2c.expectRead = tempData + [0, 0, 0, 0]
             XCTAssertEqual(sht.readCelsius(), 0, accuracy: 0.01)
@@ -97,7 +97,13 @@
 
         func testHumidify() {
             let huPercent25: UInt16 = 16384
+            let huPercent61: UInt16 = 40000
             
+            i2c.expectRead = [0, 0, 0] + huPercent25.getBytes() + [0]
+            XCTAssertEqual(sht.readHumidity(), 25, accuracy: 0.1)
+            
+            i2c.expectRead = [0, 0, 0] + huPercent61.getBytes() + [0]
+            XCTAssertEqual(sht.readHumidity(), 61, accuracy: 0.1)
         }
 
     }

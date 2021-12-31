@@ -1,6 +1,8 @@
 # MadDrivers
 
 ![build](https://github.com/madmachineio/MadDrivers/actions/workflows/build.yml/badge.svg)
+![test](https://github.com/madmachineio/MadDrivers/actions/workflows/host_test.yml/badge.svg)
+[![codecov](https://codecov.io/gh/madmachineio/MadDrivers/branch/main/graph/badge.svg?token=CiL37B327S)](https://codecov.io/gh/madmachineio/MadDrivers)
 [![Discord](https://img.shields.io/discord/592743353049808899?&logo=Discord&colorB=7289da)](https://madmachine.io/discord)
 [![twitter](https://img.shields.io/twitter/follow/madmachineio?label=%40madmachineio&style=social)](https://twitter.com/madmachineio)
 
@@ -109,7 +111,7 @@ Take the library `SHT3x` for example:
 
 1. Create an executable project. You can refer to [this tutorial](https://docs.madmachine.io/how-to/create-new-project).
 
-2. Open the project and open the file `package.swift`. 
+2. Open the project and open the file `Package.swift`. 
 
     The `MadDrivers` has already been added to your project by default. You could use all libraries in it. It's better to **specify the specific library** to reduce the build time for your project. Change the statement
     
