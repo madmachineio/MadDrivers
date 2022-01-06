@@ -113,9 +113,15 @@ let package = Package(
         .target(
             name: "VEML6040",
             dependencies: ["SwiftIO"]),
-        
+
+        .testTarget(
+            name: "ADXL345Tests",
+            dependencies: ["ADXL345", "SwiftIO"]),
         .testTarget(
             name: "APDS9960Tests",
             dependencies: ["APDS9960", "SwiftIO"]),
+        .testTarget(
+            name: "SHT3xTests",
+            dependencies: ["SHT3x", "SwiftIO"]),
     ]
 )
