@@ -40,7 +40,7 @@ let package = Package(
         .library(name: "IS31FL3731", targets: ["IS31FL3731"]),
         .library(name: "LCD1602", targets: ["LCD1602"]),
         .library(name: "LIS3DH", targets: ["LIS3DH"]),
-        .library(name: "MAG3110", targets: ["MCP4725"]),
+        .library(name: "MAG3110", targets: ["MAG3110"]),
         .library(name: "MCP4725", targets: ["MCP4725"]),
         .library(name: "MPU6050", targets: ["MPU6050"]),
         .library(name: "PCF8523", targets: ["PCF8523"]),
