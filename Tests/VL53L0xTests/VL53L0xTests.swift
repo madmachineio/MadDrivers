@@ -11,7 +11,11 @@ final class VL53L0xTests: XCTestCase {
         super.setUp()
         i2c = I2C(Id.I2C0)
 
-        i2c.expectRead = [0xEE, 0]
+        i2c.expectRead = [0xEE, 0,
+                          0, 0, 1, 138, 37, 10, 20, 30, 40, 50, 60, 20,
+                          187, 3, 15, 5, 28, 4, 5, 7,
+                          187, 3, 15, 5, 28, 4, 5, 7,
+                          1, 1]
 
         vl53l0x = VL53L0x(i2c)
     }
@@ -28,21 +32,51 @@ final class VL53L0xTests: XCTestCase {
                                      0x01, 0xFF,])
     }
 
+
     func testGetMeasurementTimingBudget() {
         i2c.written = []
+        i2c.expectRead = [187, 3, 15, 5, 28, 4, 5, 7]
 
-        vl53l0x.getMeasurementTimingBudget()
-        XCTAssertEqual(i2c.written, [])
+
+        XCTAssertEqual(vl53l0x.getMeasurementTimingBudget(), 15433)
+        XCTAssertEqual(i2c.written, [0x01, 0x50, 0x46, 0x51, 0x70, 0x71])
+    }
+
+
+    func testSetMeasurementTimingBudget() {
+        i2c.written = []
+        i2c.expectRead = [187, 3, 15, 5, 28, 4, 5, 7]
+
+        vl53l0x.setMeasurementTimingBudget(7000)
+        XCTAssertEqual(i2c.written, [0x01, 0x50, 0x46, 0x51, 0x70, 0x71, 0x71, 0, 18])
+    }
+
+    func testCalTimeoutMclks() {
+        XCTAssertEqual(vl53l0x.calTimeoutMclks(2890, 28), 27)
+    }
+
+    func testEncodeTimeout() {
+        XCTAssertEqual(vl53l0x.encodeTimeout(28064), [7, 219])
     }
 
     func testGetSequenceStepTimeouts() {
         i2c.written = []
-        i2c.expectRead = []
+        i2c.expectRead = [3, 15, 5, 28, 4, 5, 7]
 
-        XCTAssertEqual(vl53l0x.getSequenceStepTimeouts(), [])
+        let values = vl53l0x.getSequenceStepTimeouts(false)
+
+        XCTAssertEqual(values.msrcDssTccUs, 488)
+        XCTAssertEqual(values.preRangeMclks, 897)
+        XCTAssertEqual(values.preRangeUs, 27363)
+        XCTAssertEqual(values.finalRangePclks, 10)
+        XCTAssertEqual(values.finalRangeUs, 8579)
         XCTAssertEqual(i2c.written, [0x50, 0x46, 0x51, 0x70, 0x71])
     }
 
+
+    func testDecodeTimeout() {
+        XCTAssertEqual(vl53l0x.decodeTimeout(msb: 5, lsb: 28), 897)
+    }
 
     func testGetVcselPulsePeriod() {
         i2c.written = []
@@ -62,7 +96,13 @@ final class VL53L0xTests: XCTestCase {
         i2c.written = []
         i2c.expectRead = [123]
 
-        XCTAssertEqual(vl53l0x.getSequenceStepEnables(), [true, true, false, true, false])
+        let values = vl53l0x.getSequenceStepEnables()
+
+        XCTAssertEqual(values.tcc, true)
+        XCTAssertEqual(values.dss, true)
+        XCTAssertEqual(values.msrc, false)
+        XCTAssertEqual(values.preRange, true)
+        XCTAssertEqual(values.finalRange, false)
         XCTAssertEqual(i2c.written, [0x01])
     }
 
@@ -104,11 +144,6 @@ final class VL53L0xTests: XCTestCase {
 
     
 
-    func testStaticInit() {
-        i2c.written = []
-
-    }
-
     func testSetSpad() {
         i2c.written = []
         i2c.expectRead = [0, 0, 1, 138, 37,
@@ -148,7 +183,27 @@ final class VL53L0xTests: XCTestCase {
                                      0xFF, 0x01, 0x00, 0x01, 0xFF, 0x00, 0x80, 0x00])
 
     }
-    
+
+    func testPerformRefCalibration() {
+        i2c.written = []
+        i2c.expectRead = [1, 1]
+
+        vl53l0x.performRefCalibration()
+        XCTAssertEqual(i2c.written, [0x01, 0x01,
+                                     0, 0x41, 0x13, 0x0B, 0x01, 0, 0,
+                                     0x01, 0x02,
+                                     0, 1, 0x13, 0x0B, 0x01, 0, 0,
+                                     0x01, 0xE8
+                                    ])
+    }
+
+    func testPerformSingleRefCalibration() {
+        i2c.written = []
+        i2c.expectRead = [1]
+
+        vl53l0x.performSingleRefCalibration(10)
+        XCTAssertEqual(i2c.written, [0, 11, 0x13, 0x0B, 0x01, 0, 0])
+    }
 }
 
 
