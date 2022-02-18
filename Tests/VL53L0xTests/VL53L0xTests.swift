@@ -11,7 +11,7 @@ final class VL53L0xTests: XCTestCase {
         super.setUp()
         i2c = I2C(Id.I2C0)
 
-        i2c.expectRead = [0xEE, 0,
+        i2c.expectRead = [0xEE, 2, 0,
                           0, 0, 1, 138, 37, 10, 20, 30, 40, 50, 60, 20,
                           187, 3, 15, 5, 28, 4, 5, 7,
                           187, 3, 15, 5, 28, 4, 5, 7,
@@ -22,10 +22,10 @@ final class VL53L0xTests: XCTestCase {
 
     func testDataInit() {
         i2c.written = []
-        i2c.expectRead = [0]
+        i2c.expectRead = [2, 0]
 
         vl53l0x.dataInit()
-        XCTAssertEqual(i2c.written, [0x88, 0, 0x80, 1, 0xFF, 1, 0, 0,
+        XCTAssertEqual(i2c.written, [0x88, 0, 0x80, 1, 0xFF, 1, 0, 0, 0x91,
                                      0, 1, 0xFF, 0, 0x80, 0,
                                      0x60, 0x60, 0x12,
                                      0x44, 0, 32,
@@ -204,7 +204,50 @@ final class VL53L0xTests: XCTestCase {
         vl53l0x.performSingleRefCalibration(10)
         XCTAssertEqual(i2c.written, [0, 11, 0x13, 0x0B, 0x01, 0, 0])
     }
+
+
+    func testStartContinuous() {
+        i2c.written = []
+        i2c.expectRead = [1, 2]
+
+        vl53l0x.startContinuous()
+        XCTAssertEqual(i2c.written, [0x80, 0x01, 0xFF, 0x01, 0x00, 0x00, 0x91, 2,
+                                     0x00, 0x01, 0xFF, 0x00, 0x80, 0x00, 0x00, 0x02,
+                                    0x00, 0x00])
+    }
+
+    func testStopContinuous() {
+        i2c.written = []
+
+        vl53l0x.stopContinuous()
+        XCTAssertEqual(i2c.written, [0x00, 0x01, 0xFF, 0x01,
+                                     0x00, 0x00, 0x91, 0x00,
+                                     0x00, 0x01, 0xFF, 0x00])
+    }
+
+
+    func testReadRangeContinuous() {
+        i2c.written = []
+        i2c.expectRead = [7, 50, 33]
+
+        XCTAssertEqual(vl53l0x.readRangeContinuous(), 12833)
+        XCTAssertEqual(i2c.written, [0x13, 30, 0x0B, 0x01])
+    }
+
+    func testReadRangeSingle() {
+        i2c.written = []
+        i2c.expectRead = [0, 7, 50, 33]
+
+        XCTAssertEqual(vl53l0x.readRangeSingle(), 12833)
+        XCTAssertEqual(i2c.written, [0x80, 0x01, 0xFF, 0x01,
+                                     0x00, 0x00, 0x91, 0x02,
+                                     0x00, 0x01, 0xFF, 0x00,
+                                     0x80, 0x00, 0x00, 0x00,
+                                     0x00,
+                                     0x13, 30, 0x0B, 0x01])
+    }
 }
+
 
 
 

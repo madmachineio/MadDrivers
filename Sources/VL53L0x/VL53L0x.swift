@@ -6,6 +6,8 @@ final public class VL53L0x {
     public let ioTimeout: Int
     private var readBuffer = [UInt8](repeating: 0, count: 6)
     var timingBudget: UInt32 = 0
+    var stopVariable: UInt8 = 0
+    public var mode: Mode = .single
 
     public init(_ i2c: I2C, address: UInt8 = 0x29, ioTimeout: Int = 0) {
         let speed = i2c.getSpeed()
@@ -34,7 +36,7 @@ final public class VL53L0x {
     /// more accurate measurements.
     /// - Parameter budget: maximum measurement time in microsecond.
     /// It should be bigger than 17000us.
-    func setMeasurementTimingBudget(_ budget: UInt32) {
+    public func setMeasurementTimingBudget(_ budget: UInt32) {
         guard budget <= 20000 else { return }
 
         var sumBudget = 1320 + OverheadUs.end.rawValue
@@ -135,8 +137,107 @@ final public class VL53L0x {
         try? writeRegister(.FINAL_RANGE_CONFIG_MIN_COUNT_RATE_RTN_LIMIT, data)
     }
 
+    /// Start continuous ranging measurement.
+    public func startContinuous() {
+        try? writeRegister(0x80, 0x01)
+        try? writeRegister(0xFF, 0x01)
+        try? writeRegister(0x00, 0x00)
+        try? writeRegister(0x91, stopVariable)
+        try? writeRegister(0x00, 0x01)
+        try? writeRegister(0xFF, 0x00)
+        try? writeRegister(0x80, 0x00)
+        try? writeRegister(.SYSRANGE_START, 0x02)
 
+        var byte: UInt8 = 0
+        let start = getSystemUptimeInMilliseconds()
+
+        repeat {
+            try? readRegister(.SYSRANGE_START, into: &byte)
+            if ioTimeout > 0 && getSystemUptimeInMilliseconds() - start >= ioTimeout {
+                print(#function + ": Timeout waiting for VL53L0X.")
+            }
+
+        } while byte & 0x01 > 0
+        mode = .continuous
+    }
+
+    func stopContinuous() {
+        try? writeRegister(.SYSRANGE_START, 0x01)
+
+        try? writeRegister(0xFF, 0x01)
+        try? writeRegister(0x00, 0x00)
+        try? writeRegister(0x91, 0x00)
+        try? writeRegister(0x00, 0x01)
+        try? writeRegister(0xFF, 0x00)
+    }
+
+    public func readRange() -> UInt16 {
+        let range: UInt16
+        if mode == .single {
+            range = readRangeSingle()
+        } else {
+            range = readRangeContinuous()
+        }
+        return range
+    }
+
+    func readRangeContinuous() -> UInt16 {
+        let start = getSystemUptimeInMilliseconds()
+        var byte: UInt8 = 0
+
+        repeat {
+            try? readRegister(.RESULT_INTERRUPT_STATUS, into: &byte)
+
+            if ioTimeout > 0 && getSystemUptimeInMilliseconds() - start >= ioTimeout {
+                print(#function + ": Timeout waiting for VL53L0X.")
+                return 0
+            }
+        } while byte & 0x07 == 0
+
+        try? readRegister(Register.RESULT_RANGE_STATUS.rawValue + 10, into: &readBuffer, count: 2)
+        try? writeRegister(.SYSTEM_INTERRUPT_CLEAR, 0x01)
+        print(readBuffer)
+        return UInt16(readBuffer[0]) << 8 | UInt16(readBuffer[1])
+    }
+
+    func readRangeSingle() -> UInt16 {
+        try? writeRegister(0x80, 0x01)
+        try? writeRegister(0xFF, 0x01)
+        try? writeRegister(0x00, 0x00)
+        try? writeRegister(0x91, stopVariable)
+        try? writeRegister(0x00, 0x01)
+        try? writeRegister(0xFF, 0x00)
+        try? writeRegister(0x80, 0x00)
+        try? writeRegister(.SYSRANGE_START, 0x01)
+
+        let start = getSystemUptimeInMilliseconds()
+
+        var byte: UInt8 = 0
+
+        repeat {
+            try? readRegister(.SYSRANGE_START, into: &byte)
+
+            if ioTimeout > 0 && getSystemUptimeInMilliseconds() - start >= ioTimeout {
+                print(#function + ": Timeout waiting for VL53L0X.")
+                return 0
+            }
+        } while byte & 0x01 > 0
+
+        return readRangeContinuous()
+    }
+
+
+    public enum Mode {
+        case single
+        case continuous
+    }
 }
+
+
+
+
+
+
 
 extension VL53L0x {
     enum Register: UInt8 {
@@ -158,6 +259,7 @@ extension VL53L0x {
         case FINAL_RANGE_CONFIG_TIMEOUT_MACROP_HI = 0x71
         case SYSRANGE_START = 0x00
         case RESULT_INTERRUPT_STATUS = 0x13
+        case RESULT_RANGE_STATUS = 0x14
     }
 
     enum OverheadUs: UInt32 {
@@ -209,7 +311,29 @@ extension VL53L0x {
     func readRegister(
         _ reg: Register, into buffer: inout [UInt8], count: Int
     ) throws {
+        for i in 0..<buffer.count {
+            buffer[i] = 0
+        }
+
         var result = i2c.write(reg.rawValue, to: address)
+        if case .failure(let err) = result {
+            throw err
+        }
+
+        result = i2c.read(into: &buffer, count: count, from: address)
+        if case .failure(let err) = result {
+            throw err
+        }
+    }
+
+    func readRegister(
+        _ reg: UInt8, into buffer: inout [UInt8], count: Int
+    ) throws {
+        for i in 0..<buffer.count {
+            buffer[i] = 0
+        }
+
+        var result = i2c.write(reg, to: address)
         if case .failure(let err) = result {
             throw err
         }
@@ -241,6 +365,8 @@ extension VL53L0x {
         try? writeRegister(0x80, 0x01)
         try? writeRegister(0xFF, 0x01)
         try? writeRegister(0x00, 0x00)
+
+        try? readRegister(0x91, into: &stopVariable)
 
         try? writeRegister(0x00, 0x01)
         try? writeRegister(0xFF, 0x00)
