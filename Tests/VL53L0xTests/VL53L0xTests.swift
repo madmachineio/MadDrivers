@@ -15,7 +15,7 @@ final class VL53L0xTests: XCTestCase {
                           0, 0, 1, 138, 37, 10, 20, 30, 40, 50, 60, 20,
                           187, 3, 15, 5, 28, 4, 5, 7,
                           187, 3, 15, 5, 28, 4, 5, 7,
-                          1, 1]
+                          1, 1, 1, 2]
 
         vl53l0x = VL53L0x(i2c)
     }
@@ -48,7 +48,7 @@ final class VL53L0xTests: XCTestCase {
         i2c.expectRead = [187, 3, 15, 5, 28, 4, 5, 7]
 
         vl53l0x.setMeasurementTimingBudget(7000)
-        XCTAssertEqual(i2c.written, [0x01, 0x50, 0x46, 0x51, 0x70, 0x71, 0x71, 0, 18])
+        XCTAssertEqual(i2c.written, [])
     }
 
     func testCalTimeoutMclks() {
@@ -242,7 +242,7 @@ final class VL53L0xTests: XCTestCase {
         XCTAssertEqual(i2c.written, [0x80, 0x01, 0xFF, 0x01,
                                      0x00, 0x00, 0x91, 0x02,
                                      0x00, 0x01, 0xFF, 0x00,
-                                     0x80, 0x00, 0x00, 0x00,
+                                     0x80, 0x00, 0x00, 0x01,
                                      0x00,
                                      0x13, 30, 0x0B, 0x01])
     }

@@ -1,15 +1,44 @@
+//=== VL53L0x.swift -------------------------------------------------------===//
+//
+// Copyright (c) MadMachine Limited
+// Licensed under MIT License
+//
+// Authors: Ines Zhou
+// Created: 03/01/2022
+//
+// See https://madmachine.io for more information
+//
+//===----------------------------------------------------------------------===//
+
 import SwiftIO
 
+/// This is the library for VL53L0x distance sensor.
+///
+/// The VL53L0x contains a laser source to emit laser. After the light arrives
+/// at the surface of an object, it will be bounced back to the sensor. It then
+/// gives you a range reading based on the time to receive the light.
+///
+/// The sensor provides a 25 degree angle of view, which means the light within
+/// that cone could be detected. It can measure 50-1200mm of distance.
 final public class VL53L0x {
-    public let i2c: I2C
-    public let address: UInt8
-    public let ioTimeout: Int
+    private let i2c: I2C
+    private let address: UInt8
+    private let ioTimeout: Int
     private var readBuffer = [UInt8](repeating: 0, count: 6)
-    var timingBudget: UInt32 = 0
-    var stopVariable: UInt8 = 0
-    public var mode: Mode = .single
+    private var timingBudget: UInt32 = 0
+    private var stopVariable: UInt8 = 0
+    private var mode: Mode
 
-    public init(_ i2c: I2C, address: UInt8 = 0x29, ioTimeout: Int = 0) {
+
+    /// Initialize the sensor using I2C communication.
+    /// - Parameters:
+    ///   - i2c: **REQUIRED** The I2C interface that the sensor connects.
+    ///   - address: **OPTIONAL** The sensor's address, 0x29 by default.
+    ///   - ioTimeout: **OPTIONAL** The timeout for reading from the sensor.
+    ///   By default, it's 0 which means there is no timeout, so the sensor
+    ///   will continue to read until get the desired reading.
+    ///   - mode: **OPTIONAL** The measurement mode: `.single` or `.continuous`.
+    public init(_ i2c: I2C, address: UInt8 = 0x29, ioTimeout: Int = 0, mode: Mode = .continuous) {
         let speed = i2c.getSpeed()
         guard speed == .standard || speed == .fast else {
             fatalError(#function + ": VL53L0x only supports 100kHz (standard) and 400kHz (fast) I2C speed")
@@ -18,6 +47,7 @@ final public class VL53L0x {
         self.i2c = i2c
         self.address = address
         self.ioTimeout = ioTimeout
+        self.mode = mode
 
         var byte: UInt8 = 0
         try? readRegister(.IDENTIFICATION_MODEL_ID, into: &byte)
@@ -28,16 +58,19 @@ final public class VL53L0x {
         dataInit()
         staticInit()
         performRefCalibration()
+        if mode == .continuous {
+            startContinuous()
+        }
     }
 
-    /// Set the measurement timing budget in microsecond.
+    /// Set the maximum time for one measurement.
     ///
-    /// It is the maximum time for one measurement. A longer timing budget allows for
-    /// more accurate measurements.
-    /// - Parameter budget: maximum measurement time in microsecond.
-    /// It should be bigger than 17000us.
+    /// A longer timing budget allows for more accurate measurements but
+    /// cause slower measuremnt. The default value is about 33ms.
+    /// - Parameter budget: Maximum measurement time in microsecond.
+    /// It should be bigger than 20ms.
     public func setMeasurementTimingBudget(_ budget: UInt32) {
-        guard budget <= 20000 else { return }
+        guard budget > 20000 else { return }
 
         var sumBudget = 1320 + OverheadUs.end.rawValue
         let enables = getSequenceStepEnables()
@@ -80,7 +113,8 @@ final public class VL53L0x {
     }
 
     /// Get the measurement timing budget in microseconds.
-    func getMeasurementTimingBudget() -> UInt32 {
+    /// It is the maximum time for one measurement.
+    public func getMeasurementTimingBudget() -> UInt32 {
         var budget: UInt32 = OverheadUs.start.rawValue + OverheadUs.end.rawValue
         let enables = getSequenceStepEnables()
         let timeouts = getSequenceStepTimeouts(enables.preRange)
@@ -106,28 +140,12 @@ final public class VL53L0x {
         return budget
     }
 
-    /// Get the VCSEL pulse period in PCLKs with the specified period type.
-    func getVcselPulsePeriod(_ type: VcselPeriodType) -> UInt8 {
-        var byte: UInt8 = 0
-        if type == .preRange {
-            try? readRegister(.PRE_RANGE_CONFIG_VCSEL_PERIOD, into: &byte)
-        } else {
-            try? readRegister(.FINAL_RANGE_CONFIG_VCSEL_PERIOD, into: &byte)
-        }
-
-        return (byte + 1) << 1
-    }
-
-    enum VcselPeriodType {
-        case preRange
-        case finalRange
-    }
 
     /// Set the return signal rate limit in mega counts per second.
     /// It decides the minimum measurement for a valid reading.
     func setSignalRateLimit(_ limit: Float) {
         guard limit >= 0 && limit <= 511.99 else {
-            print("signal rate limit should be within 0 - 511.00")
+            print(#function + ": signal rate limit should be within 0 - 511.00")
             return
         }
 
@@ -137,7 +155,8 @@ final public class VL53L0x {
         try? writeRegister(.FINAL_RANGE_CONFIG_MIN_COUNT_RATE_RTN_LIMIT, data)
     }
 
-    /// Start continuous ranging measurement.
+    /// Start continuous ranging measurement. The default mode is continuous
+    /// and thus it has been set by default.
     public func startContinuous() {
         try? writeRegister(0x80, 0x01)
         try? writeRegister(0xFF, 0x01)
@@ -153,7 +172,7 @@ final public class VL53L0x {
 
         repeat {
             try? readRegister(.SYSRANGE_START, into: &byte)
-            if ioTimeout > 0 && getSystemUptimeInMilliseconds() - start >= ioTimeout {
+            if checkTimeout(timeout: ioTimeout, start: start) {
                 print(#function + ": Timeout waiting for VL53L0X.")
             }
 
@@ -161,7 +180,9 @@ final public class VL53L0x {
         mode = .continuous
     }
 
-    func stopContinuous() {
+    /// Stop the continuous measurement. The sensor will enter standby state.
+    /// The measurement mode will change to single mode.
+    public func stopContinuous() {
         try? writeRegister(.SYSRANGE_START, 0x01)
 
         try? writeRegister(0xFF, 0x01)
@@ -169,66 +190,34 @@ final public class VL53L0x {
         try? writeRegister(0x91, 0x00)
         try? writeRegister(0x00, 0x01)
         try? writeRegister(0xFF, 0x00)
+        mode = .single
     }
 
-    public func readRange() -> UInt16 {
+    /// Start to measure the range between the object and the sensor.
+    /// The sensor should measure range for about 50-1200mm.
+    /// So distances exceed that range will return nil.
+    /// - Returns: Range in millimeters.
+    public func readRange() -> Int? {
         let range: UInt16
         if mode == .single {
             range = readRangeSingle()
         } else {
             range = readRangeContinuous()
         }
-        return range
+
+        if range > 1300 {
+            return nil
+        }
+        return Int(range)
     }
 
-    func readRangeContinuous() -> UInt16 {
-        let start = getSystemUptimeInMilliseconds()
-        var byte: UInt8 = 0
-
-        repeat {
-            try? readRegister(.RESULT_INTERRUPT_STATUS, into: &byte)
-
-            if ioTimeout > 0 && getSystemUptimeInMilliseconds() - start >= ioTimeout {
-                print(#function + ": Timeout waiting for VL53L0X.")
-                return 0
-            }
-        } while byte & 0x07 == 0
-
-        try? readRegister(Register.RESULT_RANGE_STATUS.rawValue + 10, into: &readBuffer, count: 2)
-        try? writeRegister(.SYSTEM_INTERRUPT_CLEAR, 0x01)
-        print(readBuffer)
-        return UInt16(readBuffer[0]) << 8 | UInt16(readBuffer[1])
-    }
-
-    func readRangeSingle() -> UInt16 {
-        try? writeRegister(0x80, 0x01)
-        try? writeRegister(0xFF, 0x01)
-        try? writeRegister(0x00, 0x00)
-        try? writeRegister(0x91, stopVariable)
-        try? writeRegister(0x00, 0x01)
-        try? writeRegister(0xFF, 0x00)
-        try? writeRegister(0x80, 0x00)
-        try? writeRegister(.SYSRANGE_START, 0x01)
-
-        let start = getSystemUptimeInMilliseconds()
-
-        var byte: UInt8 = 0
-
-        repeat {
-            try? readRegister(.SYSRANGE_START, into: &byte)
-
-            if ioTimeout > 0 && getSystemUptimeInMilliseconds() - start >= ioTimeout {
-                print(#function + ": Timeout waiting for VL53L0X.")
-                return 0
-            }
-        } while byte & 0x01 > 0
-
-        return readRangeContinuous()
-    }
-
-
+    /// The measurement modes.
     public enum Mode {
+        /// Perform range measurement once. The sensor will enter standy
+        /// state automatically until a measurement is set again.
         case single
+        /// Perform range measurement continuously. As soon as the measurement
+        /// is finished, another one is started without delay.
         case continuous
     }
 }
@@ -269,6 +258,11 @@ extension VL53L0x {
         case tcc = 590
         case dss = 690
         case finalRange = 550
+    }
+
+    enum VcselPeriodType {
+        case preRange
+        case finalRange
     }
 
     func writeRegister(_ reg: UInt8, _ value: UInt8) throws {
@@ -359,7 +353,7 @@ extension VL53L0x {
     }
 
     func dataInit() {
-        // Set I2C standard mode.
+        /// Set I2C standard mode.
         try? writeRegister(0x88, 0x00)
 
         try? writeRegister(0x80, 0x01)
@@ -372,8 +366,8 @@ extension VL53L0x {
         try? writeRegister(0xFF, 0x00)
         try? writeRegister(0x80, 0x00)
 
-        // MSRC (Minimum Signal Rate Check).
-        // Disable SIGNAL_RATE_MSRC (bit 1) and SIGNAL_RATE_PRE_RANGE (bit 4) limit checks
+        /// MSRC (Minimum Signal Rate Check).
+        /// Disable SIGNAL_RATE_MSRC (bit 1) and SIGNAL_RATE_PRE_RANGE (bit 4) limit checks
         var byte: UInt8 = 0
         try? readRegister(.MSRC_CONFIG_CONTROL, into: &byte)
         try? writeRegister(.MSRC_CONFIG_CONTROL, byte | 0x12)
@@ -415,7 +409,7 @@ extension VL53L0x {
         repeat {
             try? readRegister(.RESULT_INTERRUPT_STATUS, into: &byte)
 
-            if ioTimeout > 0 && getSystemUptimeInMilliseconds() - start >= ioTimeout {
+            if checkTimeout(timeout: ioTimeout, start: start) {
                 print(#function + ": Timeout waiting for VL53L0X.")
             }
         } while byte & 0x07 == 0
@@ -575,7 +569,8 @@ extension VL53L0x {
 
 
 
-    // Get reference SPAD (single photon avalanche diode) count and type.
+    /// Get reference SPAD (single photon avalanche diode) count and type used
+    /// as receiver.
     func getSpadInfo() -> (UInt8, Bool)? {
         try? writeRegister(0x80, 0x01)
         try? writeRegister(0xFF, 0x01)
@@ -599,7 +594,7 @@ extension VL53L0x {
 
         repeat {
             try? readRegister(0x83, into: &byte)
-            if ioTimeout > 0 && getSystemUptimeInMilliseconds() - start > ioTimeout {
+            if checkTimeout(timeout: ioTimeout, start: start) {
                 return nil
             }
         } while byte == 0
@@ -656,6 +651,18 @@ extension VL53L0x {
         return (tcc: tcc, dss: dss, msrc: msrc, preRange: preRange, finalRange: finalRange)
     }
 
+    /// Get the VCSEL pulse period in PCLKs with the specified period type.
+    func getVcselPulsePeriod(_ type: VcselPeriodType) -> UInt8 {
+        var byte: UInt8 = 0
+        if type == .preRange {
+            try? readRegister(.PRE_RANGE_CONFIG_VCSEL_PERIOD, into: &byte)
+        } else {
+            try? readRegister(.FINAL_RANGE_CONFIG_VCSEL_PERIOD, into: &byte)
+        }
+
+        return (byte + 1) << 1
+    }
+
 
     func getSequenceStepTimeouts(_ preRange: Bool) -> (msrcDssTccUs: UInt32, preRangeMclks: UInt16, preRangeUs: UInt32, finalRangePclks: UInt8, finalRangeUs: UInt32) {
         let preRangePclks = getVcselPulsePeriod(.preRange)
@@ -685,6 +692,53 @@ extension VL53L0x {
     }
 
 
+    func readRangeContinuous() -> UInt16 {
+        let start = getSystemUptimeInMilliseconds()
+        var byte: UInt8 = 0
+
+        repeat {
+            try? readRegister(.RESULT_INTERRUPT_STATUS, into: &byte)
+
+            if checkTimeout(timeout: ioTimeout, start: start) {
+                print(#function + ": Timeout waiting for VL53L0X.")
+                return 0
+            }
+        } while byte & 0x07 == 0
+
+        try? readRegister(Register.RESULT_RANGE_STATUS.rawValue + 10, into: &readBuffer, count: 2)
+        try? writeRegister(.SYSTEM_INTERRUPT_CLEAR, 0x01)
+        return UInt16(readBuffer[0]) << 8 | UInt16(readBuffer[1])
+    }
+
+    func readRangeSingle() -> UInt16 {
+        try? writeRegister(0x80, 0x01)
+        try? writeRegister(0xFF, 0x01)
+        try? writeRegister(0x00, 0x00)
+        try? writeRegister(0x91, stopVariable)
+        try? writeRegister(0x00, 0x01)
+        try? writeRegister(0xFF, 0x00)
+        try? writeRegister(0x80, 0x00)
+        try? writeRegister(.SYSRANGE_START, 0x01)
+
+        let start = getSystemUptimeInMilliseconds()
+
+        var byte: UInt8 = 0
+
+        repeat {
+            try? readRegister(.SYSRANGE_START, into: &byte)
+
+            if checkTimeout(timeout: ioTimeout, start: start) {
+                print(#function + ": Timeout waiting for VL53L0X.")
+                return 0
+            }
+        } while byte & 0x01 > 0
+
+        return readRangeContinuous()
+    }
+
+    func checkTimeout(timeout: Int, start: Int64) -> Bool {
+        return ioTimeout > 0 && getSystemUptimeInMilliseconds() - start >= ioTimeout
+    }
 
 
 }
