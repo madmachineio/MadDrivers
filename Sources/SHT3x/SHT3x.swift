@@ -46,7 +46,7 @@ final public class SHT3x {
     }
     
     /// Get the temperature in Celcius.
-    /// - Returns: A float representing the current temperature
+    /// - Returns: A float representing the current temperature.
     public func readCelsius() -> Float {
         try? getSensorData(into: &readBuffer)
         let rawTemp = UInt16(readBuffer[0]) << 8 | UInt16(readBuffer[1])
@@ -62,7 +62,7 @@ final public class SHT3x {
     }
 
     /// Read the current relative humidity.
-    /// - Returns: A float between 0 and 1 representing the humidity.
+    /// - Returns: A float representing the humidity.
     public func readHumidity() -> Float {
         try? getSensorData(into: &readBuffer)
         let rawHumi = UInt16(readBuffer[3]) << 8 | UInt16(readBuffer[4])

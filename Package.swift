@@ -11,6 +11,7 @@ let package = Package(
             name: "MadDrivers",
             targets: [
                 "ADXL345",
+                "AHTx0",
                 "APDS9960",
                 "BH1750",
                 "BME680",
@@ -31,6 +32,7 @@ let package = Package(
                 "VEML6040",
                 "VL53L0x"]),
         .library(name: "ADXL345", targets: ["ADXL345"]),
+        .library(name: "AHTx0", targets: ["AHTx0"]),
         .library(name: "APDS9960", targets: ["APDS9960"]),
         .library(name: "BH1750", targets: ["BH1750"]),
         .library(name: "BME680", targets: ["BME680"]),
@@ -63,6 +65,9 @@ let package = Package(
         // Targets can depend on other targets in this package, and on products in packages this package depends on.
         .target(
             name: "ADXL345",
+            dependencies: ["SwiftIO"]),
+        .target(
+            name: "AHTx0",
             dependencies: ["SwiftIO"]),
         .target(
             name: "APDS9960",
@@ -128,6 +133,9 @@ let package = Package(
         .testTarget(
             name: "ADXL345Tests",
             dependencies: ["ADXL345", "SwiftIO"]),
+        .testTarget(
+            name: "AHTx0Tests",
+            dependencies: ["AHTx0", "SwiftIO"]),
         .testTarget(
             name: "APDS9960Tests",
             dependencies: ["APDS9960", "SwiftIO"]),
