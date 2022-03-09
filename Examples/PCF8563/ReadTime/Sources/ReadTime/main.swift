@@ -1,8 +1,9 @@
+// Print the time info every 2s.
 import SwiftIO
 import MadBoard
 import PCF8563
 
-let i2c = I2C(Id.I2C1)
+let i2c = I2C(Id.I2C0)
 let rtc = PCF8563(i2c)
 
 // If the RTC has stopped work due to power off, the time will set to current

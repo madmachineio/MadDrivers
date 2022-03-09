@@ -1,3 +1,4 @@
+// Read temperature and humidity every second and print the readings.
 import SwiftIO
 import MadBoard
 import SHT3x

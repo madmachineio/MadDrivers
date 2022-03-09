@@ -54,6 +54,20 @@ You can find some frequently-used hardware here:
     <td>ST7789</td>
     <td>SPI</td>
   </tr>
+    <tr>
+    <td rowspan="2">Distance<br></td>
+    <td>HCSR04</td>
+    <td>GPIO</td>
+  </tr>
+  <tr>
+    <td>VL53L0x</td>
+    <td>I2C</td>
+  </tr>
+    <tr>
+    <td>Gesture</td>
+    <td>APDS9960</td>
+    <td>I2C</td>
+  </tr>
   <tr>
     <td>Gyroscope</td>
     <td>MPU6050</td>
@@ -62,6 +76,11 @@ You can find some frequently-used hardware here:
   <tr>
     <td>Light</td>
     <td>BH1750</td>
+    <td>I2C</td>
+  </tr>
+    <tr>
+    <td>Magnetometer</td>
+    <td>MAG3110</td>
     <td>I2C</td>
   </tr>
   <tr>
@@ -87,18 +106,17 @@ You can find some frequently-used hardware here:
     <td>I2C</td>
   </tr>
   <tr>
-    <td rowspan="2">Temperature &amp; Humidity</td>
+    <td rowspan="3">Temperature &amp; Humidity</td>
+    <td>AHTx0</td>
+    <td>I2C</td>
+  </tr>
+    <tr>
     <td>DHTxx</td>
     <td>GPIO</td>
   </tr>
   <tr>
     <td>SHT3x</td>
     <td>I2C</td>
-  </tr>
-  <tr>
-    <td>Ultrasonic</td>
-    <td>HCSR04</td>
-    <td>GPIO</td>
   </tr>
 </tbody>
 </table>
@@ -156,7 +174,7 @@ import SwiftIO
 import MadBoard
 import SHT3x
 
-let i2c = I2C(Id.I2C1)
+let i2c = I2C(Id.I2C0)
 let sensor = SHT3x(i2c)
 
 while true {

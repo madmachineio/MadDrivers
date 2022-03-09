@@ -1,11 +1,12 @@
+// Set an alarm at 20s of each minute, such as 1m20s, 2m29s, 3m20s...
 import SwiftIO
 import MadBoard
 import DS3231
 
 let i2c = I2C(Id.I2C0)
 let sensor = DS3231(i2c)
-let led = DigitalOut(Id.D19)
-let interruptPin = DigitalIn(Id.D12, mode: .pullUp)
+let led = DigitalOut(Id.D0)
+let interruptPin = DigitalIn(Id.D1, mode: .pullUp)
 
 var value = false
 

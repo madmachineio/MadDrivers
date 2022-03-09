@@ -3,7 +3,7 @@ import SwiftIO
 import BMP280
 import MadBoard
 
-let i2c = I2C(Id.I2C1)
+let i2c = I2C(Id.I2C0)
 let sensor = BMP280(i2c)
 
 while true {

@@ -1,3 +1,4 @@
+// Display the phrase "Hello World!" on the LCD.
 import SwiftIO
 import MadBoard
 import LCD1602

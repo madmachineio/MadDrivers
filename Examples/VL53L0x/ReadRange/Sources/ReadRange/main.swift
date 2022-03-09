@@ -3,7 +3,7 @@ import SwiftIO
 import MadBoard
 import VL53L0x
 
-let i2c = I2C(Id.I2C1)
+let i2c = I2C(Id.I2C0)
 let sensor = VL53L0x(i2c)
 
 while true {

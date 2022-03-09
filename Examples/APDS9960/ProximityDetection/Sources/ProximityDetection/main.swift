@@ -5,7 +5,7 @@ import SwiftIO
 import MadBoard
 import APDS9960
 
-let i2c = I2C(Id.I2C1)
+let i2c = I2C(Id.I2C0)
 let sensor = APDS9960(i2c)
 
 // Enable the proximity detection first.

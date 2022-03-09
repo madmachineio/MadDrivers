@@ -2,7 +2,7 @@ import SwiftIO
 import MadBoard
 import BME680
 
-let i2c = I2C(Id.I2C1)
+let i2c = I2C(Id.I2C0)
 let sensor = BME680(i2c)
 
 while true {

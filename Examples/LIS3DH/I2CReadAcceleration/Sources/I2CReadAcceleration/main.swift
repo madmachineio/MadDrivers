@@ -1,3 +1,4 @@
+// Read accelerations on the x, y, z-axis every second.
 import SwiftIO
 import MadBoard
 import LIS3DH

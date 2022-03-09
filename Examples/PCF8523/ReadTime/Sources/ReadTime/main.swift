@@ -1,8 +1,9 @@
+// Read current time and print it every 3s.
 import SwiftIO
 import MadBoard
 import PCF8523
 
-let i2c = I2C(Id.I2C1)
+let i2c = I2C(Id.I2C0)
 let rtc = PCF8523(i2c)
 
 // Set the time if the RTC has lost power. You will need to change the time
