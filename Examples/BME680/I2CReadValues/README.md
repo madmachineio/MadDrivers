@@ -1,6 +1,6 @@
 # I2CReadValues
 
-Use I2C communication to get reading from the sensor. The readings includes temperature, humidity, pressure, and tells if there are too much VOC gases.
+Use **I2C** communication to get readings from the sensor. The readings includes temperature, humidity, pressure, and tells if there are too much VOC gases in the air.
 
 ## Library reference
 

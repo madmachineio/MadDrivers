@@ -1,6 +1,6 @@
 # I2CReadAcceleration
 
-In this example, your board will communicate with the accelerometer via I2C bus and read the accelerations on the x, y, z-axis. You can view the values on a serial monitor.
+In this example, your board will communicate with the accelerometer via **I2C** bus and read the accelerations on the x, y, z-axis. You can view the values on a serial monitor.
 
 ## Library reference
 

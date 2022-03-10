@@ -1,6 +1,6 @@
 # DrawPixels
 
-In this example, you will draw a rectangle on the LED matrix by turning on the corresponding LED.
+In this example, you will draw a rectangle on the LED matrix by turning on the corresponding LEDs.
 
 ## Library reference
 

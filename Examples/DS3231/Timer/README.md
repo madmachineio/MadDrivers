@@ -1,6 +1,6 @@
 # Timer
 
-Set the RTC as a timer. It alerts every 10s. At that time, the LED will be toggled and the time will be printed. 
+Set the RTC as a timer. It alerts every 10s. When time is up, the LED will change its state and thus blink every 10s. The current time will be printed at that time. 
 
 ## Library reference
 

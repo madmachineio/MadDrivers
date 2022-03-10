@@ -1,6 +1,6 @@
 # Frame
 
-In this example, you'll set the frames of the LED matrix. Each frame displays a rectangle of different sizes. When the matrix displays the frames one by one, you will get a simple animation.
+In this example, you'll set the frames of the LED matrix. The frames display rectangles of different sizes. When they are displayed one by one, you will get a simple animation.
 
 ## Library reference
 

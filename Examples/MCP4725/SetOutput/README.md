@@ -1,6 +1,6 @@
 # SetOutput
 
-The sensor will output voltage from the minimum to the maximum and then to the minimum. You will change the raw value of output to realize it.
+The sensor will output changing voltages by setting the raw value. Therefore, the voltages are from the minimum to the maximum and then to the minimum.
 
 ## Library reference
 

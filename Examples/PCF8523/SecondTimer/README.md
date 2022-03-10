@@ -1,6 +1,6 @@
 # SecondTimer
 
-Set a second timer. When time is up, the LED changes its state, therefore, the LED blinks every second.
+Set a second timer. When time is up, the LED changes its state. Therefore, the LED blinks every second.
 
 ## Library reference
 

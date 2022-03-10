@@ -1,6 +1,6 @@
 # SPIReadValues
 
-Read the temperature, barometric pressure and altitude from the sensor using SPI communication. The altitude depends on the sea level pressure so you need to change it to current value.
+Read the temperature, barometric pressure and altitude from the sensor using **SPI** communication. The altitude depends on the sea level pressure so you need to change it to current value.
 
 ## Library reference
 

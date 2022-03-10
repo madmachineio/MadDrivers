@@ -1,6 +1,6 @@
 # SPIReadAcceleration
 
-In this example, your board communicates with the accelerometer using SPI protocol to read the accelerations on x, y, z-axis. You can view the values on a serial monitor.
+In this example, your board communicates with the accelerometer using **SPI** protocol to read the accelerations on x, y, z-axis. You can view the values on a serial monitor.
 
 ## Library reference
 

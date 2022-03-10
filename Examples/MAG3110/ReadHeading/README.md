@@ -1,6 +1,6 @@
 # ReadHeading
 
-Read the surrounding magnetic field and get the angle in a clockwise direction from North. North is at 0°, east is at 90°, south is at 180°, and west is at 270°
+Read the surrounding magnetic field and get the angle in a clockwise direction from North. North is at 0°, east is at 90°, south is at 180°, and west is at 270°.
 
 ## Library reference
 

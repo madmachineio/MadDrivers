@@ -1,6 +1,6 @@
 # ColorDetection
 
-Read the color of an object and get RGBC (red, green, blue, clear) color data. The readings are 0 to 65535.
+Read RGBC (red, green, blue, clear) color data to know color of an object. The readings are 0 to 65535.
 
 ## Library reference
 

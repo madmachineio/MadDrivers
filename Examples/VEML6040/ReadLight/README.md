@@ -1,6 +1,6 @@
 # ReadLight
 
-Read light intensity in lux and RGBW (red, green, blue, white) values. The color values can be used to know the color of an object. For example, a red object will reflect more red light, which leads to larger red values.
+Read light intensity in lux and RGBW (red, green, blue, white) values. It's better to put a light source beside it. The color values can be used to know the color of an object. For example, a red object will reflect more red light, which leads to larger red values.
 
 ## Library reference
 

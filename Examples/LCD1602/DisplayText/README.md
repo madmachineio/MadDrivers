@@ -1,6 +1,6 @@
 # DisplayText
 
-The LCD will show the phrase "Hello World!".
+IN this example, the LCD will display the phrase "Hello World!".
 
 * [SwiftIO](https://github.com/madmachineio/SwiftIO)
 * [MadBoard](https://github.com/madmachineio/MadBoards)

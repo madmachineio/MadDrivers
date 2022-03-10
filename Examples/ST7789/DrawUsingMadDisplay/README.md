@@ -1,6 +1,6 @@
 # DrawUsingMadDisplay
 
-Fill the screen with yellow, draw an orange square on the middle and display the text "Hello world!".
+Use another library `MadDisplay` to draw graphics on the LCD. You'll fill the screen with yellow, draw an orange square on the middle and display the text "Hello world!".
 
 ## Library reference
 
