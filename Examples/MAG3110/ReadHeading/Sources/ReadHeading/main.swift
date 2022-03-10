@@ -3,7 +3,7 @@ import SwiftIO
 import MadBoard
 import MAG3110
 
-let i2c = I2C(Id.I2C1)
+let i2c = I2C(Id.I2C0)
 let sensor = MAG3110(i2c)
 
 // Calibrate the sensor to offset the surrounding static magnetic field.

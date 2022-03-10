@@ -1,3 +1,5 @@
+// Read red, green, blue and white color data and the light intensity.
+// You can infer the color of objects by comparing the RGB values.
 import SwiftIO
 import MadBoard
 import VEML6040

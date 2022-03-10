@@ -1,11 +1,12 @@
+// Set a timer every 10s. If time is up, the LED will be toggled. So the LED blinks every 10s.
 import SwiftIO
 import MadBoard
 import DS3231
 
 let i2c = I2C(Id.I2C0)
 let sensor = DS3231(i2c)
-let led = DigitalOut(Id.D19)
-let interruptPin = DigitalIn(Id.D12, mode: .pullUp)
+let led = DigitalOut(Id.D0)
+let interruptPin = DigitalIn(Id.D1, mode: .pullUp)
 
 var value = false
 

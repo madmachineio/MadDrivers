@@ -1,3 +1,4 @@
+// Make every LED on the matrix change brightness from darkest to brightest, from brightest to darkest repeatedly.
 import SwiftIO
 import MadBoard
 import IS31FL3731

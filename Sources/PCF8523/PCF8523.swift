@@ -66,7 +66,7 @@ final public class PCF8523 {
 
     /// Read current time. The time info is stored in a struct including the
     /// year, month, day, hour, minute, second, dayOfWeek. 
-    /// - Returns: A Time struct if the communication is stable. Or it will be nil.
+    /// - Returns: A Time struct.
     public func readTime() -> Time {
         try? readRegister(.secondStatus, into: &readBuffer, count: 7)
 

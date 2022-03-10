@@ -1,11 +1,12 @@
+// Set a timer every 20s and blink the LED at this rate.
 import SwiftIO
 import MadBoard
 import PCF8523
 
-let i2c = I2C(Id.I2C1)
+let i2c = I2C(Id.I2C0)
 let rtc = PCF8523(i2c)
 let led = DigitalOut(Id.BLUE)
-let pin = DigitalIn(Id.D12, mode: .pullUp)
+let pin = DigitalIn(Id.D0, mode: .pullUp)
 
 var value = false
 // Enable a timer that will generate an interrupt every 20s.

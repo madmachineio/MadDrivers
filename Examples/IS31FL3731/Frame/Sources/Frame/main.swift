@@ -1,3 +1,5 @@
+// Display an animation by setting each frame of the LED matrix. 
+// The rectangle on the screen will decrease gradually.
 import SwiftIO
 import MadBoard
 import IS31FL3731

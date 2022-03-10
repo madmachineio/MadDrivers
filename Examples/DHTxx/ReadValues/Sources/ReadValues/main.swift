@@ -1,8 +1,9 @@
+// Read temperature and humidity every 2 seconds.
 import SwiftIO
 import MadBoard
 import DHTxx
 
-let pin = DigitalInOut(Id.D13)
+let pin = DigitalInOut(Id.D0)
 let sensor = DHTxx(pin)
 
 while true {

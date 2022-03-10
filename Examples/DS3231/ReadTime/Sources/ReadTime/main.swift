@@ -1,3 +1,4 @@
+// Read current time and print it every 2s.
 import SwiftIO
 import MadBoard
 import DS3231

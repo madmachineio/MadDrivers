@@ -1,9 +1,10 @@
+// Read distance between the sensor and an object in meters every second.
 import SwiftIO
 import MadBoard
 import HCSR04
 
-let trig = DigitalOut(Id.D12)
-let echo = DigitalIn(Id.D13)
+let trig = DigitalOut(Id.D0)
+let echo = DigitalIn(Id.D1)
 let sensor = HCSR04(trig: trig, echo: echo)
 
 while true {

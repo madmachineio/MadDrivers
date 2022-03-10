@@ -1,3 +1,4 @@
+// Draw a rectangle on the LED matrix.
 import SwiftIO
 import MadBoard
 import IS31FL3731

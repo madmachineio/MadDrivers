@@ -1,3 +1,4 @@
+// Display a scrolling text from right to left.
 import SwiftIO
 import MadBoard
 import IS31FL3731

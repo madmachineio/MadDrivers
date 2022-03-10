@@ -4,11 +4,11 @@ import MadBoard
 import AHTx0
 
 let i2c = I2C(Id.I2C0)
-let sensor = AHTx0(i2c)
+let humiture = AHTx0(i2c)
 
 while true {
-    let temperature = sensor.readCelsius()
-    let humidity = sensor.readHumidity()
+    let temperature = humiture.readCelsius()
+    let humidity = humiture.readHumidity()
     print("temperature: \(temperature)°C")
     print("humidity: \(humidity)%")
     sleep(ms: 1000)
