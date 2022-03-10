@@ -30,6 +30,7 @@ let package = Package(
                 "SHT3x",
                 "ST7789",
                 "VEML6040",
+                "VEML6070",
                 "VL53L0x"]),
         .library(name: "ADXL345", targets: ["ADXL345"]),
         .library(name: "AHTx0", targets: ["AHTx0"]),
@@ -51,12 +52,13 @@ let package = Package(
         .library(name: "SHT3x", targets: ["SHT3x"]),
         .library(name: "ST7789", targets: ["ST7789"]),
         .library(name: "VEML6040", targets: ["VEML6040"]),
+        .library(name: "VEML6070", targets: ["VEML6070"]),
         .library(name: "VL53L0x", targets: ["VL53L0x"]),
     ],
     dependencies: [
         // Dependencies declare other packages that this package depends on.
         // .package(url: /* package url */, from: "1.0.0"),
-        .package(url: "https://github.com/madmachineio/SwiftIO.git", .branch("main")),
+        .package(url: "https://github.com/madmachineio/SwiftIO.git", .branch("mock")),
         .package(url: "https://github.com/madmachineio/MadDisplay.git", .branch("main")),
         .package(url: "https://github.com/apple/swift-numerics", from: "1.0.0")
     ],
@@ -127,6 +129,9 @@ let package = Package(
             name: "VEML6040",
             dependencies: ["SwiftIO"]),
         .target(
+            name: "VEML6070",
+            dependencies: ["SwiftIO"]),
+        .target(
             name: "VL53L0x",
             dependencies: ["SwiftIO"]),
 
@@ -145,6 +150,9 @@ let package = Package(
         .testTarget(
             name: "SHT3xTests",
             dependencies: ["SHT3x", "SwiftIO"]),
+        .testTarget(
+            name: "VEML6070Tests",
+            dependencies: ["VEML6070", "SwiftIO"]),
         .testTarget(
             name: "VL53L0xTests",
             dependencies: ["VL53L0x", "SwiftIO"]),
