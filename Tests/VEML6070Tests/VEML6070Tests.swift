@@ -23,14 +23,14 @@ final class VEML6070Tests: XCTestCase {
         XCTAssertEqual(veml6070.readUVRaw(), 0x0A14)
     }
 
-    func testReadUVIndex() {
+    func testGetUVLevel() {
         i2c.written = []
-        XCTAssertEqual(veml6070.readUVIndex(100), .low)
-        XCTAssertEqual(veml6070.readUVIndex(560), .low)
-        XCTAssertEqual(veml6070.readUVIndex(1120), .moderate)
-        XCTAssertEqual(veml6070.readUVIndex(1494), .high)
-        XCTAssertEqual(veml6070.readUVIndex(2054), .veryHigh)
-        XCTAssertEqual(veml6070.readUVIndex(3000), .extreme)
+        XCTAssertEqual(veml6070.getUVLevel(100), .low)
+        XCTAssertEqual(veml6070.getUVLevel(560), .low)
+        XCTAssertEqual(veml6070.getUVLevel(1120), .moderate)
+        XCTAssertEqual(veml6070.getUVLevel(1494), .high)
+        XCTAssertEqual(veml6070.getUVLevel(2054), .veryHigh)
+        XCTAssertEqual(veml6070.getUVLevel(3000), .extreme)
     }
 
     func testSetInterrupt() {
