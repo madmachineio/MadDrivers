@@ -28,11 +28,11 @@ final class MCP9808Tests: XCTestCase {
         XCTAssertEqual(i2c.written, [0x06, 0x07])
     }
 
-    func testReadTemperature() {
+    func testReadCelsius() {
         i2c.written = []
         i2c.expectRead = [1, 148]
 
-        XCTAssertEqual(mcp9808.readTemperature(), 25.25)
+        XCTAssertEqual(mcp9808.readCelsius(), 25.25)
         XCTAssertEqual(i2c.written, [0x05])
     }
 

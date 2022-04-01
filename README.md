@@ -106,13 +106,17 @@ You can find some frequently-used hardware here:
     <td>I2C</td>
   </tr>
   <tr>
-    <td rowspan="3">Temperature &amp; Humidity</td>
+    <td rowspan="4">Temperature &amp; Humidity</td>
     <td>AHTx0</td>
     <td>I2C</td>
   </tr>
     <tr>
     <td>DHTxx</td>
     <td>GPIO</td>
+  </tr>
+  <tr>
+    <td>MCP9808</td>
+    <td>I2C</td>
   </tr>
   <tr>
     <td>SHT3x</td>
