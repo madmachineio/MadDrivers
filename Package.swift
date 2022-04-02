@@ -53,6 +53,7 @@ let package = Package(
         .library(name: "PCF8563", targets: ["PCF8563"]),
         .library(name: "SHT3x", targets: ["SHT3x"]),
         .library(name: "ST7789", targets: ["ST7789"]),
+        .library(name: "TSL2591", targets: ["TSL2591"]),
         .library(name: "VEML6040", targets: ["VEML6040"]),
         .library(name: "VEML6070", targets: ["VEML6070"]),
         .library(name: "VL53L0x", targets: ["VL53L0x"]),
@@ -131,6 +132,9 @@ let package = Package(
             name: "ST7789",
             dependencies: ["SwiftIO", "MadDisplay"]),
         .target(
+            name: "TSL2591",
+            dependencies: ["SwiftIO"]),
+        .target(
             name: "VEML6040",
             dependencies: ["SwiftIO"]),
         .target(
@@ -158,6 +162,9 @@ let package = Package(
         .testTarget(
             name: "SHT3xTests",
             dependencies: ["SHT3x", "SwiftIO"]),
+        .testTarget(
+            name: "TSL2591Tests",
+            dependencies: ["TSL2591", "SwiftIO"]),
         .testTarget(
             name: "VEML6070Tests",
             dependencies: ["VEML6070", "SwiftIO"]),
