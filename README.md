@@ -74,8 +74,12 @@ You can find some frequently-used hardware here:
     <td>I2C</td>
   </tr>
   <tr>
-    <td>Light</td>
+    <td rowspan="2">Light</td>
     <td>BH1750</td>
+    <td>I2C</td>
+  </tr>
+  <tr>
+    <td>TSL2591</td>
     <td>I2C</td>
   </tr>
     <tr>
@@ -120,6 +124,11 @@ You can find some frequently-used hardware here:
   </tr>
   <tr>
     <td>SHT3x</td>
+    <td>I2C</td>
+  </tr>
+    <tr>
+    <td>Ultraviolet</td>
+    <td>VEML6070</td>
     <td>I2C</td>
   </tr>
 </tbody>
