@@ -30,6 +30,7 @@ let package = Package(
                 "PCF8563",
                 "SHT3x",
                 "ST7789",
+                "TCS34725",
                 "VEML6040",
                 "VEML6070",
                 "VL53L0x"]),
@@ -53,6 +54,7 @@ let package = Package(
         .library(name: "PCF8563", targets: ["PCF8563"]),
         .library(name: "SHT3x", targets: ["SHT3x"]),
         .library(name: "ST7789", targets: ["ST7789"]),
+        .library(name: "TCS34725", targets: ["TCS34725"]),
         .library(name: "TSL2591", targets: ["TSL2591"]),
         .library(name: "VEML6040", targets: ["VEML6040"]),
         .library(name: "VEML6070", targets: ["VEML6070"]),
@@ -61,7 +63,7 @@ let package = Package(
     dependencies: [
         // Dependencies declare other packages that this package depends on.
         // .package(url: /* package url */, from: "1.0.0"),
-        .package(url: "https://github.com/madmachineio/SwiftIO.git", .branch("main")),
+        .package(url: "https://github.com/madmachineio/SwiftIO.git", .branch("mock")),
         .package(url: "https://github.com/madmachineio/MadDisplay.git", .branch("main")),
         .package(url: "https://github.com/apple/swift-numerics", from: "1.0.0")
     ],
@@ -132,6 +134,9 @@ let package = Package(
             name: "ST7789",
             dependencies: ["SwiftIO", "MadDisplay"]),
         .target(
+            name: "TCS34725",
+            dependencies: ["SwiftIO", "MadDisplay"]),
+        .target(
             name: "TSL2591",
             dependencies: ["SwiftIO"]),
         .target(
@@ -162,6 +167,9 @@ let package = Package(
         .testTarget(
             name: "SHT3xTests",
             dependencies: ["SHT3x", "SwiftIO"]),
+        .testTarget(
+            name: "TCS34725Tests",
+            dependencies: ["TCS34725", "SwiftIO"]),
         .testTarget(
             name: "TSL2591Tests",
             dependencies: ["TSL2591", "SwiftIO"]),
