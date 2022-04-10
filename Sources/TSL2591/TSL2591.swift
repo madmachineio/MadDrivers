@@ -60,7 +60,7 @@ final public class TSL2591 {
     /// The default integration time is 100ms and the gain is `.medium`.
     /// - Parameters:
     ///   - i2c: **REQUIRED** The I2C interface that the sensor connects.
-    ///   - address: **OPTIONAL** The device address of the sensor,
+    ///   - address: **OPTIONAL** The device address of the sensor.
     ///   0x29 by default.
     public init(_ i2c: I2C, address: UInt8 = 0x29) {
         let speed = i2c.getSpeed()
