@@ -30,9 +30,64 @@ final class SGP30Tests: XCTestCase {
         i2c.written = []
         i2c.expectRead = [42, 35, 102, 183, 64, 131]
 
-        XCTAssertEqual(sgp30.readRaw(), [0x2A23, 0xB740])
+        var values = sgp30.readRaw()
+        XCTAssertEqual(values.H2, 0x2A23)
+        XCTAssertEqual(values.Ethanol, 0xB740)
         XCTAssertEqual(i2c.written, [0x20, 0x50])
+
+        i2c.expectRead = [42, 35, 100, 183, 64, 131]
+        values = sgp30.readRaw()
+        XCTAssertEqual(values.H2, 0)
+        XCTAssertEqual(values.Ethanol, 0)
     }
 
+    func testReadIAQ() {
+        i2c.written = []
+        i2c.expectRead = [42, 35, 102, 183, 64, 131]
+
+        var values = sgp30.readIAQ()
+        XCTAssertEqual(values.eCO2, 0x2A23)
+        XCTAssertEqual(values.TVOC, 0xB740)
+        XCTAssertEqual(i2c.written, [0x20, 0x08])
+
+        i2c.expectRead = [42, 35, 100, 183, 64, 131]
+        values = sgp30.readIAQ()
+        XCTAssertEqual(values.eCO2, 0)
+        XCTAssertEqual(values.TVOC, 0)
+    }
+
+    func testGetBaseline() {
+        i2c.written = []
+        i2c.expectRead = [42, 35, 102, 183, 64, 131]
+
+        var values = sgp30.getBaseline()
+        XCTAssertEqual(values.eCO2, 0x2A23)
+        XCTAssertEqual(values.TVOC, 0xB740)
+        XCTAssertEqual(i2c.written, [0x20, 0x15])
+
+        i2c.expectRead = [42, 35, 100, 183, 64, 131]
+        values = sgp30.getBaseline()
+        XCTAssertEqual(values.eCO2, 0)
+        XCTAssertEqual(values.TVOC, 0)
+    }
+
+    func testSetIAQBaseline() {
+        i2c.written = []
+        sgp30.setBaseline(eCO2: 0x2A23, TVOC: 0xB740)
+        XCTAssertEqual(i2c.written, [0x20, 0x1E, 0xB7, 0x40, 131, 0x2A, 0x23, 102])
+
+    }
+
+    func testSetAbsoluteHumidity() {
+        i2c.written = []
+        sgp30.setAbsoluteHumidity(100)
+        XCTAssertEqual(i2c.written, [0x20, 0x61, 0x64, 0x00, 87])
+    }
+
+    func testSetRelativeHumidity() {
+        i2c.written = []
+        sgp30.setRelativeHumidity(celcius: 25, humidity: 50)
+        XCTAssertEqual(i2c.written, [0x20, 0x61, 0x0B, 0x7B, 137])
+    }
 
 }
