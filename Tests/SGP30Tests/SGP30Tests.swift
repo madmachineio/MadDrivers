@@ -26,17 +26,17 @@ final class SGP30Tests: XCTestCase {
         XCTAssertEqual(sgp30.calculateCRC([0xBE, 0xEF]), 146)
     }
 
-    func testReadRaw() {
+    func testReadRawValue() {
         i2c.written = []
         i2c.expectRead = [42, 35, 102, 183, 64, 131]
 
-        var values = sgp30.readRaw()
+        var values = sgp30.readRawValue()
         XCTAssertEqual(values.H2, 0x2A23)
         XCTAssertEqual(values.Ethanol, 0xB740)
         XCTAssertEqual(i2c.written, [0x20, 0x50])
 
         i2c.expectRead = [42, 35, 100, 183, 64, 131]
-        values = sgp30.readRaw()
+        values = sgp30.readRawValue()
         XCTAssertEqual(values.H2, 0)
         XCTAssertEqual(values.Ethanol, 0)
     }

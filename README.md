@@ -58,7 +58,7 @@ You can find some frequently-used hardware here:
     <td>ST7789</td>
     <td>SPI</td>
   </tr>
-    <tr>
+  <tr>
     <td rowspan="2">Distance<br></td>
     <td>HCSR04</td>
     <td>GPIO</td>
@@ -68,6 +68,15 @@ You can find some frequently-used hardware here:
     <td>I2C</td>
   </tr>
     <tr>
+    <td rowspan="2">Gas<br></td>
+    <td>BME680</td>
+    <td>I2C/SPI</td>
+  </tr>
+  <tr>
+    <td>SGP30</td>
+    <td>I2C</td>
+  </tr>
+  <tr>
     <td>Gesture</td>
     <td>APDS9960</td>
     <td>I2C</td>
@@ -92,11 +101,7 @@ You can find some frequently-used hardware here:
     <td>I2C</td>
   </tr>
   <tr>
-    <td rowspan="2">Pressure</td>
-    <td>BME680</td>
-    <td>I2C/SPI</td>
-  </tr>
-  <tr>
+    <td>Pressure</td>
     <td>BMP280</td>
     <td>I2C/SPI</td>
   </tr>

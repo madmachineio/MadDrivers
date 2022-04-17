@@ -1,6 +1,29 @@
+//=== SGP30.swift ---------------------------------------------------------===//
+//
+// Copyright (c) MadMachine Limited
+// Licensed under MIT License
+//
+// Authors: Ines Zhou
+// Created: 04/17/2022
+//
+// See https://madmachine.io for more information
+//
+//===----------------------------------------------------------------------===//
+
 import SwiftIO
 import RealModule
 
+/// This is the library of SGP30 gas sensor. It measures TVOC and eCO2.
+///
+/// The sensor supports I2C to communicate with your board. It detects the indoor
+/// air quality (IAQ) and returns the readings of TVOC from 0 to 60000 ppb
+/// (parts per billion) and eCO2 from 400 to 60000 ppm (parts per million).
+///
+/// Note: for the first 15 seconds, the sensor is still being initialized, so
+/// the default readings of eCO2 and TVOC are 400ppm and 0ppb.
+///
+/// Besides, the sensor provides humidity compensatation to provide more accurate
+/// readings.
 final public class SGP30 {
     private let i2c: I2C
     private let address: UInt8
@@ -37,52 +60,65 @@ final public class SGP30 {
 
     }
 
-    /// Read Indoor Air Quality (IAQ) .
-    /// - Returns:
+    /// Read Indoor Air Quality (IAQ). It returns eCO2 in ppm and TVOC in ppb.
+    /// - Returns: eCO2 in ppm and TVOC in ppb.
     public func readIAQ() -> (eCO2: UInt16, TVOC: UInt16) {
         try? readRegister(.measure_iaq, into: &readBuffer, count: 2, delay: 50)
         let iaq = getData(readBuffer, count: 2)
         return (iaq[0], iaq[1])
     }
 
+
+    /// Read eCO2 in ppm.
+    /// - Returns: eCO2 in ppm.
     public func readECO2() -> UInt16 {
         return readIAQ().eCO2
     }
 
+    /// Read TVOC in ppb.
+    /// - Returns: TVOC in ppb.
     public func readTVOC() -> UInt16 {
         return readIAQ().TVOC
     }
 
-
-    public func readRaw() -> (H2: UInt16, Ethanol: UInt16) {
+    /// Read raw value of H2 and ethanol.
+    /// - Returns: Raw values of H2 and ethanol in UInt16.
+    public func readRawValue() -> (H2: UInt16, Ethanol: UInt16) {
         try? readRegister(.measure_raw, into: &readBuffer, count: 2, delay: 25)
         let raw = getData(readBuffer, count: 2)
         return (raw[0], raw[1])
     }
 
+    /// Read raw value of H2.
+    /// - Returns: Raw value of H2.
     public func readH2() -> UInt16 {
-        return readRaw().H2
+        return readRawValue().H2
     }
 
+    /// Read raw value of ethanol.
+    /// - Returns: Raw value of ethanol.
     public func readEthanol() -> UInt16 {
-        return readRaw().Ethanol
+        return readRawValue().Ethanol
     }
 
-
+    /// Get the baseline values of eCO2 in ppm and TVOC in ppb.
+    /// - Returns: The baseline values of eCO2 and TVOC.
     public func getBaseline() -> (eCO2: UInt16, TVOC: UInt16) {
         try? readRegister(.get_iaq_baseline, into: &readBuffer, count: 2, delay: 10)
         let baseline = getData(readBuffer, count: 2)
         return (baseline[0], baseline[1])
     }
 
-    public func getECO2() -> UInt16 {
-        return getBaseline().eCO2
-    }
-
-    public func getTVOCBaseline() -> UInt16 {
-        return getBaseline().TVOC
-    }
-
+    /// Set the baseline value of eCO2 in ppm and TVOC in ppb.
+    ///
+    /// During the first operation, you should place the senor in an clean
+    /// environment for about 12h to get the baseline value of eCO2 and TVOC.
+    /// After you set the sensor's baseline, the sensor will give you more
+    /// accurate readings. And it's not a static value and should be updated
+    /// from time to time.
+    /// - Parameters:
+    ///   - eCO2: The baseline value of eCO2 in ppm.
+    ///   - TVOC: The baseline value of TVOC in ppb.
     public func setBaseline(eCO2: UInt16, TVOC: UInt16) {
         guard eCO2 > 0 && TVOC > 0 else {
             return
@@ -111,12 +147,14 @@ final public class SGP30 {
     }
 
 
-    /// Set the humidity comenpansation using temperature and relative humidity.
+    /// Set the humidity compensation. The temperature and relative humidity are
+    /// used to calculate the absolute humidity.
     /// - Parameters:
     ///   - celcius: Current temperature in celcius.
     ///   - humidity: Current relative humidity.
     public func setRelativeHumidity(celcius: Float, humidity: Float) {
-        let numerator = humidity / 100 * 6.112 * Float.exp((17.62 * celcius) / (243.12 + celcius))
+        let numerator = humidity / 100 * 6.112 *
+        Float.exp((17.62 * celcius) / (243.12 + celcius))
 
         let denominator = 273.15 + celcius
 
