@@ -1,13 +1,38 @@
 
 import SwiftIO
 
+/// This is the library for AS7341 spectrometer.
+///
+/// The AS7341 sensor allows you to measure lights with different wavelengths,
+/// approximately from 350nm to 1000nm.
+/// You can get a more accurate color based on the returned raw values.
+/// Besides, the sensor's sensitivity is adjustable by changing the integration
+/// time and gain setting.
+///
+/// This sensor features several photodiodes for light detection.
+/// It provideds 11-channels: 8 for visible spectrum (F1 - F8), one for clear light,
+/// one for near-infrared (NIR), plus a flicker detection channel.
+/// But it contains only 6 16-bit ACDs for data. Therefore, the 11-channels are
+/// mapped to one of them using a multiplexer (SMUX). It has been configured
+/// during measurement so you don't need to worry about it.
 final public class AS7341 {
     private let i2c: I2C
     private let address: UInt8
 
+    var lowChannels = false
+
     private var readBuffer = [UInt8](repeating: 0, count: 13)
 
-    init(_ i2c: I2C, address: UInt8 = 0x39) {
+    /// Initialize the sensor using I2C communication.
+    ///
+    /// The default gain setting is `.x128`. The atime is 100 and the astep is 999,
+    /// which corresponds to about 280ms integration time. And the maximum raw
+    /// value is 65535.
+    /// - Parameters:
+    ///   - i2c: **REQUIRED** An I2C interface for the communication. The maximum
+    ///   I2C speed is 400KHz (fast).
+    ///   - address: **OPTIONAL** The sensor's address, 0x39 by default.
+    public init(_ i2c: I2C, address: UInt8 = 0x39) {
         let speed = i2c.getSpeed()
         guard speed == .standard || speed == .fast else {
             fatalError(#function + ": AS7341 only supports 100kHz (standard) and 400kHz (fast) I2C speed")
@@ -28,11 +53,28 @@ final public class AS7341 {
         setGain(.x128)
     }
 
-    func readF1F8() -> Channels {
+    /// Read raw values of all channels consecutively.
+    ///
+    /// The wavelengths of these channels are as below:
+    /// | Channel | Center wavelength |
+    /// | ------- | ----------------- |
+    /// | F1      | 415nm (violet)    |
+    /// | F2      | 445nm (indigo)    |
+    /// | F3      | 480nm (blue)      |
+    /// | F4      | 515nm (cyan)      |
+    /// | F5      | 555nm (green)     |
+    /// | F6      | 590nm (yellow)    |
+    /// | F7      | 630nm (orange)    |
+    /// | F8      | 680nm (red)       |
+    /// | NIR     | 910nm (near IR)   |
+    /// - Returns: The raw values for all channels in UInt16.
+    public func readChannels(
+    ) -> (f1: UInt16, f2: UInt16, f3: UInt16, f4: UInt16,
+          f5: UInt16, f6: UInt16, f7: UInt16, f8: UInt16,
+          clear: UInt16, nir: UInt16) {
+
         setF1F4()
-        if isDataReady() {
-            try? readRegister(.astatus, into: &readBuffer, count: 13)
-        }
+        try? readRegister(.astatus, into: &readBuffer, count: 13)
 
         let f1 = calUInt16(readBuffer[1], readBuffer[2])
         let f2 = calUInt16(readBuffer[3], readBuffer[4])
@@ -40,104 +82,131 @@ final public class AS7341 {
         let f4 = calUInt16(readBuffer[7], readBuffer[8])
 
         setF5F8()
-        if isDataReady() {
-            try? readRegister(.astatus, into: &readBuffer, count: 13)
-        }
+        try? readRegister(.astatus, into: &readBuffer, count: 13)
 
         let f5 = calUInt16(readBuffer[1], readBuffer[2])
         let f6 = calUInt16(readBuffer[3], readBuffer[4])
         let f7 = calUInt16(readBuffer[5], readBuffer[6])
         let f8 = calUInt16(readBuffer[7], readBuffer[8])
 
-        return Channels(f1: f1, f2: f2, f3: f3, f4: f4,
-                        f5: f5, f6: f6, f7: f7, f8: f8)
+        let clear = calUInt16(readBuffer[9], readBuffer[10])
+        let nir = calUInt16(readBuffer[11], readBuffer[12])
+
+        return (f1, f2, f3, f4, f5, f6, f7, f8, clear, nir)
     }
 
-
-    func calUInt16(_ lsb: UInt8, _ msb: UInt8) -> UInt16 {
-        return UInt16(lsb) | UInt16(msb) << 8
+    /// Read the amount of light that has a wavelength of 415nm (violet).
+    /// - Returns: The reading for the light in UInt16.
+    public func read415nm() -> UInt16 {
+        setF1F4()
+        try? readRegister(.CH0_DATA_L, into: &readBuffer, count: 2)
+        return calUInt16(readBuffer[0], readBuffer[1])
     }
 
-    struct Channels {
-        let f1: UInt16
-        let f2: UInt16
-        let f3: UInt16
-        let f4: UInt16
-        let f5: UInt16
-        let f6: UInt16
-        let f7: UInt16
-        let f8: UInt16
-
-        init(f1: UInt16, f2: UInt16, f3: UInt16, f4: UInt16,
-             f5: UInt16, f6: UInt16, f7: UInt16, f8: UInt16) {
-            self.f1 = f1
-            self.f2 = f2
-            self.f3 = f3
-            self.f4 = f4
-            self.f5 = f5
-            self.f6 = f6
-            self.f7 = f7
-            self.f8 = f8
-        }
+    /// Read the amount of light that has a wavelength of 445nm (indigo).
+    /// - Returns: The reading for the light in UInt16.
+    public func read445nm() -> UInt16 {
+        setF1F4()
+        try? readRegister(.CH1_DATA_L, into: &readBuffer, count: 2)
+        return calUInt16(readBuffer[0], readBuffer[1])
     }
 
-
-
-    func setF1F4() {
-        /// Disable the Spectral Measurement before sensor configuration.
-        disableColorMeasure()
-
-        /// Select SMUX command to write SMUX configurations.
-        setSmuxCommand(2)
-
-        /// Map F1 to F4, CLEAR, NIR to 6 internal ADCs.
-        setSmuxF1F4()
-
-        /// Starts SMUX command. It will be disabled automatically after SMUX
-        /// operation is finished.
-        enableSmux()
-
-        enableColorMeasure()
+    /// Read the amount of light that has a wavelength of 480nm (blue).
+    /// - Returns: The reading for the light in UInt16.
+    public func read480nm() -> UInt16 {
+        setF1F4()
+        try? readRegister(.CH2_DATA_L, into: &readBuffer, count: 2)
+        return calUInt16(readBuffer[0], readBuffer[1])
     }
 
-    func setF5F8() {
-        /// Disable the Spectral Measurement before sensor configuration.
-        disableColorMeasure()
-
-        /// Select SMUX command to write SMUX configurations.
-        setSmuxCommand(2)
-
-        /// Map F1 to F4, CLEAR, NIR to 6 internal ADCs.
-        setSmuxF5F8()
-
-        /// Starts SMUX command. It will be disabled automatically after SMUX
-        /// operation is finished.
-        enableSmux()
-
-        enableColorMeasure()
+    /// Read the amount of light that has a wavelength of 515nm (cyan).
+    /// - Returns: The reading for the light in UInt16.
+    public func read515nm() -> UInt16 {
+        setF1F4()
+        try? readRegister(.CH3_DATA_L, into: &readBuffer, count: 2)
+        return calUInt16(readBuffer[0], readBuffer[1])
     }
 
-
-
-
-
-
-
-    func setAstep(_ step: UInt16) {
-        try? writeRegister(.astepLSB, [UInt8(step & 0xFF), UInt8(step >> 8)])
+    /// Read the amount of light that has a wavelength of 555nm (green).
+    /// - Returns: The reading for the light in UInt16.
+    public func read555nm() -> UInt16 {
+        setF5F8()
+        try? readRegister(.CH0_DATA_L, into: &readBuffer, count: 2)
+        return calUInt16(readBuffer[0], readBuffer[1])
     }
 
-    func setAtime(_ time: UInt8) {
-        try? writeRegister(.atime, time)
+    /// Read the amount of light that has a wavelength of 590nm (yellow).
+    /// - Returns: The reading for the light in UInt16.
+    public func read590nm() -> UInt16 {
+        setF5F8()
+        try? readRegister(.CH1_DATA_L, into: &readBuffer, count: 2)
+        return calUInt16(readBuffer[0], readBuffer[1])
     }
 
+    /// Read the amount of light that has a wavelength of 630nm (orange).
+    /// - Returns: The reading for the light in UInt16.
+    public func read630nm() -> UInt16 {
+        setF5F8()
+        try? readRegister(.CH2_DATA_L, into: &readBuffer, count: 2)
+        return calUInt16(readBuffer[0], readBuffer[1])
+    }
 
+    /// Read the amount of light that has a wavelength of 680nm (red).
+    /// - Returns: The reading for the light in UInt16.
+    public func read680nm() -> UInt16 {
+        setF5F8()
+        try? readRegister(.CH3_DATA_L, into: &readBuffer, count: 2)
+        return calUInt16(readBuffer[0], readBuffer[1])
+    }
 
-    func setGain(_ gain: Gain) {
+    /// Read the amount of clear light.
+    /// - Returns: The reading for the light in UInt16.
+    public func readClear() -> UInt16 {
+        setF5F8()
+        try? readRegister(.CH4_DATA_L, into: &readBuffer, count: 2)
+        return calUInt16(readBuffer[0], readBuffer[1])
+    }
+
+    /// Read the amount of NIR (near infrared) light.
+    /// - Returns: The reading for the light in UInt16.
+    public func readNIR() -> UInt16 {
+        setF5F8()
+        try? readRegister(.CH5_DATA_L, into: &readBuffer, count: 2)
+        return calUInt16(readBuffer[0], readBuffer[1])
+    }
+
+    /// Set the integration time per step.
+    ///
+    /// The step size equals _(astep + 1) x 2.78μs_.
+    ///
+    /// And the overall integration time is _(atime + 1) x (astep + 1) x 2.78μs_,
+    /// where atime is set using ``setAtime(_:)``, 100 by default.
+    ///
+    /// The maximum raw value equals _(atime + 1) x (astep + 1)_, but 65535 at most.
+    /// - Parameter value: a integer from 0 to 65534, 999 by default
+    public func setAstep(_ value: UInt16) {
+        try? writeRegister(.astepLSB, [UInt8(value & 0xFF), UInt8(value >> 8)])
+    }
+
+    /// Set the number of time steps to change the integration time.
+    ///
+    /// The integration time is _(atime + 1) x (astep + 1) x 2.78μs_,
+    /// where astep is set using ``setAstep(_:)``, 999 by default.
+    ///
+    /// The maximum raw value equals _(atime + 1) x (astep + 1)_, but 65535 at most.
+    /// - Parameter time: the number of steps from 0 to 255, 100 by default.
+    public func setAtime(_ value: UInt8) {
+        try? writeRegister(.atime, value)
+    }
+
+    /// Set the gain for measurement to change the sensitivity.
+    /// - Parameter gain: A gain setting in ``Gain``.
+    public func setGain(_ gain: Gain) {
         try? writeRegister(.CFG1, gain.rawValue)
     }
 
-    enum Gain: UInt8 {
+    /// The gain settings for the sensor to change its sensitivity.
+    public enum Gain: UInt8 {
         case xhalf = 0
         case x1 = 1
         case x2 = 2
@@ -150,9 +219,9 @@ final public class AS7341 {
         case x256 = 9
         case x512 = 10
     }
-
-
 }
+
+
 
 extension AS7341 {
     enum Register: UInt8 {
@@ -168,6 +237,7 @@ extension AS7341 {
         case CH4_DATA_L = 0x9D
         case CH5_DATA_L = 0x9F
         case status2 = 0xA3
+        case CFG0 = 0xA9
         case CFG1 = 0xAA
         case CFG6 = 0xAF
         case astepLSB = 0xCA
@@ -210,7 +280,9 @@ extension AS7341 {
         }
     }
 
-    private func readRegister(_ register: Register, into buffer: inout [UInt8], count: Int) throws {
+    private func readRegister(
+        _ register: Register, into buffer: inout [UInt8], count: Int
+    ) throws {
         for i in 0..<buffer.count {
             buffer[i] = 0
         }
@@ -224,6 +296,10 @@ extension AS7341 {
         if case .failure(let err) = result {
             throw err
         }
+    }
+
+    func calUInt16(_ lsb: UInt8, _ msb: UInt8) -> UInt16 {
+        return UInt16(lsb) | UInt16(msb) << 8
     }
 
     enum Enable: UInt8 {
@@ -254,9 +330,20 @@ extension AS7341 {
     }
 
     func enableSmux() {
+        var byte: UInt8 = 0
+        try? readRegister(.CFG0, into: &byte)
+        try? writeRegister(.CFG0, byte & 0b1110_1111)
+
+
         var enable: UInt8 = 0
         try? readRegister(.enable, into: &enable)
         try? writeRegister(.enable, enable | Enable.smux.rawValue)
+
+        try? readRegister(.enable, into: &enable)
+        while enable & Enable.smux.rawValue != 0 {
+            sleep(ms: 1)
+            try? readRegister(.enable, into: &enable)
+        }
     }
 
     func enableColorMeasure() {
@@ -274,7 +361,7 @@ extension AS7341 {
 
     /// Select SMUX command.
     func setSmuxCommand(_ command: UInt8) {
-        try? writeRegister(.CFG6, command)
+        try? writeRegister(.CFG6, command << 3)
     }
 
     // ===--- Set Sensor multiplexer -------------------------------------=== //
@@ -313,7 +400,8 @@ extension AS7341 {
     }
 
     func setSmux(_ smuxIn: SmuxIn, _ smuxOut1: SmuxOut, _ smuxOut2: SmuxOut) {
-        try? writeRegister(smuxIn.rawValue, UInt8(smuxOut1.rawValue) | UInt8(smuxOut2.rawValue << 4))
+        try? writeRegister(smuxIn.rawValue,
+                           smuxOut1.rawValue | (smuxOut2.rawValue << 4))
     }
 
     /// Set sensor multiplexer (SMUX) for sensors F1 to F4, clear and NIR to map
@@ -406,29 +494,69 @@ extension AS7341 {
         setSmux(.NIR_F, .adc5, .disable)
     }
 
-
-    func isDataReady(_ timeout: UInt64 = 1000) -> Bool {
+    func waitData() {
         var status: UInt8 = 0
-
-        let start = getSystemUptimeInMilliseconds()
-
         try? readRegister(.status2, into: &status)
 
         while status & 0b0100_0000 == 0 {
-            if getSystemUptimeInMilliseconds() - start > timeout {
-                print(#function + ": Timeout waiting for data from sensor")
-                return false
-            }
             sleep(ms: 1)
             try? readRegister(.status2, into: &status)
         }
+    }
 
-        return true
+    // ===--- Configure Sensor for measurement ---------------------------=== //
+
+    /// Configure the sensor to read values of F1-F4, clear and NIR.
+    func setF1F4() {
+        /// If the smux is already set for F1-F4, skip the operations below.
+        if lowChannels {
+            return
+        }
+
+        /// Disable the Spectral Measurement before sensor configuration.
+        disableColorMeasure()
+
+        /// Select SMUX command to write SMUX configurations.
+        setSmuxCommand(2)
+
+        /// Map F1 to F4, CLEAR, NIR to 6 internal ADCs.
+        setSmuxF1F4()
+
+        /// Starts SMUX command. It will be disabled automatically after SMUX
+        /// operation is finished.
+        enableSmux()
+
+        enableColorMeasure()
+        lowChannels = true
+        waitData()
+    }
+
+    /// Configure the sensor to read values of F5-F8, clear and NIR.
+    func setF5F8() {
+        /// If the smux is already set for F5-F8, skip the operations below.
+        if !lowChannels {
+            return
+        }
+
+        /// Disable the Spectral Measurement before sensor configuration.
+        disableColorMeasure()
+
+        /// Select SMUX command to write SMUX configurations.
+        setSmuxCommand(2)
+
+        /// Map F1 to F4, CLEAR, NIR to 6 internal ADCs.
+        setSmuxF5F8()
+
+        /// Starts SMUX command. It will be disabled automatically after SMUX
+        /// operation is finished.
+        enableSmux()
+
+        enableColorMeasure()
+        lowChannels = false
+        waitData()
     }
 
 
 }
-
-
 
 
