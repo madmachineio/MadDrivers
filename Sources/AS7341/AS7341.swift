@@ -88,7 +88,6 @@ final public class AS7341 {
         let f6 = calUInt16(readBuffer[3], readBuffer[4])
         let f7 = calUInt16(readBuffer[5], readBuffer[6])
         let f8 = calUInt16(readBuffer[7], readBuffer[8])
-
         let clear = calUInt16(readBuffer[9], readBuffer[10])
         let nir = calUInt16(readBuffer[11], readBuffer[12])
 
