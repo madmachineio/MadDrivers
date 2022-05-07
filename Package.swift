@@ -13,6 +13,7 @@ let package = Package(
                 "ADXL345",
                 "AHTx0",
                 "APDS9960",
+                "AS7341",
                 "BH1750",
                 "BME680",
                 "BMP280",
@@ -38,6 +39,7 @@ let package = Package(
         .library(name: "ADXL345", targets: ["ADXL345"]),
         .library(name: "AHTx0", targets: ["AHTx0"]),
         .library(name: "APDS9960", targets: ["APDS9960"]),
+        .library(name: "AS7341", targets: ["AS7341"]),
         .library(name: "BH1750", targets: ["BH1750"]),
         .library(name: "BME680", targets: ["BME680"]),
         .library(name: "BMP280", targets: ["BMP280"]),
@@ -80,6 +82,9 @@ let package = Package(
             dependencies: ["SwiftIO"]),
         .target(
             name: "APDS9960",
+            dependencies: ["SwiftIO"]),
+        .target(
+            name: "AS7341",
             dependencies: ["SwiftIO"]),
         .target(
             name: "BH1750",
@@ -165,6 +170,9 @@ let package = Package(
         .testTarget(
             name: "APDS9960Tests",
             dependencies: ["APDS9960", "SwiftIO"]),
+        .testTarget(
+            name: "AS7341Tests",
+            dependencies: ["AS7341", "SwiftIO"]),
         .testTarget(
             name: "MAG3110Tests",
             dependencies: ["MAG3110", "SwiftIO"]),

@@ -32,12 +32,16 @@ You can find some frequently-used hardware here:
     <td>I2C/SPI</td>
   </tr>
   <tr>
-    <td rowspan="2">Color</td>
-    <td>VEML6040</td>
+    <td rowspan="3">Color</td>
+    <td>AS7341</td>
     <td>I2C</td>
-  </tr>
   <tr>
     <td>TCS34725</td>
+    <td>I2C</td>
+  </tr>
+    </tr>
+    <tr>
+    <td>VEML6040</td>
     <td>I2C</td>
   </tr>
   <tr>
