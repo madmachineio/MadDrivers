@@ -91,8 +91,12 @@ You can find some frequently-used hardware here:
     <td>I2C</td>
   </tr>
   <tr>
-    <td rowspan="2">Light</td>
+    <td rowspan="3">Light</td>
     <td>BH1750</td>
+    <td>I2C</td>
+  </tr>
+    <tr>
+    <td>LTR390</td>
     <td>I2C</td>
   </tr>
   <tr>

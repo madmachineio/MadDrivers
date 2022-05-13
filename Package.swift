@@ -1,4 +1,4 @@
-// swift-tools-version:5.3
+// swift-tools-version:5.5
 // The swift-tools-version declares the minimum version of Swift required to build this package.
 
 import PackageDescription
@@ -23,6 +23,7 @@ let package = Package(
                 "IS31FL3731",
                 "LCD1602",
                 "LIS3DH",
+                "LTR390",
                 "MAG3110",
                 "MCP9808",
                 "MCP4725",
@@ -33,6 +34,7 @@ let package = Package(
                 "SHT3x",
                 "ST7789",
                 "TCS34725",
+                "TSL2591",
                 "VEML6040",
                 "VEML6070",
                 "VL53L0x"]),
@@ -49,6 +51,7 @@ let package = Package(
         .library(name: "IS31FL3731", targets: ["IS31FL3731"]),
         .library(name: "LCD1602", targets: ["LCD1602"]),
         .library(name: "LIS3DH", targets: ["LIS3DH"]),
+        .library(name: "LTR390", targets: ["LTR390"]),
         .library(name: "MAG3110", targets: ["MAG3110"]),
         .library(name: "MCP4725", targets: ["MCP4725"]),
         .library(name: "MCP9808", targets: ["MCP9808"]),
@@ -116,6 +119,10 @@ let package = Package(
             name: "LIS3DH",
             dependencies: ["SwiftIO"]),
         .target(
+            name: "LTR390",
+            dependencies: ["SwiftIO",
+                           .product(name: "RealModule", package: "swift-numerics")]),
+        .target(
             name: "MAG3110",
             dependencies: ["SwiftIO",
                            .product(name: "RealModule", package: "swift-numerics")]),
@@ -173,6 +180,9 @@ let package = Package(
         .testTarget(
             name: "AS7341Tests",
             dependencies: ["AS7341", "SwiftIO"]),
+        .testTarget(
+            name: "LTR390Tests",
+            dependencies: ["LTR390", "SwiftIO"]),
         .testTarget(
             name: "MAG3110Tests",
             dependencies: ["MAG3110", "SwiftIO"]),
