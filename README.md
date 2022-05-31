@@ -91,7 +91,7 @@ You can find some frequently-used hardware here:
     <td>I2C</td>
   </tr>
   <tr>
-    <td rowspan="3">Light</td>
+    <td rowspan="4">Light</td>
     <td>BH1750</td>
     <td>I2C</td>
   </tr>
@@ -104,6 +104,10 @@ You can find some frequently-used hardware here:
     <td>I2C</td>
   </tr>
     <tr>
+    <td>VEML7700</td>
+    <td>I2C</td>
+  </tr>
+  <tr>
     <td>Magnetometer</td>
     <td>MAG3110</td>
     <td>I2C</td>
