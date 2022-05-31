@@ -37,6 +37,7 @@ let package = Package(
                 "TSL2591",
                 "VEML6040",
                 "VEML6070",
+                "VEML7700",
                 "VL53L0x"]),
         .library(name: "ADXL345", targets: ["ADXL345"]),
         .library(name: "AHTx0", targets: ["AHTx0"]),
@@ -65,6 +66,7 @@ let package = Package(
         .library(name: "TSL2591", targets: ["TSL2591"]),
         .library(name: "VEML6040", targets: ["VEML6040"]),
         .library(name: "VEML6070", targets: ["VEML6070"]),
+        .library(name: "VEML7700", targets: ["VEML7700"]),
         .library(name: "VL53L0x", targets: ["VL53L0x"]),
     ],
     dependencies: [
@@ -165,6 +167,9 @@ let package = Package(
             name: "VEML6070",
             dependencies: ["SwiftIO"]),
         .target(
+            name: "VEML7700",
+            dependencies: ["SwiftIO"]),
+        .target(
             name: "VL53L0x",
             dependencies: ["SwiftIO"]),
 
@@ -204,6 +209,9 @@ let package = Package(
         .testTarget(
             name: "VEML6070Tests",
             dependencies: ["VEML6070", "SwiftIO"]),
+        .testTarget(
+            name: "VEML7700Tests",
+            dependencies: ["VEML7700", "SwiftIO"]),
         .testTarget(
             name: "VL53L0xTests",
             dependencies: ["VL53L0x", "SwiftIO"]),
