@@ -176,8 +176,7 @@ final public class BMP280 {
     /// Calculate the altitude above sea level in meter.
     ///
     /// The altitude is calculated based on the sea level pressure.
-    /// You can find the current sea level pressure here:
-    /// https://weather.us/observations/usa/pressure-qff/20211203-0400z.html
+    /// You can find the current sea level pressure [here](https://weather.us/observations/pressure-qff.html).
     /// - Parameter seaLevelPressure: The sea level pressure in hPa.
     /// - Returns: The altitude in meter.
     public func readAltitude(_ seaLevelPressure: Double) -> Double {
