@@ -108,9 +108,14 @@ You can find some frequently-used hardware here:
     <td>I2C</td>
   </tr>
   <tr>
-    <td>Magnetometer</td>
+    <td rowspan="2">Magnetometer</td>
     <td>MAG3110</td>
     <td>I2C</td>
+  </tr>
+  </tr>
+    <tr>
+    <td>MLX90393</td>
+    <td>I2C/SPI</td>
   </tr>
   <tr>
     <td rowspan="2">Pressure</td>
