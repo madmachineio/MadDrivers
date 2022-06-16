@@ -27,6 +27,7 @@ let package = Package(
                 "MAG3110",
                 "MCP4725",
                 "MCP9808",
+                "MLX90393",
                 "MPL3115A2",
                 "MPU6050",
                 "PCF8523",
@@ -57,6 +58,7 @@ let package = Package(
         .library(name: "MAG3110", targets: ["MAG3110"]),
         .library(name: "MCP4725", targets: ["MCP4725"]),
         .library(name: "MCP9808", targets: ["MCP9808"]),
+        .library(name: "MLX90393", targets: ["MLX90393"]),
         .library(name: "MPL3115A2", targets: ["MPL3115A2"]),
         .library(name: "MPU6050", targets: ["MPU6050"]),
         .library(name: "PCF8523", targets: ["PCF8523"]),
@@ -137,6 +139,9 @@ let package = Package(
             name: "MCP9808",
             dependencies: ["SwiftIO"]),
         .target(
+            name: "MLX90393",
+            dependencies: ["SwiftIO"]),
+        .target(
             name: "MPL3115A2",
             dependencies: ["SwiftIO"]),
         .target(
@@ -199,6 +204,9 @@ let package = Package(
         .testTarget(
             name: "MCP9808Tests",
             dependencies: ["MCP9808", "SwiftIO"]),
+        .testTarget(
+            name: "MLX90393Tests",
+            dependencies: ["MLX90393", "SwiftIO"]),
         .testTarget(
             name: "MPL3115A2Tests",
             dependencies: ["MPL3115A2", "SwiftIO"]),
