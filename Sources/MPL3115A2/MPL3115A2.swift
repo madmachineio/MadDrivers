@@ -1,4 +1,14 @@
-
+//=== MPL3115A2.swift -----------------------------------------------------===//
+//
+// Copyright (c) MadMachine Limited
+// Licensed under MIT License
+//
+// Authors: Ines Zhou
+// Created: 06/08/2022
+//
+// See https://madmachine.io for more information
+//
+//===----------------------------------------------------------------------===//
 import SwiftIO
 
 /// This is the library for MPL3115A2 pressure sensor. It supports I2C communication.
