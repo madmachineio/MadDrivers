@@ -156,7 +156,12 @@ You can find some frequently-used hardware here:
     <td>SHT3x</td>
     <td>I2C</td>
   </tr>
-    <tr>
+  <tr>
+    <td>Thermal</td>
+    <td>AMG88xx</td>
+    <td>I2C</td>
+  </tr>
+  <tr>
     <td>Ultraviolet</td>
     <td>VEML6070</td>
     <td>I2C</td>

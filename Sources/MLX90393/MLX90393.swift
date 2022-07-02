@@ -1,3 +1,14 @@
+//=== MLX90393.swift ------------------------------------------------------===//
+//
+// Copyright (c) MadMachine Limited
+// Licensed under MIT License
+//
+// Authors: Ines Zhou
+// Created: 06/15/2022
+//
+// See https://madmachine.io for more information
+//
+//===----------------------------------------------------------------------===//
 
 import SwiftIO
 
