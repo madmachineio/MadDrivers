@@ -12,9 +12,7 @@
 
 import SwiftIO
 
-#if canImport(MadDisplay)
-import struct MadDisplay.ColorSpace
-#endif
+
 
 /**
  This is the library for IS31FL3731 chip. It supports I2C communication.
@@ -28,8 +26,6 @@ import struct MadDisplay.ColorSpace
  The display has 8 seperate frames from 0 to 7. You can show any of them or
  display in turns to create an animation.
  
- You can also regard the LED matrix as a 9x16 screen and use `MadDisplay`
- to display text on it.
  
  - Attention: If you set all pixels to full brightness, the module will require
  too much current. So you may need to connect an external power supply
@@ -49,10 +45,6 @@ public final class IS31FL3731 {
     /// The current frame that the matrix displays or sets.
     public private(set) var currentFrame: UInt8 = 0
     
-#if canImport(MadDisplay)
-    public private(set) var colorSpace = ColorSpace()
-#endif
-
     private var writeBuffer = [UInt8](repeating: 0, count: 145)
     /**
      Initialize the module to get it ready for lighting.
@@ -69,10 +61,6 @@ public final class IS31FL3731 {
         self.i2c = i2c
         self.address = address
         
-#if canImport(MadDisplay)
-        colorSpace.depth = 8
-        colorSpace.grayscale = true
-#endif
         shutdown()
         stopBreath()
         setMode(.picutreMode)
@@ -382,13 +370,3 @@ extension IS31FL3731 {
     }
     
 }
-
-
-#if canImport(MadDisplay)
-import protocol MadDisplay.BitmapWritable
-
-extension IS31FL3731: BitmapWritable {
-    
-}
-
-#endif
