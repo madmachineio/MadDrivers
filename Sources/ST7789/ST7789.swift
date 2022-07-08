@@ -12,10 +12,6 @@
 
 import SwiftIO
 
-#if canImport(MadDisplay)
-import struct MadDisplay.ColorSpace
-#endif
-
 
 /// This is the library for ST7789 SPI screen.
 /// It supports two sizes of screens: 240x240 and 240x320.
@@ -77,10 +73,6 @@ public final class ST7789 {
     private var xOffset: Int
     private var yOffset: Int
 
-#if canImport(MadDisplay)
-    public private(set) var colorSpace = ColorSpace()
-#endif
-
     
     /// Initialize all the necessary pins and set the parameters of the screen.
     /// The ST7789 chip can drive 240x240 and 240x320 screens.
@@ -116,11 +108,6 @@ public final class ST7789 {
         self.rotation = rotation
         self.xOffset = 0
         self.yOffset = 0
-
-#if canImport(MadDisplay)
-        colorSpace.depth = 16
-        colorSpace.reverseBytesInWord = true
-#endif
         
         reset()
         setRoation(rotation)
@@ -437,10 +424,3 @@ extension ST7789 {
 
 
 
-
-#if canImport(MadDisplay)
-import protocol MadDisplay.BitmapWritable
-extension ST7789: BitmapWritable {
-
-}
-#endif
