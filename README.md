@@ -86,7 +86,11 @@ You can find some frequently-used hardware here:
     <td>I2C</td>
   </tr>
   <tr>
-    <td>Gyroscope</td>
+    <td rowspan="2">Gyroscope</td>
+    <td>BMI160</td>
+    <td>I2C/SPI</td>
+  </tr>
+  <tr>
     <td>MPU6050</td>
     <td>I2C</td>
   </tr>

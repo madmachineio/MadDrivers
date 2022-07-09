@@ -17,6 +17,7 @@ let package = Package(
                 "AS7341",
                 "BH1750",
                 "BME680",
+                "BMI160",
                 "BMP280",
                 "DHTxx",
                 "DS3231",
@@ -49,6 +50,7 @@ let package = Package(
         .library(name: "AS7341", targets: ["AS7341"]),
         .library(name: "BH1750", targets: ["BH1750"]),
         .library(name: "BME680", targets: ["BME680"]),
+        .library(name: "BMI160", targets: ["BMI160"]),
         .library(name: "BMP280", targets: ["BMP280"]),
         .library(name: "DHTxx", targets: ["DHTxx"]),
         .library(name: "DS3231", targets: ["DS3231"]),
@@ -107,6 +109,9 @@ let package = Package(
             name: "BME680",
             dependencies: ["SwiftIO",
                             .product(name: "RealModule", package: "swift-numerics")]),
+        .target(
+            name: "BMI160",
+            dependencies: ["SwiftIO"]),
         .target(
             name: "BMP280",
             dependencies: ["SwiftIO",
@@ -203,6 +208,9 @@ let package = Package(
         .testTarget(
             name: "AS7341Tests",
             dependencies: ["AS7341", "SwiftIO"]),
+        .testTarget(
+            name: "BMI160Tests",
+            dependencies: ["BMI160", "SwiftIO"]),
         .testTarget(
             name: "LTR390Tests",
             dependencies: ["LTR390", "SwiftIO"]),
