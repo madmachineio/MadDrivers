@@ -228,9 +228,9 @@ public final class ST7789 {
     ///   - y: The y-coordinate of the start point.
     ///   - w: The width of the area.
     ///   - h: The height of the area.
-    ///   - data: An buffer of color data in UInt8.
+    ///   - data: An raw buffer of color data.
     public func writeBitmap(x: Int, y: Int, width w: Int,
-                            height h: Int, data: UnsafeBufferPointer<UInt8>) {
+                            height h: Int, data: UnsafeRawBufferPointer) {
         setAddrWindow(x: x, y: y, width: w, height: h)
         writeData(data, count: w * h * 2)
     }
@@ -412,7 +412,7 @@ extension ST7789 {
         cs.high()
     }
 
-    func writeData(_ data: UnsafeBufferPointer<UInt8>, count: Int) {
+    func writeData(_ data: UnsafeRawBufferPointer, count: Int) {
         dc.high()
         cs.low()
         spi.write(data, count: count)
