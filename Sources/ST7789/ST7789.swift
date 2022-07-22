@@ -42,9 +42,10 @@ public final class ST7789 {
 
      (.PORCTRL, [0x0C, 0x0C, 0x00, 0x33, 0x33]),
      (.GCTRL, [0x35]),
-     (.VCOMS, [0x32]),
+     (.VCOMS, [0x19]),
+     (.LCMCTRL, [0x2C]),
      (.VDVVRHEN, [0x01]),
-     (.VRHS, [0x15]),
+     (.VRHS, [0x12]),
      (.VDVSET, [0x20]),
      (.FRCTR2, [0x0F]),
      (.PWCTRL1, [0xA4, 0xA1]),
@@ -65,10 +66,6 @@ public final class ST7789 {
     
     public private(set) var width: Int
     public private(set) var height: Int
-    
-    public let depth = 16
-    public let grayscale = false
-    public let reverseBytesInWord = true
     
     private var xOffset: Int
     private var yOffset: Int
@@ -93,8 +90,12 @@ public final class ST7789 {
                 rst: DigitalOut, bl: DigitalOut,
                 width: Int = 240, height: Int = 240,
                 rotation: Rotation = .angle0) {
-        guard (width == 240 && height == 240) || (width == 240 && height == 320)
-                || (width == 320 && height == 240) else {
+        guard (width == 240 && height == 240)
+                || (width == 240 && height == 320)
+                || (width == 320 && height == 240)
+                || (width == 135 && height == 240)
+                || (width == 240 && height == 135)
+                else {
                     fatalError("Not support this resolution!")
                 }
         
@@ -127,69 +128,124 @@ public final class ST7789 {
     /// - Parameter angle: The rotation angle.
     public func setRoation(_ angle: Rotation) {
         rotation = angle
-        var madctlConfig: MadctlConfig
-        
-        if width == 240 && height == 240 {
-            switch rotation {
-            case .angle0:
+        var madctlConfig: MadctlConfig = [.RGB]
+
+        let ratio = (width, height)
+
+        switch ratio {
+            case (240, 240):
+                switch rotation {
+                case .angle0:
+                    xOffset = 0
+                    yOffset = 0
+                    madctlConfig = [.pageTopToBottom, .leftToRight,
+                                    .normalMode, .lineTopToBottom, .RGB]
+                case .angle90:
+                    xOffset = 0
+                    yOffset = 0
+                    madctlConfig = [.pageTopToBottom, .rightToLeft,
+                                    .reverseMode, .lineTopToBottom, .RGB]
+                case .angle180:
+                    xOffset = 0
+                    yOffset = 80
+                    madctlConfig = [.pageBottomToTop, .rightToLeft,
+                                    .normalMode, .lineTopToBottom, .RGB]
+                case .angle270:
+                    xOffset = 80
+                    yOffset = 0
+                    madctlConfig = [.pageBottomToTop, .leftToRight,
+                                    .reverseMode, .lineTopToBottom, .RGB]
+                }
+            case (240, 320):
                 xOffset = 0
                 yOffset = 0
-                madctlConfig = [.pageTopToBottom, .leftToRight,
-                                .normalMode, .lineTopToBottom, .RGB]
-            case .angle90:
+                switch rotation {
+                case .angle0:
+                    madctlConfig = [.pageTopToBottom, .leftToRight,
+                                    .normalMode, .lineTopToBottom, .RGB]
+                case .angle90:
+                    swap(&width, &height)
+                    madctlConfig = [.pageTopToBottom, .rightToLeft,
+                                    .reverseMode, .lineTopToBottom, .RGB]
+                case .angle180:
+                    madctlConfig = [.pageBottomToTop, .rightToLeft,
+                                    .normalMode, .lineTopToBottom, .RGB]
+                case .angle270:
+                    swap(&width, &height)
+                    madctlConfig = [.pageBottomToTop, .leftToRight,
+                                    .reverseMode, .lineTopToBottom, .RGB]
+                }
+            case (320, 240):
                 xOffset = 0
                 yOffset = 0
-                madctlConfig = [.pageTopToBottom, .rightToLeft,
-                                .reverseMode, .lineTopToBottom, .RGB]
-            case .angle180:
-                xOffset = 0
-                yOffset = 80
-                madctlConfig = [.pageBottomToTop, .rightToLeft,
-                                .normalMode, .lineTopToBottom, .RGB]
-            case .angle270:
-                xOffset = 80
-                yOffset = 0
-                madctlConfig = [.pageBottomToTop, .leftToRight,
-                                .reverseMode, .lineTopToBottom, .RGB]
-            }
-        } else if width == 240 && height == 320 {
-            xOffset = 0
-            yOffset = 0
-            switch rotation {
-            case .angle0:
-                madctlConfig = [.pageTopToBottom, .leftToRight,
-                                .normalMode, .lineTopToBottom, .RGB]
-            case .angle90:
-                swap(&width, &height)
-                madctlConfig = [.pageTopToBottom, .rightToLeft,
-                                .reverseMode, .lineTopToBottom, .RGB]
-            case .angle180:
-                madctlConfig = [.pageBottomToTop, .rightToLeft,
-                                .normalMode, .lineTopToBottom, .RGB]
-            case .angle270:
-                swap(&width, &height)
-                madctlConfig = [.pageBottomToTop, .leftToRight,
-                                .reverseMode, .lineTopToBottom, .RGB]
-            }
-        } else {
-            xOffset = 0
-            yOffset = 0
-            switch rotation {
-            case .angle0:
-                madctlConfig = [.pageTopToBottom, .rightToLeft,
-                                .reverseMode, .lineTopToBottom, .RGB]
-            case .angle90:
-                swap(&width, &height)
-                madctlConfig = [.pageBottomToTop, .rightToLeft,
-                                .normalMode, .lineTopToBottom, .RGB]
-            case .angle180:
-                madctlConfig = [.pageBottomToTop, .leftToRight,
-                                .reverseMode, .lineTopToBottom, .RGB]
-            case .angle270:
-                swap(&width, &height)
-                madctlConfig = [.pageTopToBottom, .leftToRight,
-                                .normalMode, .lineTopToBottom, .RGB]
-            }
+                switch rotation {
+                case .angle0:
+                    madctlConfig = [.pageTopToBottom, .rightToLeft,
+                                    .reverseMode, .lineTopToBottom, .RGB]
+                case .angle90:
+                    swap(&width, &height)
+                    madctlConfig = [.pageBottomToTop, .rightToLeft,
+                                    .normalMode, .lineTopToBottom, .RGB]
+                case .angle180:
+                    madctlConfig = [.pageBottomToTop, .leftToRight,
+                                    .reverseMode, .lineTopToBottom, .RGB]
+                case .angle270:
+                    swap(&width, &height)
+                    madctlConfig = [.pageTopToBottom, .leftToRight,
+                                    .normalMode, .lineTopToBottom, .RGB]
+                }
+            case (135, 240):
+                switch rotation {
+                case .angle0:
+                    xOffset = 52
+                    yOffset = 40
+                    madctlConfig = [.pageTopToBottom, .leftToRight,
+                                    .normalMode, .lineTopToBottom, .RGB]
+                case .angle90:
+                    xOffset = 40
+                    yOffset = 53
+                    swap(&width, &height)
+                    madctlConfig = [.pageTopToBottom, .rightToLeft,
+                                    .reverseMode, .lineBottomToTop, .RGB]
+                case .angle180:
+                    xOffset = 53
+                    yOffset = 40
+                    madctlConfig = [.pageBottomToTop, .rightToLeft,
+                                    .normalMode, .lineTopToBottom, .RGB]
+                case .angle270:
+                    xOffset = 40
+                    yOffset = 52
+                    swap(&width, &height)
+                    madctlConfig = [.pageBottomToTop, .leftToRight,
+                                    .reverseMode, .lineTopToBottom, .RGB]
+                }
+            case (240, 135):
+                switch rotation {
+                case .angle0:
+                    xOffset = 40
+                    yOffset = 53
+                    madctlConfig = [.pageTopToBottom, .rightToLeft,
+                                    .reverseMode, .lineBottomToTop, .RGB]
+                case .angle90:
+                    xOffset = 53
+                    yOffset = 40
+                    swap(&width, &height)
+                    madctlConfig = [.pageBottomToTop, .rightToLeft,
+                                    .normalMode, .lineTopToBottom, .RGB]
+                case .angle180:
+                    xOffset = 40
+                    yOffset = 52
+                    madctlConfig = [.pageBottomToTop, .leftToRight,
+                                    .reverseMode, .lineTopToBottom, .RGB]
+                case .angle270:
+                    xOffset = 52
+                    yOffset = 40
+                    swap(&width, &height)
+                    madctlConfig = [.pageTopToBottom, .leftToRight,
+                                    .normalMode, .lineTopToBottom, .RGB]
+                }
+            default:
+                break
         }
         
         writeConfig([madctlConfig.rawValue], to: .MADCTL)
@@ -228,9 +284,9 @@ public final class ST7789 {
     ///   - y: The y-coordinate of the start point.
     ///   - w: The width of the area.
     ///   - h: The height of the area.
-    ///   - data: An buffer of color data in UInt8.
+    ///   - data: An raw buffer of color data.
     public func writeBitmap(x: Int, y: Int, width w: Int,
-                            height h: Int, data: UnsafeBufferPointer<UInt8>) {
+                            height h: Int, data: UnsafeRawBufferPointer) {
         setAddrWindow(x: x, y: y, width: w, height: h)
         writeData(data, count: w * h * 2)
     }
@@ -245,22 +301,24 @@ public final class ST7789 {
         writeData(data)
     }
     
+    /// Set the screen with colors defined in an buffer.
+    /// Two data are for one pixel. So the data count should be double
+    /// the product of width and height to set all pixels.
+    /// - Parameter data: An array of color data in UInt8.
+    public func writeScreen(_ data: UnsafeRawBufferPointer) {
+        guard data.count <= width * height * 2 else { return }
+        setAddrWindow(x: 0, y: 0, width: width, height: height)
+        writeData(data, count: width * height * 2)
+    }
     
     /// Paint the whole screen with a specified color.
     /// - Parameter color: A 16-bit color value, by default, black.
     public func clearScreen(_ color: UInt16 = 0x0000) {
-        let highByte = UInt8(color >> 8)
-        let lowByte = UInt8(color & 0xFF)
-        
-        var data = [UInt8](repeating: 0, count: width * height * 2)
-        
-        for i in 0..<width * height {
-            let pos = i * 2
-            data[pos] = highByte
-            data[pos + 1] = lowByte
+        let data = [UInt16](repeating: color, count: width * height)
+
+        data.withUnsafeBytes { ptr in
+            writeScreen(ptr)
         }
-        
-        writeScreen(data)
     }
     
     
@@ -391,7 +449,7 @@ extension ST7789 {
     }
     
     func writeData(_ data: UInt16) {
-        let array = [UInt8(data >> 8), UInt8(data & 0xFF)]
+        let array = [UInt8(data & 0xFF), UInt8(data >> 8)]
         dc.high()
         cs.low()
         spi.write(array)
@@ -412,15 +470,10 @@ extension ST7789 {
         cs.high()
     }
 
-    func writeData(_ data: UnsafeBufferPointer<UInt8>, count: Int) {
+    func writeData(_ data: UnsafeRawBufferPointer, count: Int) {
         dc.high()
         cs.low()
         spi.write(data, count: count)
         cs.high()
     }
 }
-
-
-
-
-
