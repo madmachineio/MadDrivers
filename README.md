@@ -201,7 +201,7 @@ After you download the whole folder, [here](https://docs.madmachine.io/overview/
 
 Take the library `SHT3x` for example:
 
-1. [Create](https://docs.madmachine.io/overview/getting-started/create-project) an executable project.
+1. [Create](https://docs.madmachine.io/overview/getting-started/create-project) an executable project `ReadSHT3x`.
 
 2. Open the project and open the file `Package.swift`. 
 
@@ -214,7 +214,7 @@ Take the library `SHT3x` for example:
 // The swift-tools-version declares the minimum version of Swift required to build this package.
 import PackageDescription
 let package = Package(
-    name: "sht3x",
+    name: "ReadSHT3x",
     dependencies: [
         // Dependencies declare other packages that this package depends on.
         .package(url: "https://github.com/madmachineio/SwiftIO.git", .upToNextMinor(from: "0.0.1")),
@@ -225,7 +225,7 @@ let package = Package(
         // Targets are the basic building blocks of a package. A target can define a module or a test suite.
         // Targets can depend on other targets in this package, and on products in packages this package depends on.
         .target(
-            name: "sht3x",
+            name: "ReadSHT3x",
             dependencies: [
                 "SwiftIO",
                 "MadBoards",
@@ -233,8 +233,8 @@ let package = Package(
                 .product(name: "SHT3x", package: "MadDrivers")
             ]),
         .testTarget(
-            name: "sht3xTests",
-            dependencies: ["sht3x"]),
+            name: "ReadSHT3xTests",
+            dependencies: ["ReadSHT3x"]),
     ]
 )
 ```
@@ -268,14 +268,22 @@ First of all, a big thanks to you for taking the time to contribute 🥰! Any co
 
 ### How can I contribute
 
-1. Open an open issue addressing the problem or telling your plan on a new driver.
-2. Fork the MadDrivers repository.
-3. Clone the repo to your local machine.
-3. Create a new branch.
-4. Start to work on your driver. 
-5. After you finish the driver, push it to your repo and create a pull request to propose the changes.
 
-[Here](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/working-with-forks) are some tutorials from GitHub about these operations.
+1. **Open an [issue](https://github.com/madmachineio/MadDrivers/issues)** to address the problem, your request for a new feature or submit your proposal for the driver. It allows us to avoid duplication of work and helps to merge your changes into the project.
+2. **Fork** the MadDrivers repository to your GitHub account by clicking the Fork button in the top right corner of this page.
+3. Change the current directory to the desired one and **clone** the repo to your local computer.
+```
+git clone https://github.com/YOUR-USERNAME/MadDrivers.git
+```
+4. **Create a new branch** `feature/add_sht3x` off of main for your changes.
+
+5. Start to work on your driver and test your code using the sensors. Check [the driver guide](#driver-guide) for some extra info.
+6. After you finish the driver, **push** your changes to your repo.
+
+7. Go to your forked repo and click the button **Compare & pull request** to propose your changes to the original repo.
+8. Review the changes and choose the branch for the pull request. Click the button **Create pull request**.
+9. After your request is sent, all drivers will be built automatically. It will take a long time. You can see its process in Actions. If it fails, you will need to fix it and push again.
+10. At last, if no error occurs, your request will be reviewed and merged into main.
 
 ### To-do list
 
@@ -315,6 +323,13 @@ If you would like to create a new driver, below is our to-do list of sensors for
 
 This part guides you through adding a new driver to this library. Take SHT3x for example. 
 
+To start with, let's have an overview of the main repository’s source tree. The `MadDrivers` is a Swift package. You'll find source code for all drivers, example projects, a manifest file, and other files.
+* `Sources`: device driver code.
+* `Examples`: simple demos for each device to get started.
+* `Tests`: test for device drivers.
+* `Package.swift`: package name and its content.
+* `Package.mmp`: MadMachine project file.
+
 ```
 ├── MadDrivers
 │   ├── Sources
@@ -323,13 +338,16 @@ This part guides you through adding a new driver to this library. Take SHT3x for
 │   ├── Examples
 │   │   ├── SHT3x
 │   │   │   ├── ReadValues
+│   ├── Tests
+│   │   ├── SHT3xTests
 │   ├── Package.swift
+│   ├── Package.mmp
 │   ├── ...
 ```
-
-1. Create a new folder `SHT3x` in the folder `Sources`. Each folder in it matches a device.
-2. Create a swift file named `SHT3x.swift` in the folder `SHT3x`. This file stores the code to configure the sensor.
-3. Add the new target SHT3x to the file `Package.swift` as below.
+To add your driver, you will
+1. create a new folder `SHT3x` in the folder `Sources`. Each folder in it matches a device.
+2. create a swift file named `SHT3x.swift` in the folder `SHT3x`. This file stores the code to configure the sensor.
+3. add the new target SHT3x to the file `Package.swift` as below.
 
 ```swift
 import PackageDescription
@@ -372,9 +390,9 @@ let package = Package(
 )
 ```
 
-4. Write code for the sensor according to its datasheet. At the same time, you can find many drivers created by manufacturer or others as a reference. 
+4. write code for the sensor according to its datasheet. At the same time, you can find many drivers created by manufacturers or others as a reference. 
 
-5. In the folder `Examples`, create a new folder `SHT3x` to store demo project(s).
+5. in the folder `Examples`, create a new folder `SHT3x` to store demo project(s).
 
 Info: BTW, we add tests for each sensor while writing code, which will prevent us from some typos and obvious errors. You could also skip it. 
 If you want to have a try, one thing to note is that the `SwiftIO` library used for tests is from the branch `mock`. You need to change its version while working on tests. As for how to write tests, you could refer to [SHT3xTests](./Tests/SHT3xTests/SHT3xTests.swift). It lies in supposing the values from a sensor and calculating the 
