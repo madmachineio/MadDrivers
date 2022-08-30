@@ -266,24 +266,40 @@ while true {
 
 First of all, a big thanks to you for taking the time to contribute 🥰! Any corrections, enhancements and supplements are welcome! 
 
-### How can I contribute
+If you want to use some sensors which is not included in the `MadDrivers`, you can **[open an issue](https://github.com/madmachineio/MadDrivers/issues)** or **[create a pull request](https://github.com/madmachineio/MadDrivers/pulls)** from your own fork.
 
 
-1. **Open an [issue](https://github.com/madmachineio/MadDrivers/issues)** to address the problem, your request for a new feature or submit your proposal for the driver. It allows us to avoid duplication of work and helps to merge your changes into the project.
-2. **Fork** the MadDrivers repository to your GitHub account by clicking the Fork button in the top right corner of this page.
-3. Change the current directory to the desired one and **clone** the repo to your local computer.
-```
+### How can I contribute from my own fork
+
+1. **Fork** the MadDrivers repository to your GitHub account by clicking the Fork button in the top right corner of this page.
+
+2. **Clone** the repo to your local computer.
+```bash
 git clone https://github.com/YOUR-USERNAME/MadDrivers.git
 ```
+
+3. Enter the directory you just cloned.
+```bash
+cd MadDrivers
+```
+
 4. **Create a new branch** `feature/add_sht3x` off of main for your changes.
+```bash
+git checkout -b feature/add_sht3x
+```
 
-5. Start to work on your driver and test your code using the sensors. Check [the driver guide](#driver-guide) for some extra info.
-6. After you finish the driver, **push** your changes to your repo.
+5. Start to work on your driver and test your code using the sensor. Check [the driver guide](#driver-guide) for some extra info.
 
-7. Go to your forked repo and click the button **Compare & pull request** to propose your changes to the original repo.
-8. Review the changes and choose the branch for the pull request. Click the button **Create pull request**.
-9. After your request is sent, all drivers will be built automatically. It will take a long time. You can see its process in Actions. If it fails, you will need to fix it and push again.
-10. At last, if no error occurs, your request will be reviewed and merged into main.
+6. After you implement the driver, **push** your changes to your repo.
+```bash
+git push --set-upstream origin feature/add_sht3x
+```
+
+7. Go to your forked repo and click the button **Compare & pull request** to propose your changes to the upstream repo.
+
+8. Click the button **Create pull request**.
+
+9. After your request is sent, the CI will check your PR automatically.  If no error occurs and no modification is required, your request will be reviewed and merged into `main` branch. 
 
 ### To-do list
 
