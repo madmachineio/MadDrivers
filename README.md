@@ -148,7 +148,11 @@ The table below lists the existing drivers and will be updated as time goes on.
     <td>AHTx0</td>
     <td>I2C</td>
   </tr>
-    <tr>
+  <tr>
+    <td>ADT7410</td>
+    <td>I2C</td>
+  </tr>
+  <tr>
     <td>DHTxx</td>
     <td>GPIO</td>
   </tr>
@@ -158,6 +162,10 @@ The table below lists the existing drivers and will be updated as time goes on.
   </tr>
   <tr>
     <td>SHT3x</td>
+    <td>I2C</td>
+  </tr>
+  <tr>
+    <td>TMP102</td>
     <td>I2C</td>
   </tr>
   <tr>
@@ -307,8 +315,6 @@ If you would like to create a new driver, below is our to-do list of sensors for
 
 | Type                                 | Sensors       | Communication |
 | ------------------------------------ | ------------- | ------------- |
-| Temperature                          | ADT7410       | I2C           |
-| Temperature                          | TMP102        | I2C           |
 | Temperature/humidity                 | HTS221        | I2C/SPI       |
 | Temperature/humidity                 | HTU21D        | I2C           |
 | Temperature/humidity                 | SI7021        | I2C           |

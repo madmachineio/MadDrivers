@@ -39,6 +39,7 @@ let package = Package(
                 "SHT3x",
                 "ST7789",
                 "TCS34725",
+                "TMP102",
                 "TSL2591",
                 "VEML6040",
                 "VEML6070",
@@ -73,6 +74,7 @@ let package = Package(
         .library(name: "SHT3x", targets: ["SHT3x"]),
         .library(name: "ST7789", targets: ["ST7789"]),
         .library(name: "TCS34725", targets: ["TCS34725"]),
+        .library(name: "TMP102", targets: ["TMP102"]),
         .library(name: "TSL2591", targets: ["TSL2591"]),
         .library(name: "VEML6040", targets: ["VEML6040"]),
         .library(name: "VEML6070", targets: ["VEML6070"]),
@@ -182,6 +184,9 @@ let package = Package(
             dependencies: ["SwiftIO",
                            .product(name: "RealModule", package: "swift-numerics")]),
         .target(
+            name: "TMP102",
+            dependencies: ["SwiftIO"]),
+        .target(
             name: "TSL2591",
             dependencies: ["SwiftIO"]),
         .target(
@@ -241,6 +246,9 @@ let package = Package(
         .testTarget(
             name: "TCS34725Tests",
             dependencies: ["TCS34725", "SwiftIO"]),
+        .testTarget(
+            name: "TMP102Tests",
+            dependencies: ["TMP102", "SwiftIO"]),
         .testTarget(
             name: "TSL2591Tests",
             dependencies: ["TSL2591", "SwiftIO"]),
