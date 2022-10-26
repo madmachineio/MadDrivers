@@ -77,7 +77,7 @@ public final class ST7789 {
     /// - Parameters:
     ///   - spi: **REQUIRED** SPI interface. The communication speed between
     ///     two devices should be as fast as possible within the range,
-    ///     usually 60,000,000.
+    ///     usually 30,000,000.
     ///   - cs: **REQUIRED** The digital output pin used for chip select.
     ///   - dc: **REQUIRED** The digital output pin used for data or command.
     ///   - rst: **REQUIRED** The digital output pin used to reset the screen.
