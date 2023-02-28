@@ -6,9 +6,9 @@
 [![Discord](https://img.shields.io/discord/592743353049808899?&logo=Discord&colorB=7289da)](https://madmachine.io/discord)
 [![twitter](https://img.shields.io/twitter/follow/madmachineio?label=%40madmachineio&style=social)](https://twitter.com/madmachineio)
 
-This `MadDrivers` library, based on `SwiftIO`, provides an easy way to use all kinds of devices with your boards. You could directly use the related class to read or write data without worrying about the communication details.
+This `MadDrivers` library, based on `SwiftIO`, provides an easy way to use all kinds of devices with your boards. You could directly use the related class to read or write data without worrying about communication details.
 
-Note: This library aims to simplify the way you program all devices, so some uncommon errors or rare situations aren't considered. The `SwiftIO` library can give the messages about the communication and which error occurs if it fails. If you need more detailed results to ensure security, feel free to download and modify the code according to your need.
+Note: This library aims to simplify the way you program all devices, so some uncommon errors or rare situations aren't considered. The `SwiftIO` library can give messages about the communication and which error occurs if it fails. If you need more detailed results to ensure security, feel free to download and modify the code according to your need.
 
 ## Drivers
 The table below lists the existing drivers and will be updated as time goes on.
@@ -95,6 +95,11 @@ The table below lists the existing drivers and will be updated as time goes on.
     <td>I2C</td>
   </tr>
   <tr>
+    <td>Touch</td>
+    <td>MPR121</td>
+    <td>I2C</td>
+  </tr>
+  <tr>
     <td rowspan="4">Light</td>
     <td>BH1750</td>
     <td>I2C</td>
@@ -144,7 +149,7 @@ The table below lists the existing drivers and will be updated as time goes on.
     <td>I2C</td>
   </tr>
   <tr>
-    <td rowspan="4">Temperature &amp; Humidity</td>
+    <td rowspan="7">Temperature &amp; Humidity</td>
     <td>AHTx0</td>
     <td>I2C</td>
   </tr>
@@ -155,6 +160,10 @@ The table below lists the existing drivers and will be updated as time goes on.
   <tr>
     <td>DHTxx</td>
     <td>GPIO</td>
+  </tr>
+  <tr>
+    <td>MAX6675</td>
+    <td>SPI</td>
   </tr>
   <tr>
     <td>MCP9808</td>
@@ -327,7 +336,6 @@ If you would like to create a new driver, below is our to-do list of sensors for
 | CO2                                  | SCD4X         | I2C           |
 | IR Thermal Camera                    | MLX90640      | I2C           |
 | UV/IR/ambient light                  | SI1145        | I2C           |
-| Capacitive touch                     | MPR121        | I2C           |
 | Current/power monitor                | INA260        | I2C           |
 | RF Transceiver                       | NRF24L01      | SPI           |
 | Absolute-orientation                 | BNO055        | I2C/UART      |
