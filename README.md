@@ -127,13 +127,17 @@ The table below lists the existing drivers and will be updated as time goes on.
     <td>I2C/SPI</td>
   </tr>
   <tr>
-    <td rowspan="2">Pressure</td>
+    <td rowspan="3">Pressure</td>
     <td>BMP280</td>
     <td>I2C/SPI</td>
   </tr>
-    <tr>
+  <tr>
     <td>MPL3115A2</td>
     <td>I2C</td>
+  </tr>
+    <tr>
+    <td>MS5611</td>
+    <td>I2C/SPI</td>
   </tr>
   <tr>
     <td rowspan="3">RTC</td>
@@ -331,7 +335,6 @@ If you would like to create a new driver, below is our to-do list of sensors for
 | Temperature/Humidity/Pressure        | BME280        | I2C/SPI       |
 | Pressure                             | BMP085/BMP180 | I2C           |
 | Pressure                             | BMP388        | I2C/SPI       |
-| Pressure                             | MS5611        | I2C/SPI       |
 | Air quality                          | CCS811        | I2C           |
 | CO2                                  | SCD4X         | I2C           |
 | IR Thermal Camera                    | MLX90640      | I2C           |
