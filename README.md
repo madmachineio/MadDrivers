@@ -153,7 +153,7 @@ The table below lists the existing drivers and will be updated as time goes on.
     <td>I2C</td>
   </tr>
   <tr>
-    <td rowspan="7">Temperature &amp; Humidity</td>
+    <td rowspan="8">Temperature &amp; Humidity</td>
     <td>AHTx0</td>
     <td>I2C</td>
   </tr>
@@ -164,6 +164,10 @@ The table below lists the existing drivers and will be updated as time goes on.
   <tr>
     <td>DHTxx</td>
     <td>GPIO</td>
+  </tr>
+  <tr>
+    <td>HTU21D</td>
+    <td>I2C</td>
   </tr>
   <tr>
     <td>MAX6675</td>
@@ -329,7 +333,6 @@ If you would like to create a new driver, below is our to-do list of sensors for
 | Type                                 | Sensors       | Communication |
 | ------------------------------------ | ------------- | ------------- |
 | Temperature/humidity                 | HTS221        | I2C/SPI       |
-| Temperature/humidity                 | HTU21D        | I2C           |
 | Temperature/humidity                 | SI7021        | I2C           |
 | Pressure/Temperature                 | MPL115A2      | I2C           |
 | Temperature/Humidity/Pressure        | BME280        | I2C/SPI       |
