@@ -23,6 +23,7 @@ let package = Package(
                 "DHTxx",
                 "DS3231",
                 "HCSR04",
+                "HTU21D",
                 "IS31FL3731",
                 "LCD1602",
                 "LIS3DH",
@@ -60,6 +61,7 @@ let package = Package(
         .library(name: "DHTxx", targets: ["DHTxx"]),
         .library(name: "DS3231", targets: ["DS3231"]),
         .library(name: "HCSR04", targets: ["HCSR04"]),
+        .library(name: "HTU21D", targets: ["HTU21D"]),
         .library(name: "IS31FL3731", targets: ["IS31FL3731"]),
         .library(name: "LCD1602", targets: ["LCD1602"]),
         .library(name: "LIS3DH", targets: ["LIS3DH"]),
@@ -135,6 +137,9 @@ let package = Package(
             dependencies: ["SwiftIO"]),
         .target(
             name: "HCSR04",
+            dependencies: ["SwiftIO"]),
+        .target(
+            name: "HTU21D",
             dependencies: ["SwiftIO"]),
         .target(
             name: "IS31FL3731",
@@ -236,6 +241,9 @@ let package = Package(
         .testTarget(
             name: "BMI160Tests",
             dependencies: ["BMI160", "SwiftIO"]),
+        .testTarget(
+            name: "HTU21DTests",
+            dependencies: ["HTU21D", "SwiftIO"]),
         .testTarget(
             name: "LTR390Tests",
             dependencies: ["LTR390", "SwiftIO"]),
