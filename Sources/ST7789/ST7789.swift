@@ -95,6 +95,8 @@ public final class ST7789 {
                 || (width == 320 && height == 240)
                 || (width == 135 && height == 240)
                 || (width == 240 && height == 135)
+                || (width == 172 && height == 320)
+                || (width == 320 && height == 172)
                 else {
                     fatalError("Not support this resolution!")
                 }
@@ -240,6 +242,56 @@ public final class ST7789 {
                 case .angle270:
                     xOffset = 52
                     yOffset = 40
+                    swap(&width, &height)
+                    madctlConfig = [.pageTopToBottom, .leftToRight,
+                                    .normalMode, .lineTopToBottom, .RGB]
+                }
+            case (172, 320):
+                switch rotation {
+                case .angle0:
+                    xOffset = 34
+                    yOffset = 0
+                    madctlConfig = [.pageTopToBottom, .leftToRight,
+                                    .normalMode, .lineTopToBottom, .RGB]
+                case .angle90:
+                    xOffset = 0
+                    yOffset = 34
+                    swap(&width, &height)
+                    madctlConfig = [.pageTopToBottom, .rightToLeft,
+                                    .reverseMode, .lineBottomToTop, .RGB]
+                case .angle180:
+                    xOffset = 34
+                    yOffset = 0
+                    madctlConfig = [.pageBottomToTop, .rightToLeft,
+                                    .normalMode, .lineTopToBottom, .RGB]
+                case .angle270:
+                    xOffset = 0
+                    yOffset = 34
+                    swap(&width, &height)
+                    madctlConfig = [.pageBottomToTop, .leftToRight,
+                                    .reverseMode, .lineTopToBottom, .RGB]
+                }
+            case (320, 172):
+                switch rotation {
+                case .angle0:
+                    xOffset = 0
+                    yOffset = 34
+                    madctlConfig = [.pageTopToBottom, .rightToLeft,
+                                    .reverseMode, .lineBottomToTop, .RGB]
+                case .angle90:
+                    xOffset = 34
+                    yOffset = 0
+                    swap(&width, &height)
+                    madctlConfig = [.pageBottomToTop, .rightToLeft,
+                                    .normalMode, .lineTopToBottom, .RGB]
+                case .angle180:
+                    xOffset = 0
+                    yOffset = 34
+                    madctlConfig = [.pageBottomToTop, .leftToRight,
+                                    .reverseMode, .lineTopToBottom, .RGB]
+                case .angle270:
+                    xOffset = 34
+                    yOffset = 0
                     swap(&width, &height)
                     madctlConfig = [.pageTopToBottom, .leftToRight,
                                     .normalMode, .lineTopToBottom, .RGB]
