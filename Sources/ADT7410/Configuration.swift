@@ -35,8 +35,8 @@ public extension ADT7410 {
         public var temperatureDetectionMode: TemperatureDetectionMode = .COMPARATOR_MODE
         /// The operation mode describes in which cycle the temperature is measured by the chip.
         public var operationMode: OperationMode = .CONTINUOS
-        /// The sensor store the temperature in 13 bit or 16 bit resulution.
-        public var resulution: Resulution = .r_13Bit
+        /// The sensor store the temperature in 13 bit or 16 bit resolution.
+        public var resolution: Resolution = .r_13Bit
         
         /// Initialize default configuration of a ADT7410.
         public init(){}
@@ -51,7 +51,7 @@ public extension ADT7410 {
             intOutputPolarity = .init(rawValue: configByte & 0b1000)!
             temperatureDetectionMode = .init(rawValue: configByte & 0b10000)!
             operationMode = .init(rawValue: configByte & 0b1100000)!
-            resulution = .init(rawValue: configByte & 0b10000000)!
+            resolution = .init(rawValue: configByte & 0b10000000)!
         }
         
         func getByte() -> UInt8{
@@ -60,7 +60,7 @@ public extension ADT7410 {
                      intOutputPolarity.rawValue |
                      temperatureDetectionMode.rawValue |
                      operationMode.rawValue |
-                     resulution.rawValue )
+                     resolution.rawValue )
         }
     }
     
@@ -110,8 +110,8 @@ public extension ADT7410 {
         case SHUTDOWN = 0b1100000
     }
     
-    /// The sensor store the temperature in 13 bit or 16 bit resulution.
-    enum Resulution: UInt8{
+    /// The sensor store the temperature in 13 bit or 16 bit resolution.
+    enum Resolution: UInt8{
         
         /// Sign bit + 12 bits gives a temperature resolution of 0.0625°C.
         case r_13Bit = 0b0
