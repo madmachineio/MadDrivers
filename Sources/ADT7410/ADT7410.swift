@@ -38,11 +38,11 @@ public class ADT7410{
         let operationMode = configuration.operationMode
         
         if(operationMode == .ONE_SHOT || operationMode == .SHUTDOWN){
-            set0perationMode(.ONE_SHOT)
+            setOperationMode(.ONE_SHOT)
             sleep(ms: 240)
         }
         
-        return Self.toTemp(configuration.resulution,read(.TEMP_MSB,2))
+        return Self.toTemp(configuration.resolution,read(.TEMP_MSB,2))
     }
     
     /// Read the status.
@@ -51,21 +51,21 @@ public class ADT7410{
         Status(read(.STATUS))
     }
     
-    /// Read the temparture range.
+    /// Read the temperature range.
     ///
     /// If the temperature falls below the min value or rises above the max value, the INT pin is triggered. Default temperature range is 10°C to 64°C.
     /// - Returns: Temperture range of the INT Pin.
     public func readIntTemperatureRange() -> (minTemp: Double,maxTemp: Double) {
-        ( Self.toTemp(configuration.resulution, read(.SETPOINT_TEMP_LOW_MSB,2)),
-          Self.toTemp(configuration.resulution, read(.SETPOINT_TEMP_HIGH_MSB,2)))
+        ( Self.toTemp(configuration.resolution, read(.SETPOINT_TEMP_LOW_MSB,2)),
+          Self.toTemp(configuration.resolution, read(.SETPOINT_TEMP_HIGH_MSB,2)))
     }
     
-    /// Read the critical temparture.
+    /// Read the critical temperature.
     ///
-    /// If the temperature rises above the value, the CT pin is triggered. Default critical temparture is 147°C.
-    /// - Returns: Critical temparture for the CT pin.
+    /// If the temperature rises above the value, the CT pin is triggered. Default critical temperature is 147°C.
+    /// - Returns: Critical temperature for the CT pin.
     public func readCTCriticalTemperature() -> Double{
-        Self.toTemp(configuration.resulution,read(.SETPOINT_TEMP_CRIT_MSB,2))
+        Self.toTemp(configuration.resolution,read(.SETPOINT_TEMP_CRIT_MSB,2))
     }
     
     /// Read the temperature hysteresis value for the THIGH, TLOW, and TCRIT temperature limits.
@@ -93,7 +93,7 @@ public class ADT7410{
     
     /// Set the operation mode.
     /// - Parameter mode: Operation mode
-    public func set0perationMode(_ mode: OperationMode){
+    public func setOperationMode(_ mode: OperationMode){
         configuration.operationMode = mode
         write([configuration.getByte()], to: .CONFIG)
     }
@@ -126,31 +126,31 @@ public class ADT7410{
         write([configuration.getByte()],to: .CONFIG)
     }
     
-    /// Set the temparture range.
+    /// Set the temperature range.
     ///
     /// If the temperature falls below the min value or rises above the max value, the INT pin is triggered. Default temperature range is 10°C to 64°C.
     /// - Parameters:
     ///   - minTemp: Lower limit of the temperature range.
     ///   - maxTemp: Upper limit of the temperature range.
     public func setIntTemperatureRange(min minTemp: Double, max maxTemp: Double ){
-        write(Self.toData(configuration.resulution, minTemp), to: .SETPOINT_TEMP_LOW_MSB)
-        write(Self.toData(configuration.resulution, maxTemp), to: .SETPOINT_TEMP_HIGH_MSB)
+        write(Self.toData(configuration.resolution, minTemp), to: .SETPOINT_TEMP_LOW_MSB)
+        write(Self.toData(configuration.resolution, maxTemp), to: .SETPOINT_TEMP_HIGH_MSB)
     }
     
-    /// Set the critical temparture.
+    /// Set the critical temperature.
     ///
-    /// If the temperature rises above the value, the CT pin is triggered. Default critical temparture is 147°C.
-    /// - Parameter tempature: Critical temparture for the CT pin.
-    public func setCTCriticalTemperature(tempature: Double){
-        write(Self.toData(configuration.resulution,tempature), to: .SETPOINT_TEMP_CRIT_MSB)
+    /// If the temperature rises above the value, the CT pin is triggered. Default critical temperature is 147°C.
+    /// - Parameter temperature: Critical temperature for the CT pin.
+    public func setCTCriticalTemperature(temperature: Double){
+        write(Self.toData(configuration.resolution,temperature), to: .SETPOINT_TEMP_CRIT_MSB)
     }
     
     /// Set the temperature hysteresis value for the THIGH, TLOW, and TCRIT temperature limits.
     ///
     /// The value is subtracted from the THIGH and TCRIT values and added to the TLOW value to implement hysteresis. allowed values are from 0°C-15°C and default temperature hyst is 5°C.
-    /// - Parameter tempature: Temperature hysteresis value.
-    public func setHyst(tempature: UInt8){
-        write([tempature], to: .SETPOINT_TEMP_HYST)
+    /// - Parameter temperature: Temperature hysteresis value.
+    public func setHyst(temperature: UInt8){
+        write([temperature], to: .SETPOINT_TEMP_HYST)
     }
     
     /// Set the configuration.
@@ -185,22 +185,22 @@ extension ADT7410 {
         i2c.write([registerAddresse.rawValue]+data, to: serialBusAddress.rawValue)
     }
     
-    static func toTemp(_ resulution: ADT7410.Resulution, _ data: [UInt8]) -> Double{
+    static func toTemp(_ resolution: ADT7410.Resolution, _ data: [UInt8]) -> Double{
         let dataInt16 = (Int16(data[0]) << 8) | Int16(data[1])
         let isPositiveTemp = dataInt16 >= 0
         
-        switch(resulution, isPositiveTemp){
+        switch(resolution, isPositiveTemp){
         case (.r_13Bit,true): return Double(dataInt16 >> 3) / 16
         case (.r_13Bit,false): return Double(dataInt16 >> 3 | 0b1 << 15) / 16
         case (.r_16Bit,_ ): return Double(dataInt16) / 128
         }
     }
     
-    static func toData(_ resulution: ADT7410.Resulution, _ temp: Double) -> [UInt8]{
+    static func toData(_ resolution: ADT7410.Resolution, _ temp: Double) -> [UInt8]{
         let isPositiveTemp = temp >= 0
         var data:Int16 = 0
         
-        switch(resulution, isPositiveTemp){
+        switch(resolution, isPositiveTemp){
         case (.r_13Bit,true): data = Int16(temp * 16) << 3
         case (.r_13Bit,false): data = (Int16(temp * 16) << 3) | 0b1 << 15
         case (.r_16Bit,_): data = Int16(temp * 128.0)
