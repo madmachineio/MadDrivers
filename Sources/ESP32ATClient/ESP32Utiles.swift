@@ -1,9 +1,9 @@
-typealias URCCallback = (String?) -> Void
+typealias URCCallback = (String) -> Void
 
 public struct URCMessage {
-    let prefix: String
-    let suffix: String
-    let callback: URCCallback?
+    var prefix: String = ""
+    var suffix: String = ""
+    let callback: URCCallback
 }
 
 public enum ATCommand {
@@ -14,9 +14,11 @@ public enum ATCommand {
 }
 
 public enum ESP32ATClientError: Error {
+    case requestError
     case requestOverlength
     case responseTimeout
     case responseError
+    case receivePromptFailed
     case resetError
 }
 
@@ -33,7 +35,7 @@ public struct ATRequest {
         content = atCommand
     }
 
-    func parse() throws -> String {
+    public func parse() throws -> String {
         let requestString: String
 
         switch self.content {

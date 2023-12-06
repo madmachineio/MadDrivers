@@ -3,7 +3,7 @@ import MadBoard
 import ESP32ATClient
 
 @main
-public struct HttpGet {
+public struct HttpPost {
     public static func main() {
         sleep(ms: 100)
 
@@ -34,10 +34,10 @@ public struct HttpGet {
         while true {
             if esp.wifiStatus == .ready {
                 do {
-                    let ret = try esp.httpGet(url: "https://httpbin.org/get")
+                    let ret = try esp.httpPost(url: "https://httpbin.org/post", headers: ["Accept: application/json"])
                     print(ret)
                 } catch {
-                    print("Http GET Error: \(error)")
+                    print("Http POST Error: \(error)")
                 }
             } else {
                 _ = try? esp.readLine(timeout: 1000)

@@ -1,4 +1,3 @@
-// Read temperature and relative humidity every second.
 import SwiftIO
 import MadBoard
 import ESP32ATClient

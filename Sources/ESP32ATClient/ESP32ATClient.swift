@@ -6,7 +6,6 @@ public final class ESP32ATClient {
     static let responseOK = "OK"
     static let responseError = "ERROR"
     static let endMark = "\r\n"
-    static let prompt = Character(">")
     static let promptByte = UInt8(0x3E)
 
     let uart: UART
@@ -21,51 +20,46 @@ public final class ESP32ATClient {
     public private(set) var esp32Status: ESP32Status = .initialization
     public private(set) var wifiStatus: WiFiStatus = .disconnected
     public private(set) var connectionStatus: ConnectionStatus = .closed
-    public private(set) var promptReceived = false
 
-    lazy var readyCallback: URCCallback = { [unowned self] (str: String?) -> Void in
+    lazy var readyCallback: URCCallback = { [unowned self] (str: String) -> Void in
         esp32Status = .ready
         wifiStatus = .disconnected
         connectionStatus = .closed
     }
 
-    lazy var busyCallback: URCCallback = { [unowned self] (str: String?) in
+    lazy var busyCallback: URCCallback = { [unowned self] (str: String) in
         sleep(ms: 10)
     }
 
-    lazy var wifiConnectedCallback: URCCallback = { [unowned self] (str: String?) in
+    lazy var wifiConnectedCallback: URCCallback = { [unowned self] (str: String) in
         wifiStatus = .connected
         connectionStatus = .closed
     }
 
-    lazy var wifiReadyCallback: URCCallback = { [unowned self] (str: String?) in
+    lazy var wifiReadyCallback: URCCallback = { [unowned self] (str: String) in
         wifiStatus = .ready
         connectionStatus = .closed
     }
 
-    lazy var wifiDisconnectedCallback: URCCallback = { [unowned self] (str: String?) in
+    lazy var wifiDisconnectedCallback: URCCallback = { [unowned self] (str: String) in
         wifiStatus = .disconnected
         connectionStatus = .closed
     }
 
-    lazy var connectionOKCallback: URCCallback = { [unowned self] (str: String?) in
+    lazy var connectionOKCallback: URCCallback = { [unowned self] (str: String) in
         connectionStatus = .established
     }
 
-    lazy var sendOKCallback: URCCallback = { [unowned self] (str: String?) in
+    lazy var sendOKCallback: URCCallback = { [unowned self] (str: String) in
         connectionStatus = .sendOK
     }
 
-    lazy var sendFailCallback: URCCallback = { [unowned self] (str: String?) in
+    lazy var sendFailCallback: URCCallback = { [unowned self] (str: String) in
         connectionStatus = .error
     }
 
-    lazy var connectionCloseCallback: URCCallback = { [unowned self] (str: String?) in
+    lazy var connectionCloseCallback: URCCallback = { [unowned self] (str: String) in
         connectionStatus = .closed
-    }
-
-    lazy var promptReceivedCallback: URCCallback = { [unowned self] (str: String?) in
-        promptReceived = true
     }
 
     public init(uart: UART, rst: DigitalOut) {
@@ -76,19 +70,17 @@ public final class ESP32ATClient {
         receivedBytes.reserveCapacity(1024 * 16)
 
         self.urcMessages = [
-            URCMessage(prefix: "ready", suffix: ESP32ATClient.endMark, callback: readyCallback),
-            URCMessage(prefix: "busy p...", suffix: ESP32ATClient.endMark, callback: busyCallback),
+            URCMessage(prefix: "ready", callback: readyCallback),
+            URCMessage(prefix: "busy p...", callback: busyCallback),
 
-            URCMessage(prefix: "WIFI CONNECTED", suffix: ESP32ATClient.endMark, callback: wifiConnectedCallback),
-            URCMessage(prefix: "WIFI GOT IP", suffix: ESP32ATClient.endMark, callback: wifiReadyCallback),
-            URCMessage(prefix: "WIFI DISCONNECT", suffix: ESP32ATClient.endMark, callback: wifiDisconnectedCallback),
+            URCMessage(prefix: "WIFI CONNECTED", callback: wifiConnectedCallback),
+            URCMessage(prefix: "WIFI GOT IP", callback: wifiReadyCallback),
+            URCMessage(prefix: "WIFI DISCONNECT", callback: wifiDisconnectedCallback),
 
-            URCMessage(prefix: "CONNECT", suffix: ESP32ATClient.endMark, callback: connectionOKCallback),
-            URCMessage(prefix: "SEND OK", suffix: ESP32ATClient.endMark, callback: sendOKCallback),
-            URCMessage(prefix: "SEND FAIL", suffix: ESP32ATClient.endMark, callback: sendFailCallback),
-            URCMessage(prefix: "CLOSED", suffix: ESP32ATClient.endMark, callback: connectionCloseCallback),
-
-            URCMessage(prefix: ">", suffix: "", callback: promptReceivedCallback),
+            URCMessage(prefix: "CONNECT", callback: connectionOKCallback),
+            URCMessage(prefix: "SEND OK", callback: sendOKCallback),
+            URCMessage(prefix: "SEND FAIL", callback: sendFailCallback),
+            URCMessage(prefix: "CLOSED", callback: connectionCloseCallback),
         ]
     }
 
@@ -115,51 +107,60 @@ public final class ESP32ATClient {
         }
     }
 
-    private func readLine(timeout: Int = -1, waitPrompt: Bool = false) throws -> String {
+    @discardableResult
+    public func readLine(timeout: Int = -1, removeNLCR: Bool = true) throws -> String {
+        var receivedOneLine = false
+
         while true {
             let byte = try readByte(timeout: timeout)
 
             if byte == 0x0A && lastByte == 0x0D {
-                _ = receivedBytes.removeLast()
-                lastByte = byte
-                break
-            }
-            if waitPrompt && byte == ESP32ATClient.promptByte {
-                receivedBytes.removeAll(keepingCapacity: true)
-                receivedBytes.append(byte)
-                lastByte = byte
-                break
+                receivedOneLine = true
             }
             receivedBytes.append(byte)
             lastByte = byte
+            if receivedOneLine {
+                break
+            }
+        }
+        if removeNLCR {
+            receivedBytes.removeLast()
+            receivedBytes.removeLast()
         }
         receivedBytes.append(0)
         let line = String(cString: receivedBytes)
         receivedBytes.removeAll(keepingCapacity: true)
+        if !line.isEmpty {
+            for urc in urcMessages {
+                if (line.hasPrefix(urc.prefix)) || (!urc.suffix.isEmpty && line.hasSuffix(urc.suffix)) {
+                    urc.callback(line)
+                    break
+                }
+            }
+        }
         return line
     }
 
-    @discardableResult
-    public func waitURCMessage(timeout: Int = 5000, waitPrompt: Bool = false) throws -> String {
+    public func waitPrompt(timeout: Int = 2000) throws {
         lock.lock()
         defer { lock.unlock() }
 
+        var byte: UInt8 = 0
         while true {
-            let line = try readLine(timeout: timeout, waitPrompt: waitPrompt)
-            if !line.isEmpty {
-                for urc in urcMessages {
-                    if line.hasPrefix(urc.prefix) {
-                        urc.callback!(line)
-                        return line
-                    }
-                }
+            do {
+                byte = try readByte(timeout: timeout)
+            } catch {
+                throw ESP32ATClientError.receivePromptFailed
+            }
+
+            if byte == ESP32ATClient.promptByte {
+                break
             }
         }
     }
 
     public func executeRequesst(_ rst: ATRequest, timeout: Int = 5000) throws -> ATResponse {
         var response = ATResponse()
-        var receivedURC = false
 
         lock.lock()
         defer { lock.unlock() }
@@ -169,17 +170,6 @@ public final class ESP32ATClient {
         while true {
             let line = try readLine(timeout: timeout)
             if !line.isEmpty {
-                for urc in urcMessages {
-                    if line.hasPrefix(urc.prefix) {
-                        urc.callback!(line)
-                        receivedURC = true
-                        break
-                    }
-                }
-                if receivedURC {
-                    receivedURC = false
-                    continue
-                }
                 response.content.append(line)
                 if line.hasPrefix(ESP32ATClient.responseOK) {
                     response.ok = true
@@ -224,9 +214,14 @@ extension ESP32ATClient {
         lastByte = 0
         rst.high()
 
-        try waitURCMessage()
-        if esp32Status != .ready {
-            throw ESP32ATClientError.resetError
+        do {
+            try readLine(timeout: 2000)
+        } catch ESP32ATClientError.responseTimeout {
+            if esp32Status != .ready {
+                throw ESP32ATClientError.resetError
+            }
+        } catch {
+            throw error
         }
     }
 
@@ -324,7 +319,7 @@ extension ESP32ATClient {
         let response = try executeRequesst(request)
 
         while wifiStatus != .ready {
-            try waitURCMessage(timeout: 10000)
+            try readLine(timeout: 10000)
         }
 
         return response.ok && wifiStatus == .ready
@@ -381,7 +376,6 @@ extension ESP32ATClient {
             response.content.removeAll { str in
                 !str.hasPrefix(command)
             }
-            print(response.content)
             for var item in response.content {
                 if let firstComma = item.firstIndex(of: ",") {
                     item.removeSubrange(item.startIndex...firstComma)
@@ -418,7 +412,7 @@ extension ESP32ATClient {
         throw ESP32ATClientError.responseError
     }
 
-    public func httpPost(url: String, data: String, headers: [String] = [], timeout: Int = 5000) throws -> Bool {
+    public func httpPost(url: String, data: String = "\r\n", headers: [String] = [], timeout: Int = 5000) throws -> String {
         let command = "+HTTPCPOST"
         var parameter = "\"" + url + "\"," + String(data.utf8.count)
 
@@ -430,19 +424,33 @@ extension ESP32ATClient {
         }
 
         let request = ATRequest(ATCommand.setup(command: command, parameter: parameter))
-        let response = try executeRequesst(request, timeout: timeout)
+        let sendResponse = try executeRequesst(request, timeout: timeout)
 
-        if response.ok {
-            _ = try waitURCMessage(timeout: timeout, waitPrompt: true)
+        if sendResponse.ok {
+
+            try waitPrompt(timeout: timeout)
             connectionStatus = .closed
+
             try writeString(data)
 
-            _ = try waitURCMessage(timeout: timeout)
-            if connectionStatus == .sendOK {
-                return true
-            } else {
-                return false
+            var receiveResponse = ATResponse()
+            while connectionStatus != .sendOK {
+                receiveResponse.content.append(try readLine(timeout: timeout))
             }
+
+            receiveResponse.ok = true
+            var string = ""
+
+            receiveResponse.content.removeAll { str in
+                !str.hasPrefix(command)
+            }
+            for var item in receiveResponse.content {
+                if let firstComma = item.firstIndex(of: ",") {
+                    item.removeSubrange(item.startIndex...firstComma)
+                    string += item
+                }
+            }
+            return string
         }
 
         throw ESP32ATClientError.responseError
