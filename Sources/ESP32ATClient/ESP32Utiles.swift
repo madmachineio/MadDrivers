@@ -23,6 +23,14 @@ public enum ESP32ATClientError: Error {
     case resetError
 }
 
+public enum ESP32ATClientJoinWiFiError: Error {
+    case timeout
+    case passwordError
+    case cannotFindAP
+    case connectFailed
+    case unknownError
+}
+
 public struct ATResponse {
     var content: [String] = []
     var ok = false

@@ -214,22 +214,45 @@ extension ESP32ATClient {
         lastByte = 0
         rst.high()
 
-        do {
-            try readLine(timeout: 2000)
-        } catch ESP32ATClientError.responseTimeout {
-            if esp32Status != .ready {
-                throw ESP32ATClientError.resetError
+        while esp32Status != .ready {
+            do {
+                try readLine(timeout: 2000)
+            } catch ESP32ATClientError.responseTimeout {
+                if esp32Status != .ready {
+                    throw ESP32ATClientError.resetError
+                }
+            } catch {
+                throw error
             }
-        } catch {
-            throw error
         }
     }
 
-    public func restore() throws -> Bool {
+    public func restore() throws {
         let request = ATRequest(ATCommand.execute(command: "+RESTORE"))
         let response = try executeRequesst(request)
 
-        return response.ok
+        if response.ok {
+            esp32Status = .initialization
+            wifiStatus = .disconnected
+            connectionStatus = .closed
+            receivedBytes.removeAll(keepingCapacity: true)
+            lastByte = 0
+
+            while esp32Status != .ready {
+                do {
+                    try readLine(timeout: 2000)
+                } catch ESP32ATClientError.responseTimeout {
+                    if esp32Status != .ready {
+                        throw ESP32ATClientError.resetError
+                    }
+                } catch {
+                    throw error
+                }
+            }
+            return
+        }
+
+        throw ESP32ATClientError.responseError
     }
 
     public func setBaudRate(to speed: Int = 115200, storage: Bool = false) throws -> Bool {
@@ -304,7 +327,7 @@ extension ESP32ATClient {
         return false
     }
 
-    public func joinAP(ssid: String? = nil, password: String = "", timeout: Int = 5000, autoConnect: Bool = true) throws -> Bool {
+    public func joinAP(ssid: String? = nil, password: String = "", timeout: Int = 20000, autoConnect: Bool = true) throws {
         let command = "+CWJAP"
         let request: ATRequest
 
@@ -316,17 +339,30 @@ extension ESP32ATClient {
             request = ATRequest(ATCommand.execute(command: command))
         }
 
-        let response = try executeRequesst(request, timeout: timeout)
+        var response = try executeRequesst(request, timeout: timeout)
 
-        while wifiStatus != .ready {
-            do {
-                try readLine(timeout: timeout)
-            } catch {
-                throw ESP32ATClientError.joinAPFailed
+        if response.ok {
+            return
+        } else {
+            response.content.removeAll { str in
+                !str.hasPrefix(command)
+            }
+            if response.content.count > 0 {
+                response.content[0].removeCommand()
+                switch response.content[0] {
+                    case "1":
+                    throw ESP32ATClientJoinWiFiError.timeout
+                    case "2":
+                    throw ESP32ATClientJoinWiFiError.passwordError
+                    case "3":
+                    throw ESP32ATClientJoinWiFiError.cannotFindAP
+                    case "4":
+                    throw ESP32ATClientJoinWiFiError.connectFailed
+                    default:
+                    throw ESP32ATClientJoinWiFiError.unknownError
+                }
             }
         }
-
-        return response.ok && wifiStatus == .ready
     }
 
     public func leaveAP() throws -> Bool {
@@ -431,7 +467,6 @@ extension ESP32ATClient {
         let sendResponse = try executeRequesst(request, timeout: timeout)
 
         if sendResponse.ok {
-
             try waitPrompt(timeout: timeout)
             connectionStatus = .closed
 

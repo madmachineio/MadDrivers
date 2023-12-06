@@ -21,7 +21,7 @@ public struct HttpPost {
             print("ESP32 WiFi mode: \(wifiMode)")
 
             // Fill the SSID and password below.
-            _ = try esp.joinAP(ssid: "", password: "", autoConnect: true)
+            try esp.joinAP(ssid: "", password: "", timeout: 20000, autoConnect: true)
             print("ESP32 WiFi status: \(esp.wifiStatus)")
 
             let ipInfo = try esp.getStationIP()

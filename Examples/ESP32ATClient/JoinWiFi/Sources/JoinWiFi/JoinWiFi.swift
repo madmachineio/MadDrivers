@@ -17,11 +17,14 @@ public struct JoinWiFi {
             print("ESP32 status: \(esp.esp32Status)")
 
             // Only in 'Station' or 'Station+SoftAP' mode can a connection to an AP be established.
-            let wifiMode = try esp.getWiFiMode()
+            var wifiMode = ESP32ATClient.WiFiMode.station
+            _ = try esp.setWiFiMode(wifiMode)
+
+            wifiMode = try esp.getWiFiMode()
             print("ESP32 WiFi mode: \(wifiMode)")
 
             // Fill the SSID and password below.
-            _ = try esp.joinAP(ssid: "", password: "")
+            try esp.joinAP(ssid: "", password: "", timeout: 20000)
             print("ESP32 WiFi status: \(esp.wifiStatus)")
 
             let ipInfo = try esp.getStationIP()

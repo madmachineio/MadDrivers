@@ -16,17 +16,21 @@ public struct Prepare {
             try esp.reset()
             print("ESP32 status: \(esp.esp32Status)")
 
-            let heartBeat = try esp.heartBeat()
-            print("ESP32 heart beat result: \(heartBeat)")
+            try esp.restore()
+            print("ESP32 restore status: \(esp.esp32Status)")
 
             let version = try esp.getVersion()
             print("ESP32 version info:\n\(version)")
-
         } catch {
             print("Error: \(error)")
         }
 
         while true {            
+            if let heartBeat = try? esp.heartBeat() {
+                print("ESP32 heart beat result: \(heartBeat)")
+            } else {
+                print("ESP32 heat beat failed!")
+            }
             sleep(ms: 1000)
         }
     }
