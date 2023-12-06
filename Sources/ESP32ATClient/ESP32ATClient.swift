@@ -304,7 +304,7 @@ extension ESP32ATClient {
         return false
     }
 
-    public func joinAP(ssid: String? = nil, password: String = "", autoConnect: Bool = true) throws -> Bool {
+    public func joinAP(ssid: String? = nil, password: String = "", timeout: Int = 5000, autoConnect: Bool = true) throws -> Bool {
         let command = "+CWJAP"
         let request: ATRequest
 
@@ -316,10 +316,14 @@ extension ESP32ATClient {
             request = ATRequest(ATCommand.execute(command: command))
         }
 
-        let response = try executeRequesst(request)
+        let response = try executeRequesst(request, timeout: timeout)
 
         while wifiStatus != .ready {
-            try readLine(timeout: 10000)
+            do {
+                try readLine(timeout: timeout)
+            } catch {
+                throw ESP32ATClientError.joinAPFailed
+            }
         }
 
         return response.ok && wifiStatus == .ready

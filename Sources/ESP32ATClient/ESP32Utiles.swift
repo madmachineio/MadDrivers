@@ -14,6 +14,7 @@ public enum ATCommand {
 }
 
 public enum ESP32ATClientError: Error {
+    case joinAPFailed
     case requestError
     case requestOverlength
     case responseTimeout
