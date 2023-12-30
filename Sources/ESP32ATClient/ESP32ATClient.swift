@@ -428,6 +428,44 @@ extension ESP32ATClient {
         throw ESP32ATClientError.responseError
     }
 
+    public func httpGet(url: String, headers: [String], timeout: Int = 5000) throws -> String {
+        let command = "+HTTPCLIENT"
+        var parameter = "2,0,\"" + url + "\",,,"
+
+        if url.hasPrefix("https") {
+            parameter += "2"
+        } else if url.hasPrefix("http") {
+            parameter += "1"
+        } else {
+            throw ESP32ATClientError.requestError
+        }
+
+        if headers.count > 0 {
+            for item in headers {
+                parameter += ",\"" + item + "\""
+            }
+        }
+
+        let request = ATRequest(ATCommand.setup(command: command, parameter: parameter))
+        var response = try executeRequesst(request, timeout: timeout)
+
+        if response.ok {
+            var string = ""
+            response.content.removeAll { str in
+                !str.hasPrefix(command)
+            }
+            for var item in response.content {
+                if let firstComma = item.firstIndex(of: ",") {
+                    item.removeSubrange(item.startIndex...firstComma)
+                    string += item
+                }
+            }
+            return string
+        }
+
+        throw ESP32ATClientError.responseError
+    }
+
     public func httpGet(url: String, timeout: Int = 5000) throws -> String {
         let command = "+HTTPCGET"
         let parameter = "\"" + url + "\",,," + String(timeout)
