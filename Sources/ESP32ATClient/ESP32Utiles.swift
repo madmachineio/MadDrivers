@@ -32,8 +32,8 @@ public enum ESP32ATClientJoinWiFiError: Error {
 }
 
 public struct ATResponse {
-    var content: [String] = []
-    var ok = false
+    public var content: [String] = []
+    public var ok = false
 }
 
 public struct ATRequest {

@@ -159,7 +159,7 @@ public final class ESP32ATClient {
         }
     }
 
-    public func executeRequesst(_ rst: ATRequest, timeout: Int = 5000) throws -> ATResponse {
+    public func executeRequest(_ rst: ATRequest, timeout: Int = 5000) throws -> ATResponse {
         var response = ATResponse()
 
         lock.lock()
@@ -186,19 +186,19 @@ public final class ESP32ATClient {
 extension ESP32ATClient {
     public func heartBeat() throws -> Bool {
         let request = ATRequest(ATCommand.execute(command: ""))
-        return try executeRequesst(request).ok
+        return try executeRequest(request).ok
     }
 
     public func softReset() throws -> Bool {
         let request = ATRequest(ATCommand.execute(command: "+RST"))
-        return try executeRequesst(request).ok
+        return try executeRequest(request).ok
     }
 
     public func setEcho(to enable: Bool) throws -> Bool {
         let command = enable ? "E1" : "E0"
 
         let request = ATRequest(ATCommand.execute(command: command))
-        let response = try executeRequesst(request)
+        let response = try executeRequest(request)
 
         return response.ok
     }
@@ -229,7 +229,7 @@ extension ESP32ATClient {
 
     public func restore() throws {
         let request = ATRequest(ATCommand.execute(command: "+RESTORE"))
-        let response = try executeRequesst(request)
+        let response = try executeRequest(request)
 
         if response.ok {
             esp32Status = .initialization
@@ -260,7 +260,7 @@ extension ESP32ATClient {
         let parameter = "\(String(speed)),8,1,0,0"
 
         let request = ATRequest(ATCommand.setup(command: command, parameter: parameter))
-        let response = try executeRequesst(request)
+        let response = try executeRequest(request)
 
         return response.ok
     }
@@ -269,7 +269,7 @@ extension ESP32ATClient {
         let command = "+GMR"
 
         let request = ATRequest(ATCommand.execute(command: command))
-        let response = try executeRequesst(request)
+        let response = try executeRequest(request)
 
         if response.ok {
             let version = response.content.reduce("") { str, item in
@@ -288,7 +288,7 @@ extension ESP32ATClient {
     public func getWiFiMode() throws -> WiFiMode {
         let command = "+CWMODE"
         let request = ATRequest(ATCommand.query(command: command))
-        var response = try executeRequesst(request)
+        var response = try executeRequest(request)
         var mode = WiFiMode.none
 
         if response.ok {
@@ -319,7 +319,7 @@ extension ESP32ATClient {
         let parameter = newMode.rawValue + (autoConnect ? ",1" : ",0")
         
         let request = ATRequest(ATCommand.setup(command: command, parameter: parameter))
-        let response = try executeRequesst(request)
+        let response = try executeRequest(request)
 
         if response.ok {
             return true
@@ -339,7 +339,7 @@ extension ESP32ATClient {
             request = ATRequest(ATCommand.execute(command: command))
         }
 
-        var response = try executeRequesst(request, timeout: timeout)
+        var response = try executeRequest(request, timeout: timeout)
 
         if response.ok {
             return
@@ -369,7 +369,7 @@ extension ESP32ATClient {
         let command = "+CWQAP"
         let request = ATRequest(ATCommand.execute(command: command))
 
-        let response = try executeRequesst(request)
+        let response = try executeRequest(request)
         return response.ok
     }
 
@@ -377,7 +377,7 @@ extension ESP32ATClient {
         let command = "+CIPSTA"
         let request = ATRequest(ATCommand.query(command: command))
 
-        var response = try executeRequesst(request)
+        var response = try executeRequest(request)
 
         if response.ok {
             response.content.removeAll { str in
@@ -397,7 +397,7 @@ extension ESP32ATClient {
         let parameter = (enable ? "1" : "0") + ",80" + ",60"
 
         let request = ATRequest(ATCommand.setup(command: command, parameter: parameter))
-        let response = try executeRequesst(request)
+        let response = try executeRequest(request)
 
         return response.ok
     }
@@ -409,7 +409,7 @@ extension ESP32ATClient {
         let command = "+HTTPCHEAD"
         let request = ATRequest(ATCommand.query(command: command))
 
-        var response = try executeRequesst(request)
+        var response = try executeRequest(request)
         var string = ""
 
         if response.ok {
@@ -447,7 +447,7 @@ extension ESP32ATClient {
         }
 
         let request = ATRequest(ATCommand.setup(command: command, parameter: parameter))
-        var response = try executeRequesst(request, timeout: timeout)
+        var response = try executeRequest(request, timeout: timeout)
 
         if response.ok {
             var string = ""
@@ -471,7 +471,7 @@ extension ESP32ATClient {
         let parameter = "\"" + url + "\",,," + String(timeout)
 
         let request = ATRequest(ATCommand.setup(command: command, parameter: parameter))
-        var response = try executeRequesst(request, timeout: timeout)
+        var response = try executeRequest(request, timeout: timeout)
 
         var string = ""
         if response.ok {
@@ -502,7 +502,7 @@ extension ESP32ATClient {
         }
 
         let request = ATRequest(ATCommand.setup(command: command, parameter: parameter))
-        let sendResponse = try executeRequesst(request, timeout: timeout)
+        let sendResponse = try executeRequest(request, timeout: timeout)
 
         if sendResponse.ok {
             try waitPrompt(timeout: timeout)
