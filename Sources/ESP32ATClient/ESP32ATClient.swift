@@ -1,5 +1,23 @@
+//=== ESP32ATClient.swift -------------------------------------------------===//
+//
+// Copyright (c) MadMachine Limited
+// Licensed under MIT License
+//
+// Authors: Andy Liu
+// Created: 01/29/2024
+//
+// See https://madmachine.io for more information
+//
+//===----------------------------------------------------------------------===//
+
 import SwiftIO
 
+/// The library for ESP32 enables you to connect to Wi-Fi networks and
+/// send HTTP requests to web servers.
+///
+/// The ESP32 simplifies WiFi connectivity and web functionality via its AT firmware.
+/// The ESP32ATClient library builds upon this, enabling ESP32 to act as a client.
+/// With it, you can effortlessly establish WiFi connections and send HTTP requests.
 public final class ESP32ATClient {
 
     static let prefix = "AT"
@@ -16,9 +34,12 @@ public final class ESP32ATClient {
 
     private var receivedBytes: [UInt8]
     private var lastByte = UInt8(0)
-
+    
+    /// Current ESP32 status.
     public private(set) var esp32Status: ESP32Status = .initialization
+    /// Current Wi-Fi status.
     public private(set) var wifiStatus: WiFiStatus = .disconnected
+    /// Current Wi-Fi connection status.
     public private(set) var connectionStatus: ConnectionStatus = .closed
 
     lazy var readyCallback: URCCallback = { [unowned self] (str: String) -> Void in
@@ -61,7 +82,11 @@ public final class ESP32ATClient {
     lazy var connectionCloseCallback: URCCallback = { [unowned self] (str: String) in
         connectionStatus = .closed
     }
-
+    
+    /// Initialize the ESP32.
+    /// - Parameters:
+    ///   - uart: **REQUIRED** The UART port to which the ESP32 is connected.
+    ///   - rst: **REQUIRED** The DigitalOut pin used to reset ESP32.
     public init(uart: UART, rst: DigitalOut) {
         self.uart = uart
         self.rst = rst
@@ -184,16 +209,23 @@ public final class ESP32ATClient {
 }
 
 extension ESP32ATClient {
+    /// Test the communication between your board and ESP32.
+    /// - Returns: True if the communication is successful.
     public func heartBeat() throws -> Bool {
         let request = ATRequest(ATCommand.execute(command: ""))
         return try executeRequest(request).ok
     }
-
+    
+    /// Trigger ESP32 software reset.
+    /// - Returns: A boolean value indicating whether the setting was successful.
     public func softReset() throws -> Bool {
         let request = ATRequest(ATCommand.execute(command: "+RST"))
         return try executeRequest(request).ok
     }
-
+    
+    /// Turn on/off AT command echoing.
+    /// - Parameter enable: Enable or disable echoing.
+    /// - Returns: A boolean value indicating whether the setting was successful.
     public func setEcho(to enable: Bool) throws -> Bool {
         let command = enable ? "E1" : "E0"
 
@@ -202,7 +234,8 @@ extension ESP32ATClient {
 
         return response.ok
     }
-
+    
+    /// Reset the ESP32.
     public func reset() throws {
         rst.low()
         sleep(ms: 40)
@@ -226,7 +259,8 @@ extension ESP32ATClient {
             }
         }
     }
-
+    
+    /// Restore factory default settings.
     public func restore() throws {
         let request = ATRequest(ATCommand.execute(command: "+RESTORE"))
         let response = try executeRequest(request)
@@ -254,7 +288,12 @@ extension ESP32ATClient {
 
         throw ESP32ATClientError.responseError
     }
-
+    
+    /// Set baud rate of the UART communication.
+    /// - Parameters:
+    ///   - speed: UART baud rate.
+    ///   - storage: Whether to save the current UART configuration as the default configuration.
+    /// - Returns: A boolean value indicating whether the setting was successful.
     public func setBaudRate(to speed: Int = 115200, storage: Bool = false) throws -> Bool {
         let command = storage ? "+UART_DEF" : "+UART_CUR"
         let parameter = "\(String(speed)),8,1,0,0"
@@ -264,7 +303,9 @@ extension ESP32ATClient {
 
         return response.ok
     }
-
+    
+    /// Get firmware version infomation.
+    /// - Returns: AT version, SDK version, compile time and Bin version.
     public func getVersion() throws -> String {
         let command = "+GMR"
 
@@ -284,7 +325,9 @@ extension ESP32ATClient {
 
 
 extension ESP32ATClient {
-
+    
+    /// Get current Wi-Fi mode.
+    /// - Returns: A Wi-Fi mode Indicating whether the ESP32 works as a station, an AP, both, or neither.
     public func getWiFiMode() throws -> WiFiMode {
         let command = "+CWMODE"
         let request = ATRequest(ATCommand.query(command: command))
@@ -313,7 +356,12 @@ extension ESP32ATClient {
         
         return mode
     }
-
+    
+    /// Set the ESP32 Wi-Fi Mode.
+    /// - Parameters:
+    ///   - newMode: The Wi-Fi Mode: `station`, `softAP`, `stationSoftAP`or `none`.
+    ///   - autoConnect: Wheter to enable automatic connection to an AP if ESP32 is set to station or stationSoftAP mode, defaulted to true.
+    /// - Returns: A boolean value indicating whether the setting was successful.
     public func setWiFiMode(_ newMode: WiFiMode, autoConnect: Bool = true) throws -> Bool {
         let command = "+CWMODE"
         let parameter = newMode.rawValue + (autoConnect ? ",1" : ",0")
@@ -326,7 +374,13 @@ extension ESP32ATClient {
         }
         return false
     }
-
+    
+    /// Connect an ESP32 station to the specified AP.
+    /// - Parameters:
+    ///   - ssid: The Wi-Fi name.
+    ///   - password: The Wi-Fi password.
+    ///   - timeout: Time in millisecond to wait for the connection.
+    ///   - autoConnect: Whether to enable Wi-Fi reconnection.
     public func joinAP(ssid: String? = nil, password: String = "", timeout: Int = 20000, autoConnect: Bool = true) throws {
         let command = "+CWJAP"
         let request: ATRequest
@@ -364,7 +418,9 @@ extension ESP32ATClient {
             }
         }
     }
-
+    
+    /// Disconnect from the AP.
+    /// - Returns: A boolean value indicating whether the disconnection was successful.
     public func leaveAP() throws -> Bool {
         let command = "+CWQAP"
         let request = ATRequest(ATCommand.execute(command: command))
@@ -372,7 +428,9 @@ extension ESP32ATClient {
         let response = try executeRequest(request)
         return response.ok
     }
-
+    
+    /// Get the IP address of the ESP32 Station.
+    /// - Returns: The IP address, gateway and netmask.
     public func getStationIP() throws -> [String] {
         let command = "+CIPSTA"
         let request = ATRequest(ATCommand.query(command: command))
@@ -391,7 +449,10 @@ extension ESP32ATClient {
 
         throw ESP32ATClientError.responseError
     }
-
+    
+    /// Enable/disable Wi-Fi connection configuration via Web server.
+    /// - Parameter enable: Enable or disable the configuration.
+    /// - Returns: A boolean value indicating whether the setting was successful.
     public func setWebServer(to enable: Bool) throws -> Bool {
         let command = "+WEBSERVER"
         let parameter = (enable ? "1" : "0") + ",80" + ",60"
@@ -405,6 +466,8 @@ extension ESP32ATClient {
 
 
 extension ESP32ATClient {
+    /// Get HTTP request header.
+    /// - Returns: HTTP request header.
     public func getHttpHead() throws -> String {
         let command = "+HTTPCHEAD"
         let request = ATRequest(ATCommand.query(command: command))
@@ -427,7 +490,13 @@ extension ESP32ATClient {
 
         throw ESP32ATClientError.responseError
     }
-
+    
+    /// Send HTTP GET requests to a web server with additional HTTP headers.
+    /// - Parameters:
+    ///   - url: The URL of the server to which the request will be sent.
+    ///   - headers: Additional HTTP headers to include in the request.
+    ///   - timeout: Time in millisecond to wait for the response.
+    /// - Returns: The response from the server.
     public func httpGet(url: String, headers: [String], timeout: Int = 5000) throws -> String {
         let command = "+HTTPCLIENT"
         var parameter = "2,0,\"" + url + "\",,,"
@@ -465,7 +534,12 @@ extension ESP32ATClient {
 
         throw ESP32ATClientError.responseError
     }
-
+    
+    /// Send HTTP GET requests to a web server
+    /// - Parameters:
+    ///   - url: The URL of the server to which the request will be sent.
+    ///   - timeout: Time in millisecond to wait for the response.
+    /// - Returns: The response from the server.
     public func httpGet(url: String, timeout: Int = 5000) throws -> String {
         let command = "+HTTPCGET"
         let parameter = "\"" + url + "\",,," + String(timeout)
@@ -489,7 +563,14 @@ extension ESP32ATClient {
 
         throw ESP32ATClientError.responseError
     }
-
+    
+    /// Perform an HTTP POST request to a web server.
+    /// - Parameters:
+    ///   - url: The URL of the server to which the POST request will be sent.
+    ///   - data: The body of the request.
+    ///   - headers: Additional HTTP headers to include in the request.
+    ///   - timeout: Time in millisecond to wait for the response.
+    /// - Returns: The response from the server.
     public func httpPost(url: String, data: String = "\r\n", headers: [String] = [], timeout: Int = 5000) throws -> String {
         let command = "+HTTPCPOST"
         var parameter = "\"" + url + "\"," + String(data.utf8.count)
