@@ -195,6 +195,11 @@ The table below lists the existing drivers and will be updated as time goes on.
     <td>VEML6070</td>
     <td>I2C</td>
   </tr>
+  <tr>
+    <td>Wi-Fi</td>
+    <td>ESP32</td>
+    <td>UART</td>
+  </tr>
 </tbody>
 </table>
 
