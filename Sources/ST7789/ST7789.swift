@@ -113,11 +113,11 @@ public final class ST7789 {
         self.yOffset = 0
         
         reset()
-        setRoation(rotation)
         
         initConfigs.forEach { config in
             writeConfig(config.data, to: config.address)
         }
+        setRoation(rotation)
         
         clearScreen()
         bl.high()
@@ -313,20 +313,19 @@ public final class ST7789 {
         setAddrWindow(x: x, y: y, width: 1, height: 1)
         writeData(color)
     }
-    
-    
-    /// Set an area of pixels on the screen. The data is in UInt8,
-    /// while a pixel needs a UInt16. So every 2 data in the array set 1 pixel.
+
+    /// Set an area of pixels on the screen.
     /// - Parameters:
     ///   - x: The x-coordinate of the start point.
     ///   - y: The y-coordinate of the start point.
     ///   - w: The width of the area.
     ///   - h: The height of the area.
-    ///   - data: An array of color data in UInt8.
+    ///   - data: An array of color data in UInt16.
     public func writeBitmap(x: Int, y: Int, width w: Int,
-                            height h: Int, data: [UInt8]) {
+                            height h: Int, data: [UInt16]) {
+        guard data.count >= w * h else { return }
         setAddrWindow(x: x, y: y, width: w, height: h)
-        writeData(data, count: w * h * 2)
+        writeData(data, count: w * h)
     }
 
     /// Set an area of pixels on the screen. The data is in UInt8,
@@ -339,18 +338,18 @@ public final class ST7789 {
     ///   - data: An raw buffer of color data.
     public func writeBitmap(x: Int, y: Int, width w: Int,
                             height h: Int, data: UnsafeRawBufferPointer) {
+        guard data.count >= w * h * 2 else { return }
         setAddrWindow(x: x, y: y, width: w, height: h)
         writeData(data, count: w * h * 2)
     }
     
     /// Set the screen with colors defined in an array.
-    /// Two data are for one pixel. So the data count should be double
     /// the product of width and height to set all pixels.
-    /// - Parameter data: An array of color data in UInt8.
-    public func writeScreen(_ data: [UInt8]) {
-        guard data.count <= width * height * 2 else { return }
+    /// - Parameter data: An array of color data in UInt16.
+    public func writeScreen(_ data: [UInt16]) {
+        guard data.count >= width * height else { return }
         setAddrWindow(x: 0, y: 0, width: width, height: height)
-        writeData(data)
+        writeData(data, count: width * height)
     }
     
     /// Set the screen with colors defined in an buffer.
@@ -358,7 +357,7 @@ public final class ST7789 {
     /// the product of width and height to set all pixels.
     /// - Parameter data: An array of color data in UInt8.
     public func writeScreen(_ data: UnsafeRawBufferPointer) {
-        guard data.count <= width * height * 2 else { return }
+        guard data.count >= width * height * 2 else { return }
         setAddrWindow(x: 0, y: 0, width: width, height: height)
         writeData(data, count: width * height * 2)
     }
@@ -500,14 +499,6 @@ extension ST7789 {
         cs.high()
     }
     
-    func writeData(_ data: UInt16) {
-        let array = [UInt8(data & 0xFF), UInt8(data >> 8)]
-        dc.high()
-        cs.low()
-        spi.write(array)
-        cs.high()
-    }
-    
     func writeData(_ data: [UInt8]) {
         dc.high()
         cs.low()
@@ -515,7 +506,7 @@ extension ST7789 {
         cs.high()
     }
 
-    func writeData(_ data: [UInt8], count: Int) {
+    func writeData(_ data: [UInt16], count: Int) {
         dc.high()
         cs.low()
         spi.write(data, count: count)
