@@ -1,10 +1,10 @@
-//=== ST7789.swift --------------------------------------------------------===//
+//=== ST7796.swift --------------------------------------------------------===//
 //
 // Copyright (c) MadMachine Limited
 // Licensed under MIT License
 //
 // Authors: Andy Liu
-// Created: 04/22/2021
+// Created: 04/27/2024
 //
 // See https://madmachine.io for more information
 //
@@ -13,8 +13,8 @@
 import SwiftIO
 
 
-/// This is the library for ST7789 SPI screen.
-/// It supports two sizes of screens: 240x240 and 240x320.
+/// This is the library for ST7796 SPI screen.
+/// It supports the size of screen: 480x320.
 ///
 /// It has 16-bit color pixels. One pixel matches one point of the
 /// coordinate system on the screen. It starts from (0,0).
@@ -22,43 +22,44 @@ import SwiftIO
 /// x and y coordinates go up respectively to the right and downwards.
 /// The origin can also be changed to any of the four corners of the screen
 /// as you rotate the display.
-public final class ST7789 {
-    
+public final class ST7796 {
     
     /// The rotation angles of the screen.
     public enum Rotation {
         case angle0, angle90, angle180, angle270
     }
-    
+
     private let initConfigs: [(address: Command, data: [UInt8]?)] = [
+        (.CSCON, [0xC3]),
+        (.CSCON, [0x96]),
         (.COLMOD, [0x55]),
-        (.INVON, nil),
+        (.CSCON, [0x3C]),
+        (.CSCON, [0x69]),
+        // (.INVON, nil),
         (.DISPON, nil)
     ]
-
-    /*
-     private let initConfigs: [(address: Command, data: [UInt8]?)] = [
-     (.COLMOD, [0x05]),
-
-     (.PORCTRL, [0x0C, 0x0C, 0x00, 0x33, 0x33]),
-     (.GCTRL, [0x35]),
-     (.VCOMS, [0x19]),
-     (.LCMCTRL, [0x2C]),
-     (.VDVVRHEN, [0x01]),
-     (.VRHS, [0x12]),
-     (.VDVSET, [0x20]),
-     (.FRCTR2, [0x0F]),
-     (.PWCTRL1, [0xA4, 0xA1]),
-     (.PVGAMCTRL, [0xD0, 0x04, 0x0A, 0x08, 0x07, 0x05, 0x32,
-     0x32, 0x48, 0x38, 0x15, 0x15, 0x2A, 0x2E]),
-     (.NVGAMCTRL, [0xD0, 0x07, 0x0D, 0x09, 0x09, 0x16, 0x30,
-     0x44, 0x49, 0x39, 0x16, 0x16, 0x2B, 0x2F]),
-
-     (.INVON, nil),
-     (.DISPON, nil)
-     ]
-     */
     
+    //  private let initConfigs: [(address: Command, data: [UInt8]?)] = [
+    //     (.CSCON, [0xC3]),
+    //     (.CSCON, [0x96]),
+    //     (.COLMOD, [0x05]),
+
+    //     (.DOCA, [0x40, 0x82, 0x07, 0x18, 0x27, 0x0A, 0xB6, 0x33]),
+    //     (.VCMPCTL, [0x27]),
+    //     (.PWR3, [0xA7]),
+
+    //     (.PGC, [0xF0, 0x01, 0x06, 0x0F, 0x12, 0x1D, 0x36, 0x54,
+    //         0x44, 0x0C, 0x18, 0x16, 0x13, 0x15]),
+    //     (.NGC, [0xF0, 0x01, 0x05, 0x0A, 0x0B, 0x07, 0x32, 0x44,
+    //         0x44, 0x0C, 0x18, 0x17, 0x13, 0x16]),
+
+    //     (.CSCON, [0x3C]),
+    //     (.CSCON, [0x69]),
+
+    //     //(.INVON, nil),
+    //     (.DISPON, nil)
+    //  ]
+
     let spi: SPI
     let cs, dc, rst, bl: DigitalOut
     
@@ -72,8 +73,7 @@ public final class ST7789 {
 
     
     /// Initialize all the necessary pins and set the parameters of the screen.
-    /// The ST7789 chip can drive 240x240 and 240x320 screens.
-    /// 240x240 by default.
+    /// The ST7796 chip can drive 480x320 screen.
     /// - Parameters:
     ///   - spi: **REQUIRED** SPI interface. The communication speed between
     ///     two devices should be as fast as possible within the range,
@@ -82,21 +82,16 @@ public final class ST7789 {
     ///   - dc: **REQUIRED** The digital output pin used for data or command.
     ///   - rst: **REQUIRED** The digital output pin used to reset the screen.
     ///   - bl: **REQUIRED** The digital output pin used for backlight control.
-    ///   - width: **OPTIONAL** The width of the screen. It is 240 by default.
-    ///   - height: **OPTIONAL** The height of the screen. It is 240 by default.
+    ///   - width: **OPTIONAL** The width of the screen. It is 480 by default.
+    ///   - height: **OPTIONAL** The height of the screen. It is 320 by default.
     ///   - rotation: **OPTIONAL** Set the origin and rotation of the screen.
     ///     By default, the origin is on top left of the screen.
     public init(spi: SPI, cs: DigitalOut, dc: DigitalOut,
                 rst: DigitalOut, bl: DigitalOut,
-                width: Int = 240, height: Int = 240,
+                width: Int = 480, height: Int = 320,
                 rotation: Rotation = .angle0) {
-        guard (width == 240 && height == 240)
-                || (width == 240 && height == 320)
-                || (width == 320 && height == 240)
-                || (width == 135 && height == 240)
-                || (width == 240 && height == 135)
-                || (width == 172 && height == 320)
-                || (width == 320 && height == 172)
+        guard (width == 480 && height == 320)
+                || (width == 320 && height == 480)
                 else {
                     fatalError("Not support this resolution!")
                 }
@@ -131,170 +126,46 @@ public final class ST7789 {
     public func setRoation(_ angle: Rotation) {
         rotation = angle
         var madctlConfig: MadctlConfig = [.RGB]
-
         let ratio = (width, height)
 
         switch ratio {
-            case (240, 240):
-                switch rotation {
-                case .angle0:
-                    xOffset = 0
-                    yOffset = 0
-                    madctlConfig = [.pageTopToBottom, .leftToRight,
-                                    .normalMode, .lineTopToBottom, .RGB]
-                case .angle90:
-                    xOffset = 0
-                    yOffset = 0
-                    madctlConfig = [.pageTopToBottom, .rightToLeft,
-                                    .reverseMode, .lineTopToBottom, .RGB]
-                case .angle180:
-                    xOffset = 0
-                    yOffset = 80
-                    madctlConfig = [.pageBottomToTop, .rightToLeft,
-                                    .normalMode, .lineTopToBottom, .RGB]
-                case .angle270:
-                    xOffset = 80
-                    yOffset = 0
-                    madctlConfig = [.pageBottomToTop, .leftToRight,
-                                    .reverseMode, .lineTopToBottom, .RGB]
-                }
-            case (240, 320):
-                xOffset = 0
-                yOffset = 0
-                switch rotation {
-                case .angle0:
-                    madctlConfig = [.pageTopToBottom, .leftToRight,
-                                    .normalMode, .lineTopToBottom, .RGB]
-                case .angle90:
-                    swap(&width, &height)
-                    madctlConfig = [.pageTopToBottom, .rightToLeft,
-                                    .reverseMode, .lineTopToBottom, .RGB]
-                case .angle180:
-                    madctlConfig = [.pageBottomToTop, .rightToLeft,
-                                    .normalMode, .lineTopToBottom, .RGB]
-                case .angle270:
-                    swap(&width, &height)
-                    madctlConfig = [.pageBottomToTop, .leftToRight,
-                                    .reverseMode, .lineTopToBottom, .RGB]
-                }
-            case (320, 240):
+            case (320, 480):
                 xOffset = 0
                 yOffset = 0
                 switch rotation {
                 case .angle0:
                     madctlConfig = [.pageTopToBottom, .rightToLeft,
-                                    .reverseMode, .lineTopToBottom, .RGB]
+                                    .normalMode, .lineTopToBottom, .BGR]
                 case .angle90:
                     swap(&width, &height)
-                    madctlConfig = [.pageBottomToTop, .rightToLeft,
-                                    .normalMode, .lineTopToBottom, .RGB]
+                    madctlConfig = [.pageTopToBottom, .leftToRight,
+                                    .reverseMode, .lineTopToBottom, .BGR]
                 case .angle180:
                     madctlConfig = [.pageBottomToTop, .leftToRight,
-                                    .reverseMode, .lineTopToBottom, .RGB]
+                                    .normalMode, .lineTopToBottom, .BGR]
                 case .angle270:
                     swap(&width, &height)
-                    madctlConfig = [.pageTopToBottom, .leftToRight,
-                                    .normalMode, .lineTopToBottom, .RGB]
+                    madctlConfig = [.pageBottomToTop, .rightToLeft,
+                                    .reverseMode, .lineTopToBottom, .BGR]
                 }
-            case (135, 240):
+            case (480, 320):
+                xOffset = 0
+                yOffset = 0
                 switch rotation {
                 case .angle0:
-                    xOffset = 52
-                    yOffset = 40
                     madctlConfig = [.pageTopToBottom, .leftToRight,
-                                    .normalMode, .lineTopToBottom, .RGB]
+                                    .reverseMode, .lineTopToBottom, .BGR]
                 case .angle90:
-                    xOffset = 40
-                    yOffset = 53
-                    swap(&width, &height)
-                    madctlConfig = [.pageTopToBottom, .rightToLeft,
-                                    .reverseMode, .lineBottomToTop, .RGB]
-                case .angle180:
-                    xOffset = 53
-                    yOffset = 40
-                    madctlConfig = [.pageBottomToTop, .rightToLeft,
-                                    .normalMode, .lineTopToBottom, .RGB]
-                case .angle270:
-                    xOffset = 40
-                    yOffset = 52
                     swap(&width, &height)
                     madctlConfig = [.pageBottomToTop, .leftToRight,
-                                    .reverseMode, .lineTopToBottom, .RGB]
-                }
-            case (240, 135):
-                switch rotation {
-                case .angle0:
-                    xOffset = 40
-                    yOffset = 53
-                    madctlConfig = [.pageTopToBottom, .rightToLeft,
-                                    .reverseMode, .lineBottomToTop, .RGB]
-                case .angle90:
-                    xOffset = 53
-                    yOffset = 40
-                    swap(&width, &height)
-                    madctlConfig = [.pageBottomToTop, .rightToLeft,
-                                    .normalMode, .lineTopToBottom, .RGB]
+                                    .normalMode, .lineTopToBottom, .BGR]
                 case .angle180:
-                    xOffset = 40
-                    yOffset = 52
-                    madctlConfig = [.pageBottomToTop, .leftToRight,
-                                    .reverseMode, .lineTopToBottom, .RGB]
+                    madctlConfig = [.pageBottomToTop, .rightToLeft,
+                                    .reverseMode, .lineTopToBottom, .BGR]
                 case .angle270:
-                    xOffset = 52
-                    yOffset = 40
-                    swap(&width, &height)
-                    madctlConfig = [.pageTopToBottom, .leftToRight,
-                                    .normalMode, .lineTopToBottom, .RGB]
-                }
-            case (172, 320):
-                switch rotation {
-                case .angle0:
-                    xOffset = 34
-                    yOffset = 0
-                    madctlConfig = [.pageTopToBottom, .leftToRight,
-                                    .normalMode, .lineTopToBottom, .RGB]
-                case .angle90:
-                    xOffset = 0
-                    yOffset = 34
                     swap(&width, &height)
                     madctlConfig = [.pageTopToBottom, .rightToLeft,
-                                    .reverseMode, .lineBottomToTop, .RGB]
-                case .angle180:
-                    xOffset = 34
-                    yOffset = 0
-                    madctlConfig = [.pageBottomToTop, .rightToLeft,
-                                    .normalMode, .lineTopToBottom, .RGB]
-                case .angle270:
-                    xOffset = 0
-                    yOffset = 34
-                    swap(&width, &height)
-                    madctlConfig = [.pageBottomToTop, .leftToRight,
-                                    .reverseMode, .lineTopToBottom, .RGB]
-                }
-            case (320, 172):
-                switch rotation {
-                case .angle0:
-                    xOffset = 0
-                    yOffset = 34
-                    madctlConfig = [.pageTopToBottom, .rightToLeft,
-                                    .reverseMode, .lineBottomToTop, .RGB]
-                case .angle90:
-                    xOffset = 34
-                    yOffset = 0
-                    swap(&width, &height)
-                    madctlConfig = [.pageBottomToTop, .rightToLeft,
-                                    .normalMode, .lineTopToBottom, .RGB]
-                case .angle180:
-                    xOffset = 0
-                    yOffset = 34
-                    madctlConfig = [.pageBottomToTop, .leftToRight,
-                                    .reverseMode, .lineTopToBottom, .RGB]
-                case .angle270:
-                    xOffset = 34
-                    yOffset = 0
-                    swap(&width, &height)
-                    madctlConfig = [.pageTopToBottom, .leftToRight,
-                                    .normalMode, .lineTopToBottom, .RGB]
+                                    .normalMode, .lineTopToBottom, .BGR]
                 }
             default:
                 break
@@ -402,7 +273,7 @@ public final class ST7789 {
     }
 }
 
-extension ST7789 {
+extension ST7796 {
     enum Command: UInt8 {
         case NOP        = 0x00
         case SWRESET    = 0x01
@@ -429,36 +300,34 @@ extension ST7789 {
         case MADCTL     = 0x36
         case COLMOD     = 0x3A
         
-        case RAMCTRL    = 0xB0
-        case RGBCTRL    = 0xB1
-        case PORCTRL    = 0xB2
-        case FRCTRL1    = 0xB3
-        case PARCTRL    = 0xB5
-        case GCTRL      = 0xB7
-        case GTADJ      = 0xB8
-        case DGMEN      = 0xBA
-        case VCOMS      = 0xBB
-        case POWSAVE    = 0xBC
-        case DLPOFFSAVE = 0xBD
+        case IFMODE     = 0xB0
+        case FRMCTR1    = 0xB1
+        case FRMCTR2    = 0xB2
+        case FRMCTR3    = 0xB3
+        case DIC        = 0xB4
+        case BPC        = 0xB5
+        case DFC        = 0xB6
+        case EM         = 0xB7
         
-        case LCMCTRL    = 0xC0
-        case IDSET      = 0xC1
-        case VDVVRHEN   = 0xC2
-        case VRHS       = 0xC3
-        case VDVSET     = 0xC4
-        case VCMOFSET   = 0xC5
-        case FRCTR2     = 0xC6
-        case CABCCTRL   = 0xC7
-        case REGSEL1    = 0xC8
-        case REGSEL2    = 0xCA
-        case PWMFRSEL   = 0xCC
+        case PWR1       = 0xC0
+        case PWR2       = 0xC1
+        case PWR3       = 0xC2
+        case VCMPCTL    = 0xC5
+        case VCMOFFSET  = 0xC6
         
-        case PWCTRL1    = 0xD0
-        case VAPVANEN   = 0xD2
-        case CMD2EN     = 0xDF
+        case NVMADW     = 0xD0
+        case NVMBPROG   = 0xD1
+        case NVMSTATUS  = 0xD2
+        case RDID4      = 0xD3
         
-        case PVGAMCTRL  = 0xE0
-        case NVGAMCTRL  = 0xE1
+        case PGC        = 0xE0
+        case NGC        = 0xE1
+        case DGC1       = 0xE2
+        case DGC2       = 0xE3
+        case DOCA       = 0xE8
+
+        case CSCON      = 0xF0
+        case SPIREADCTL = 0xFB
     }
     
     struct MadctlConfig: OptionSet {

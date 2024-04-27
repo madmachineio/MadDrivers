@@ -126,7 +126,9 @@ while true {
 
     // Pass all pixel info to the screen using SPI communication to display the
     // generated thermal image.
-    screen.writeScreen(data)
+    data.withUnsafeBytes { ptr in
+        screen.writeScreen(ptr)
+    }
 }
 
 // The original pixels from the sensor is 8x8. By comparison, the screen is
