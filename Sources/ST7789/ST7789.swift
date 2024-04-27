@@ -311,7 +311,7 @@ public final class ST7789 {
     @inline(__always)
     public func writePixel(x: Int, y: Int, color: UInt16) {
         setAddrWindow(x: x, y: y, width: 1, height: 1)
-        writeData([color])
+        writeData([color], count: 1)
     }
 
     /// Set an area of pixels on the screen.
@@ -497,24 +497,22 @@ extension ST7789 {
         cs.low()
         spi.write(command.rawValue)
         cs.high()
+        dc.high()
     }
     
     func writeData(_ data: [UInt8]) {
-        dc.high()
         cs.low()
         spi.write(data)
         cs.high()
     }
 
     func writeData(_ data: [UInt16], count: Int) {
-        dc.high()
         cs.low()
         spi.write(data, count: count)
         cs.high()
     }
 
     func writeData(_ data: UnsafeRawBufferPointer, count: Int) {
-        dc.high()
         cs.low()
         spi.write(data, count: count)
         cs.high()
