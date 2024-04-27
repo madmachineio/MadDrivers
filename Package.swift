@@ -42,6 +42,7 @@ let package = Package(
                 "SGP30",
                 "SHT3x",
                 "ST7789",
+                "ST7796",
                 "TCS34725",
                 "TMP102",
                 "TSL2591",
@@ -82,6 +83,7 @@ let package = Package(
         .library(name: "SGP30", targets: ["SGP30"]),
         .library(name: "SHT3x", targets: ["SHT3x"]),
         .library(name: "ST7789", targets: ["ST7789"]),
+        .library(name: "ST7796", targets: ["ST7796"]),
         .library(name: "TCS34725", targets: ["TCS34725"]),
         .library(name: "TMP102", targets: ["TMP102"]),
         .library(name: "TSL2591", targets: ["TSL2591"]),
@@ -202,6 +204,9 @@ let package = Package(
             dependencies: ["SwiftIO"]),
         .target(
             name: "ST7789",
+            dependencies: ["SwiftIO"]),
+        .target(
+            name: "ST7796",
             dependencies: ["SwiftIO"]),
         .target(
             name: "TCS34725",
