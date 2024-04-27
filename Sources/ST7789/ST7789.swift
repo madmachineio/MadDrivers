@@ -311,7 +311,7 @@ public final class ST7789 {
     @inline(__always)
     public func writePixel(x: Int, y: Int, color: UInt16) {
         setAddrWindow(x: x, y: y, width: 1, height: 1)
-        writeData(color)
+        writeData([color])
     }
 
     /// Set an area of pixels on the screen.
