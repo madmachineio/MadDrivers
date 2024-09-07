@@ -46,7 +46,8 @@ final public class VEML7700 {
     public init(_ i2c: I2C, address: UInt8 = 0x10) {
         let speed = i2c.getSpeed()
         guard speed == .standard || speed == .fast else {
-            fatalError(#function + ": VEML7700 only supports 100kHz (standard) and 400kHz (fast) I2C speed")
+            print(#function + ": VEML7700 only supports 100kHz (standard) and 400kHz (fast) I2C speed")
+            fatalError()
         }
 
         self.i2c = i2c
@@ -188,7 +189,7 @@ extension VEML7700 {
 
     private func readRegister(
         _ register: Register, into buffer: inout [UInt8]
-    ) throws {
+    ) throws(Errno) {
         for i in 0..<buffer.count {
             buffer[i] = 0
         }
@@ -199,7 +200,7 @@ extension VEML7700 {
         }
     }
 
-    private func writeRegister(_ register: Register, _ data: [UInt8]) throws {
+    private func writeRegister(_ register: Register, _ data: [UInt8]) throws(Errno) {
         var data = data
         data.insert(register.rawValue, at: 0)
         let result = i2c.write(data, to: address)

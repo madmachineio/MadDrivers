@@ -92,7 +92,8 @@ final public class LIS3DH {
     public init(_ i2c: I2C, address: UInt8 = 0x18) {
         let speed = i2c.getSpeed()
         guard speed == .standard || speed == .fast else {
-            fatalError(#function + ": LIS3DH only supports 100kHz (standard) and 400kHz (fast) I2C speed")
+            print(#function + ": LIS3DH only supports 100kHz (standard) and 400kHz (fast) I2C speed")
+            fatalError()
         }
 
         self.i2c = i2c
@@ -107,7 +108,8 @@ final public class LIS3DH {
         dataRate = .Hz400
 
         guard getDeviceID() == defaultWhoAmI else {
-            fatalError(#function + ": Fail to find LIS3DH at address \(address)")
+            print(#function + ": Fail to find LIS3DH at address \(address)")
+            fatalError()
         }
 
         setRange(gRange)
@@ -142,19 +144,23 @@ final public class LIS3DH {
 
         guard (spi.cs == false && csPin != nil && csPin!.getMode() == .pushPull)
                 || (spi.cs == true && csPin == nil) else {
-                    fatalError(#function + ": csPin isn't correctly configured")
+                    print(#function + ": csPin isn't correctly configured")
+                    fatalError()
         }
 
         guard spi.getSpeed() <= 10_000_000 else {
-            fatalError(#function + ": LIS3DH cannot support SPI speed faster than 10MHz")
+            print(#function + ": LIS3DH cannot support SPI speed faster than 10MHz")
+            fatalError()
         }
 
         guard spi.getMode() == (true, true, .MSB) else {
-            fatalError(#function + ": SPI mode doesn't match for LIS3DH. CPOL and CPHA should be true and bitOrder should be .MSB")
+            print(#function + ": SPI mode doesn't match for LIS3DH. CPOL and CPHA should be true and bitOrder should be .MSB")
+            fatalError()
         }
 
         guard getDeviceID() == defaultWhoAmI else {
-            fatalError(#function + ": Fail to find LIS3DH with default ID via SPI")
+            print(#function + ": Fail to find LIS3DH with default ID via SPI")
+            fatalError()
         }
 
         setRange(gRange)
@@ -327,7 +333,7 @@ extension LIS3DH {
         static let zEnable          = DataRateConfig(rawValue: 0b0100)
     }
     
-    private func writeRegister(_ value: UInt8, to reg: Register) throws {
+    private func writeRegister(_ value: UInt8, to reg: Register) throws(Errno) {
         var result: Result<(), Errno>
         if i2c != nil {
             result = i2c!.write([reg.rawValue, value], to: address!)
@@ -343,7 +349,7 @@ extension LIS3DH {
         }
     }
     
-    private func readRegister(_ reg: Register, into byte: inout UInt8) throws {
+    private func readRegister(_ reg: Register, into byte: inout UInt8) throws(Errno) {
         var result: Result<(), Errno>
         if i2c != nil {
             result = i2c!.writeRead(reg.rawValue, into: &byte, address: address!)
@@ -363,7 +369,7 @@ extension LIS3DH {
     
     private func readRegister(
         _ beginReg: Register, into buffer: inout [UInt8], count: Int
-    ) throws {
+    ) throws(Errno) {
         var result: Result<(), Errno>
 
         var writeByte = beginReg.rawValue

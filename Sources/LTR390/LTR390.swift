@@ -11,7 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 import SwiftIO
-import RealModule
+// import RealModule
 
 /// This is the library for LTR390 UV and ambient light sensor.
 ///
@@ -52,7 +52,8 @@ final public class LTR390 {
     public init(_ i2c: I2C, address: UInt8 = 0x53) {
         let speed = i2c.getSpeed()
         guard speed == .standard || speed == .fast else {
-            fatalError(#function + ": LTR390 only supports 100kHz (standard) and 400kHz (fast) I2C speed")
+            print(#function + ": LTR390 only supports 100kHz (standard) and 400kHz (fast) I2C speed")
+            fatalError()
         }
 
         self.i2c = i2c
@@ -63,7 +64,8 @@ final public class LTR390 {
 
         guard getID() == 0xB2 else {
             print(getID())
-            fatalError(#function + ": Fail to find LTR390 at address \(address)")
+            print(#function + ": Fail to find LTR390 at address \(address)")
+            fatalError()
         }
 
         reset()
@@ -248,7 +250,7 @@ extension LTR390 {
 
     private func readRegister(
         _ register: Register, into byte: inout UInt8
-    ) throws {
+    ) throws(Errno) {
         var result = i2c.write(register.rawValue, to: address)
         if case .failure(let err) = result {
             throw err
@@ -262,7 +264,7 @@ extension LTR390 {
 
     private func readRegister(
         _ register: Register, into buffer: inout [UInt8], count: Int
-    ) throws {
+    ) throws(Errno) {
         for i in 0..<buffer.count {
             buffer[i] = 0
         }
@@ -278,14 +280,14 @@ extension LTR390 {
         }
     }
 
-    private func writeRegister(_ register: Register, _ value: UInt8) throws {
+    private func writeRegister(_ register: Register, _ value: UInt8) throws(Errno) {
         let result = i2c.write([register.rawValue, value], to: address)
         if case .failure(let err) = result {
             throw err
         }
     }
 
-    private func writeRegister(_ register: Register, _ data: [UInt8]) throws {
+    private func writeRegister(_ register: Register, _ data: [UInt8]) throws(Errno) {
         var data = data
         data.insert(register.rawValue, at: 0)
         let result = i2c.write(data, to: address)
@@ -353,4 +355,15 @@ extension LTR390 {
         case als = 0
         case uvs = 1
     }
+}
+
+
+@_extern(c, "exp2f")
+func exp2f(_: Float) -> Float
+
+extension Float {
+  @_transparent
+  static func exp2(_ x: Float) -> Float {
+    exp2f(x)
+  }
 }

@@ -11,7 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 import SwiftIO
-import RealModule
+// import RealModule
 
 /// This is the library for BMP280 temperature and pressure sensor.
 ///
@@ -56,7 +56,8 @@ final public class BMP280 {
         filter = .x16
 
         guard getDeviceID() == 0x58 else {
-            fatalError(#function + ": Fail to find BMP280 at address \(address)")
+            print(#function + ": Fail to find BMP280 at address \(address)")
+            fatalError()
         }
 
         reset()
@@ -94,20 +95,24 @@ final public class BMP280 {
 
         guard (spi.cs == false && csPin != nil && csPin!.getMode() == .pushPull)
                 || (spi.cs == true && csPin == nil) else {
-                    fatalError(#function + ": csPin isn't correctly configured")
+                    print(#function + ": csPin isn't correctly configured")
+                    fatalError()
         }
 
         guard spi.getMode() == (true, true, .MSB) ||
                 spi.getMode() == (false, false, .MSB) else {
-            fatalError(#function + ": SPI mode doesn't match for BMP280. CPOL and CPHA should be both true or both false and bitOrder should be .MSB")
+            print(#function + ": SPI mode doesn't match for BMP280. CPOL and CPHA should be both true or both false and bitOrder should be .MSB")
+            fatalError()
         }
 
         guard spi.getSpeed() <= 10_000_000 else {
-            fatalError(#function + ": BMP280 cannot support spi speed faster than 10MHz")
+            print(#function + ": BMP280 cannot support spi speed faster than 10MHz")
+            fatalError()
         }
 
         guard getDeviceID() == 0x58 else {
-            fatalError(#function + ": Fail to find BMP280 with default ID via SPI")
+            print(#function + ": Fail to find BMP280 with default ID via SPI")
+            fatalError()
         }
 
         reset()
@@ -181,7 +186,7 @@ final public class BMP280 {
     /// - Returns: The altitude in meter.
     public func readAltitude(_ seaLevelPressure: Double) -> Double {
         let pressure = readPressure()
-        let altitude = 44330 * (1.0 - Double.pow(pressure / seaLevelPressure, 0.1903))
+        let altitude = 44330 * (1.0 - Double.mathPow(pressure / seaLevelPressure, 0.1903))
         return altitude
     }
 
@@ -318,7 +323,7 @@ extension BMP280 {
         case temp = 0xFA
     }
 
-    private func writeRegister(_ register: Register, _ value: UInt8) throws {
+    private func writeRegister(_ register: Register, _ value: UInt8) throws(Errno) {
         var result: Result<(), Errno>
 
         if i2c != nil {
@@ -337,7 +342,7 @@ extension BMP280 {
 
     private func readRegister(
         _ register: Register, into byte: inout UInt8
-    ) throws {
+    ) throws(Errno) {
         var result: Result<(), Errno>
 
         if i2c != nil {
@@ -362,7 +367,7 @@ extension BMP280 {
 
     private func readRegister(
         _ register: Register, into buffer: inout [UInt8], count: Int
-    ) throws {
+    ) throws(Errno) {
         for i in 0..<buffer.count {
             buffer[i] = 0
         }
@@ -447,4 +452,16 @@ extension BMP280 {
         let calibration = [t1, t2, t3, p1, p2, p3, p4, p5, p6, p7, p8, p9]
         return calibration
     }
+}
+
+@_extern(c, "pow")
+func pow(_: Double, _ : Double) -> Double
+
+extension Double {
+  @_transparent
+  static func mathPow(_ x: Double, _ y: Double) -> Double {
+    guard x >= 0 else { return .nan }
+    if x == 0 && y == 0 { return .nan }
+    return pow(x, y)
+  }
 }

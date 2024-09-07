@@ -72,7 +72,8 @@ final public class MPU6050 {
     public init(_ i2c: I2C, address: UInt8 = 0x68) {
         let speed = i2c.getSpeed()
         guard speed == .standard || speed == .fast else {
-            fatalError(#function + ": MPU6050 only supports 100kHz (standard) and 400kHz (fast) I2C speed")
+            print(#function + ": MPU6050 only supports 100kHz (standard) and 400kHz (fast) I2C speed")
+            fatalError()
         }
 
         self.i2c = i2c
@@ -83,7 +84,8 @@ final public class MPU6050 {
         var byte: UInt8 = 0
         try? readRegister(.whoAmI, into: &byte)
         guard byte == 0x68 else {
-            fatalError(#function + ": Fail to find MPU6050 at address \(address)")
+            print(#function + ": Fail to find MPU6050 at address \(address)")
+            fatalError()
         }
 
         reset()
@@ -264,7 +266,7 @@ extension MPU6050 {
         sleep(ms: 100)
     }
 
-    private func writeRegister(_ register: Register, _ value: UInt8) throws {
+    private func writeRegister(_ register: Register, _ value: UInt8) throws(Errno) {
         let result = i2c.write([register.rawValue, value], to: address)
         if case .failure(let err) = result {
             throw err
@@ -273,7 +275,7 @@ extension MPU6050 {
 
     private func readRegister(
         _ register: Register, into byte: inout UInt8
-    ) throws {
+    ) throws(Errno) {
         var result = i2c.write(register.rawValue, to: address)
         if case .failure(let err) = result {
             throw err
@@ -287,7 +289,7 @@ extension MPU6050 {
 
     private func readRegister(
         _ register: Register, into buffer: inout [UInt8], count: Int
-    ) throws {
+    ) throws(Errno) {
         for i in 0..<buffer.count {
             buffer[i] = 0
         }

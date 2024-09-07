@@ -44,7 +44,7 @@ public struct ATRequest {
         content = atCommand
     }
 
-    public func parse() throws -> String {
+    public func parse() throws(Errno) -> String {
         let requestString: String
 
         switch self.content {

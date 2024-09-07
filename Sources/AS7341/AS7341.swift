@@ -46,14 +46,16 @@ final public class AS7341 {
     public init(_ i2c: I2C, address: UInt8 = 0x39) {
         let speed = i2c.getSpeed()
         guard speed == .standard || speed == .fast else {
-            fatalError(#function + ": AS7341 only supports 100kHz (standard) and 400kHz (fast) I2C speed")
+            print(#function + ": AS7341 only supports 100kHz (standard) and 400kHz (fast) I2C speed")
+            fatalError()
         }
 
         self.i2c = i2c
         self.address = address
 
         guard getID() == 0b00100100 else {
-            fatalError(#function + ": Fail to find AS7341 at address \(address)")
+            print(#function + ": Fail to find AS7341 at address \(address)")
+            fatalError()
         }
 
         powerOn()
@@ -253,21 +255,21 @@ extension AS7341 {
         case astepLSB = 0xCA
     }
 
-    private func writeRegister(_ register: Register, _ value: UInt8) throws {
+    private func writeRegister(_ register: Register, _ value: UInt8) throws(Errno) {
         let result = i2c.write([register.rawValue, value], to: address)
         if case .failure(let err) = result {
             throw err
         }
     }
 
-    private func writeRegister(_ register: UInt8, _ value: UInt8) throws {
+    private func writeRegister(_ register: UInt8, _ value: UInt8) throws(Errno) {
         let result = i2c.write([register, value], to: address)
         if case .failure(let err) = result {
             throw err
         }
     }
 
-    private func writeRegister(_ register: Register, _ data: [UInt8]) throws {
+    private func writeRegister(_ register: Register, _ data: [UInt8]) throws(Errno) {
         var data = data
         data.insert(register.rawValue, at: 0)
         let result = i2c.write(data, to: address)
@@ -278,7 +280,7 @@ extension AS7341 {
 
     private func readRegister(
         _ register: Register, into byte: inout UInt8
-    ) throws {
+    ) throws(Errno) {
         var result = i2c.write(register.rawValue, to: address)
         if case .failure(let err) = result {
             throw err
@@ -292,7 +294,7 @@ extension AS7341 {
 
     private func readRegister(
         _ register: Register, into buffer: inout [UInt8], count: Int
-    ) throws {
+    ) throws(Errno) {
         for i in 0..<buffer.count {
             buffer[i] = 0
         }

@@ -65,7 +65,8 @@ final public class TSL2591 {
     public init(_ i2c: I2C, address: UInt8 = 0x29) {
         let speed = i2c.getSpeed()
         guard speed == .standard || speed == .fast else {
-            fatalError(#function + ": TSL2591 only supports 100kHz (standard) and 400kHz (fast) I2C speed")
+            print(#function + ": TSL2591 only supports 100kHz (standard) and 400kHz (fast) I2C speed")
+            fatalError()
         }
 
         self.i2c = i2c
@@ -75,7 +76,8 @@ final public class TSL2591 {
         integrationTime = .ms100
 
         guard getDeviceID() == 0x50 else {
-            fatalError(#function + ": Fail to find TSL2591 at address \(address)")
+            print(#function + ": Fail to find TSL2591 at address \(address)")
+            fatalError()
         }
 
         setGain(gain)
@@ -211,7 +213,7 @@ extension TSL2591 {
 
     private func readRegister(
         _ register: Register, into byte: inout UInt8
-    ) throws {
+    ) throws(Errno) {
         var result = i2c.write(register.rawValue | commandBit, to: address)
         if case .failure(let err) = result {
             throw err
@@ -225,7 +227,7 @@ extension TSL2591 {
 
     private func readRegister(
         _ register: Register, into buffer: inout [UInt8], count: Int
-    ) throws {
+    ) throws(Errno) {
         for i in 0..<buffer.count {
             buffer[i] = 0
         }
@@ -241,7 +243,7 @@ extension TSL2591 {
         }
     }
 
-    private func writeRegister(_ register: Register, _ value: UInt8) throws {
+    private func writeRegister(_ register: Register, _ value: UInt8) throws(Errno) {
         let result = i2c.write([register.rawValue | commandBit, value], to: address)
         if case .failure(let err) = result {
             throw err

@@ -11,7 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 import SwiftIO
-import RealModule
+// import RealModule
 
 /// This is the library for MAG3110 3-axis magnetometer.
 ///
@@ -36,11 +36,13 @@ final public class MAG3110 {
         self.address = address
 
         guard (i2c.getSpeed() == .standard) || (i2c.getSpeed() == .fast) else {
-            fatalError(#function + ": MAG3110 only supports 100kHz (standard) and 400kHz (fast) I2C speed")
+            print(#function + ": MAG3110 only supports 100kHz (standard) and 400kHz (fast) I2C speed")
+            fatalError()
         }
 
         guard getDeviceID() == 0xC4 else {
-            fatalError(#function + ": Fail to find MAG3110 at address \(address)")
+            print(#function + ": Fail to find MAG3110 at address \(address)")
+            fatalError()
         }
 
         reset()
@@ -198,7 +200,7 @@ extension MAG3110 {
 
     private func readRegister(
         _ register: Register, into byte: inout UInt8
-    ) throws {
+    ) throws(Errno) {
         var result = i2c.write(register.rawValue, to: address)
         if case .failure(let err) = result {
             throw err
@@ -212,7 +214,7 @@ extension MAG3110 {
 
     private func readRegister(
         _ register: Register, into buffer: inout [UInt8], count: Int
-    ) throws {
+    ) throws(Errno) {
         for i in 0..<buffer.count {
             buffer[i] = 0
         }
@@ -228,14 +230,14 @@ extension MAG3110 {
         }
     }
 
-    private func writeRegister(_ register: Register, _ value: UInt8) throws {
+    private func writeRegister(_ register: Register, _ value: UInt8) throws(Errno) {
         let result = i2c.write([register.rawValue, value], to: address)
         if case .failure(let err) = result {
             throw err
         }
     }
 
-    private func writeRegister(_ register: Register, _ data: [UInt8]) throws {
+    private func writeRegister(_ register: Register, _ data: [UInt8]) throws(Errno) {
         var data = data
         data.insert(register.rawValue, at: 0)
         let result = i2c.write(data, to: address)
@@ -292,3 +294,12 @@ extension MAG3110 {
     }
 }
 
+@_extern(c, "atan2f")
+func atan2f(_: Float, _: Float) -> Float
+
+extension Float {
+  @_transparent
+  static func atan2(y: Float, x: Float) -> Float {
+    atan2f(y, x)
+  }
+}

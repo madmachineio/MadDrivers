@@ -61,7 +61,8 @@ final public class BH1750 {
                 mode: Mode = .continuous, resolution: Resolution = .middle) {
         let speed = i2c.getSpeed()
         guard speed == .standard || speed == .fast else {
-            fatalError(#function + ": BH1750 only supports 100kHz (standard) and 400kHz (fast) I2C speed")
+            print(#function + ": BH1750 only supports 100kHz (standard) and 400kHz (fast) I2C speed")
+            fatalError()
         }
 
         self.i2c = i2c
@@ -134,14 +135,14 @@ extension BH1750 {
         try? writeValue(Command.reset.rawValue)
     }
 
-    private func writeValue(_ value: UInt8) throws {
+    private func writeValue(_ value: UInt8) throws(Errno) {
         let result = i2c.write(value, to: address)
         if case .failure(let err) = result {
             throw err
         }
     }
 
-    private func readValue(into buffer: inout [UInt8], count: Int) throws {
+    private func readValue(into buffer: inout [UInt8], count: Int) throws(Errno) {
         for i in 0..<buffer.count {
             buffer[i] = 0
         }

@@ -90,7 +90,7 @@ extension SHT3x {
     
     // Split the 16-bit data into two 8-bit data.
     // Write the data to the default address of the sensor.
-    private func writeValue(_ command: Command) throws {
+    private func writeValue(_ command: Command) throws(Errno) {
         let value = command.rawValue
         let result = i2c.write([UInt8(value >> 8), UInt8(value & 0xFF)], to: address)
         if case .failure(let err) = result {
@@ -98,7 +98,7 @@ extension SHT3x {
         }
     }
 
-    private func readValue(into buffer: inout [UInt8]) throws {
+    private func readValue(into buffer: inout [UInt8]) throws(Errno) {
         for i in 0..<buffer.count {
             buffer[i] = 0
         }
@@ -108,7 +108,7 @@ extension SHT3x {
         }
     }
 
-    private func getSensorData(into buffer: inout [UInt8]) throws {
+    private func getSensorData(into buffer: inout [UInt8]) throws(Errno) {
         try writeValue(.measureMedium)
         sleep(ms: 8)
         try readValue(into: &buffer)

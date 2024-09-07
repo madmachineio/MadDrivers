@@ -67,7 +67,8 @@ final public class MLX90393 {
     public init(_ i2c: I2C, address: UInt8 = 0x0C) {
         let speed = i2c.getSpeed()
         guard speed == .standard || speed == .fast else {
-            fatalError(#function + ": MLX90393 only supports 100kHz (standard) and 400kHz (fast) I2C speed.")
+            print(#function + ": MLX90393 only supports 100kHz (standard) and 400kHz (fast) I2C speed.")
+            fatalError()
         }
 
         self.i2c = i2c
@@ -117,15 +118,18 @@ final public class MLX90393 {
 
         guard (spi.cs == false && csPin != nil && csPin!.getMode() == .pushPull)
                 || (spi.cs == true && csPin == nil) else {
-                    fatalError(#function + ": csPin isn't correctly configured")
+                    print(#function + ": csPin isn't correctly configured")
+                    fatalError()
         }
 
         guard spi.getMode() == (true, true, .MSB) else {
-            fatalError(#function + ": SPI mode doesn't match for MLX90393. CPOL and CPHA should be true and bitOrder should be .MSB")
+            print(#function + ": SPI mode doesn't match for MLX90393. CPOL and CPHA should be true and bitOrder should be .MSB")
+            fatalError()
         }
 
         guard spi.getSpeed() <= 10_000_000 else {
-            fatalError(#function + ": MLX90393 cannot support SPI speed faster than 10MHz")
+            print(#function + ": MLX90393 cannot support SPI speed faster than 10MHz")
+            fatalError()
         }
 
         reset()
@@ -288,7 +292,7 @@ extension MLX90393 {
 
     func readRegister(
         _ register: Register, into buffer: inout [UInt8], count: Int
-    ) throws {
+    ) throws(Errno) {
         for i in 0..<buffer.count {
             buffer[i] = 0
         }
@@ -316,7 +320,7 @@ extension MLX90393 {
         }
     }
 
-    func writeRegister(_ register: Register, data: [UInt8]) throws {
+    func writeRegister(_ register: Register, data: [UInt8]) throws(Errno) {
         var data = data
         data.insert(Command.wr.rawValue, at: 0)
         data.append(register.rawValue << 2)
@@ -340,7 +344,7 @@ extension MLX90393 {
         }
     }
 
-    func writeCommand(_ command: UInt8) throws {
+    func writeCommand(_ command: UInt8) throws(Errno) {
         var status: UInt8 = 0
         var result: Result<(), Errno>
         if i2c != nil {
@@ -360,7 +364,7 @@ extension MLX90393 {
 
     func readCommand(
         _ command: UInt8, into buffer: inout [UInt8], count: Int
-    ) throws {
+    ) throws(Errno) {
         var result: Result<(), Errno>
         if i2c != nil {
             result = i2c!.writeRead(command, into: &buffer,

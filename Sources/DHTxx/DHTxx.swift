@@ -51,7 +51,7 @@ public final class DHTxx {
         do {
             data = try readRawValue()
         } catch {
-            print(error)
+            print("read error")
         }
         return data
     }
@@ -63,7 +63,7 @@ public final class DHTxx {
         do {
             temperature = try readRawValue().1
         } catch {
-            print(error)
+            print("readCelsius error")
         }
         return temperature
     }
@@ -75,7 +75,7 @@ public final class DHTxx {
         do {
             humidity = try readRawValue().0
         } catch {
-            print(error)
+            print("readHumidity error")
         }
         return humidity
     }
@@ -87,7 +87,7 @@ extension DHTxx {
      Fetch data from DHT modul.
      - Returns: Data from DHT modul.
      */
-    private func readRawValue() throws -> (Float, Float) {
+    private func readRawValue() throws(DHTError) -> (Float, Float) {
         var dataBits: [Bool] = []
 
         /// MCU sends out start signal.
@@ -120,7 +120,7 @@ extension DHTxx {
     }
 
     /// Calculate the duration of each signal.
-    private func edge(_ min: Int64, _ max: Int64, _ value: Bool) throws -> Int64{
+    private func edge(_ min: Int64, _ max: Int64, _ value: Bool) throws(DHTError) -> Int64{
         let start = getClockCycle()
 
         while signal.read() != value {
@@ -141,7 +141,7 @@ extension DHTxx {
     }
 
     /// Read and store the data bit from the sensor.
-    private func bit() throws -> Bool {
+    private func bit() throws(DHTError) -> Bool {
         /// Receive the signal for about 50us before each bit of data.
         _ = try edge(45000, 55000, true)
 
@@ -161,7 +161,7 @@ extension DHTxx {
 
     /// Decode the bits into final readings.
     /// The first value is the humidity and the second is temperature.
-    private func decode(bits: [Bool]) throws -> (Float, Float) {
+    private func decode(bits: [Bool]) throws(DHTError) -> (Float, Float) {
         var bytes: [UInt8] = [0,0,0,0,0]
         for i in 0..<40 {
             bytes[i/8] <<= 1
@@ -179,8 +179,20 @@ extension DHTxx {
             throw DHTError.DecodingError
         }
 
-        return (Float("\(bytes[0]).\(bytes[1])")!,
-                Float("\(bytes[2]).\(bytes[3])")!)
+        let int1 = Float(bytes[0])
+        var dec1 = Float(bytes[1])
+        while dec1 > 1 {
+            dec1 /= Float(10.0)
+        }
+
+        let int2 = Float(bytes[2])
+        var dec2 = Float(bytes[3])
+        while dec2 > 1 {
+            dec2 /= Float(10.0)
+        }
+
+        return (int1 + dec1,
+                int2 + dec2)
     }
 
     private enum DHTError: Error {

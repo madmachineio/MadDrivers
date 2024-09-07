@@ -97,7 +97,8 @@ final public class VEML6040 {
     public init(_ i2c: I2C, address: UInt8 = 0x10) {
         let speed = i2c.getSpeed()
         guard speed == .standard || speed == .fast else {
-            fatalError(#function + ": VEML6040 only supports 100kHz (standard) and 400kHz (fast) I2C speed")
+            print(#function + ": VEML6040 only supports 100kHz (standard) and 400kHz (fast) I2C speed")
+            fatalError()
         }
 
         self.i2c = i2c
@@ -196,18 +197,18 @@ extension VEML6040 {
     
     // Split the 16-bit data into two 8-bit data.
     // Write the data to the default address of the sensor.
-    private func writeConfig(_ config: Config) throws {
+    private func writeConfig(_ config: Config) throws(Errno) {
         try writeRegister(.config, config.rawValue)
     }
 
-    private func writeRegister(_ reg: Reg, _ value: UInt8) throws {
+    private func writeRegister(_ reg: Reg, _ value: UInt8) throws(Errno) {
         let result = i2c.write([reg.rawValue, value, 0], to: address)
         if case .failure(let err) = result {
             throw err
         }
     }
     
-    private func readRegister(_ reg: Reg, into buffer: inout [UInt8]) throws {
+    private func readRegister(_ reg: Reg, into buffer: inout [UInt8]) throws(Errno) {
         let result = i2c.writeRead(reg.rawValue, into: &buffer, address: address)
         if case .failure(let err) = result {
             throw err

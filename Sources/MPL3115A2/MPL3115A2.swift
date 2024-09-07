@@ -32,7 +32,8 @@ final public class MPL3115A2 {
         self.address = address
 
         guard getDeviceID() == 0xC4 else {
-            fatalError(#function + ": Fail to find MPL3115A2 at address \(address)")
+            print(#function + ": Fail to find MPL3115A2 at address \(address)")
+            fatalError()
         }
 
         reset()
@@ -166,7 +167,7 @@ extension MPL3115A2 {
 
     private func readRegister(
         _ register: Register, into buffer: inout [UInt8], count: Int
-    ) throws {
+    ) throws(Errno) {
         for i in 0..<buffer.count {
             buffer[i] = 0
         }
@@ -179,21 +180,21 @@ extension MPL3115A2 {
 
     private func readRegister(
         _ register: Register, into byte: inout UInt8
-    ) throws {
+    ) throws(Errno) {
         let result = i2c.writeRead(register.rawValue, into: &byte, address: address)
         if case .failure(let err) = result {
             throw err
         }
     }
 
-    private func writeRegister(_ register: Register, _ value: UInt8) throws {
+    private func writeRegister(_ register: Register, _ value: UInt8) throws(Errno) {
         let result = i2c.write([register.rawValue, value], to: address)
         if case .failure(let err) = result {
             throw err
         }
     }
 
-    private func writeRegister(_ register: Register, _ data: [UInt8]) throws {
+    private func writeRegister(_ register: Register, _ data: [UInt8]) throws(Errno) {
         var data = data
         data.insert(register.rawValue, at: 0)
         let result = i2c.write(data, to: address)
@@ -202,11 +203,11 @@ extension MPL3115A2 {
         }
     }
 
-    func writeControlReg(_ value: UInt8) throws {
+    func writeControlReg(_ value: UInt8) throws(Errno) {
         try writeRegister(.CTRL_REG1, value)
     }
 
-    func readControlReg(into byte: inout UInt8) throws {
+    func readControlReg(into byte: inout UInt8) throws(Errno) {
         try readRegister(.CTRL_REG1, into: &byte)
     }
 

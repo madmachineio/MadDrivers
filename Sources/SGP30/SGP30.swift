@@ -11,7 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 import SwiftIO
-import RealModule
+// import RealModule
 
 /// This is the library of SGP30 gas sensor. It measures TVOC and eCO2.
 ///
@@ -39,7 +39,8 @@ final public class SGP30 {
     public init(_ i2c: I2C, address: UInt8 = 0x58) {
         let speed = i2c.getSpeed()
         guard speed == .standard || speed == .fast else {
-            fatalError(#function + ": SGP30 only supports 100kHz (standard) and 400kHz (fast) I2C speed")
+            print(#function + ": SGP30 only supports 100kHz (standard) and 400kHz (fast) I2C speed")
+            fatalError()
         }
 
         self.i2c = i2c
@@ -47,13 +48,15 @@ final public class SGP30 {
 
         try? readRegister(.serial_id, into: &readBuffer, count: 3, delay: 10)
         guard getData(readBuffer, count: 3) != [0, 0, 0] else {
-            fatalError(#function + ": Fail to find SGP30 at address \(address)")
+            print(#function + ": Fail to find SGP30 at address \(address)")
+            fatalError()
         }
 
         try? readRegister(.get_feature_set, into: &readBuffer, count: 1, delay: 10)
         guard getData(readBuffer, count: 1) == [0x0020]
                 || getData(readBuffer, count: 1) == [0x0022] else {
-                    fatalError(#function + ": Fail to find SGP30 at address \(address)")
+                    print(#function + ": Fail to find SGP30 at address \(address)")
+                    fatalError()
                 }
 
         try? writeValue(.iaq_init, delay: 10)
@@ -178,7 +181,7 @@ extension SGP30 {
 
     }
 
-    func writeValue(_ command: Command, delay: Int) throws {
+    func writeValue(_ command: Command, delay: Int) throws(Errno) {
         let result = i2c.write(calUInt16ToUInt8(command.rawValue), to: address)
         if case .failure(let err) = result {
             throw err
@@ -187,7 +190,7 @@ extension SGP30 {
         sleep(ms: delay)
     }
 
-    func writeRegister(_ command: Command, data: [UInt8], delay: Int) throws {
+    func writeRegister(_ command: Command, data: [UInt8], delay: Int) throws(Errno) {
         let data = calUInt16ToUInt8(command.rawValue) + data
 
         let result = i2c.write(data, to: address)
@@ -201,7 +204,7 @@ extension SGP30 {
 
     func readRegister(
         _ command: Command, into buffer: inout [UInt8],
-        count: Int, delay: Int) throws {
+        count: Int, delay: Int) throws(Errno) {
             
             for i in 0..<buffer.count {
                 buffer[i] = 0
@@ -264,4 +267,14 @@ extension SGP30 {
         return data
     }
 
+}
+
+@_extern(c, "exp2f")
+func exp2f(_: Float) -> Float
+
+extension Float {
+  @_transparent
+  static func exp(_ x: Float) -> Float {
+    exp2f(x)
+  }
 }

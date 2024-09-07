@@ -55,7 +55,8 @@ public final class IS31FL3731 {
     public init(_ i2c: I2C, address: UInt8 = 0x74) {
         let speed = i2c.getSpeed()
         guard speed == .standard || speed == .fast else {
-            fatalError(#function + ": IS31FL3731 only supports 100kHz (standard) and 400kHz (fast) I2C speed")
+            print(#function + ": IS31FL3731 only supports 100kHz (standard) and 400kHz (fast) I2C speed")
+            fatalError()
         }
 
         self.i2c = i2c
@@ -288,7 +289,7 @@ extension IS31FL3731 {
     
     private func writeRegister(
         _ register: FunctionRegister, _ value: UInt8
-    ) throws {
+    ) throws(Errno) {
         selectPage(PageRegister.functionPage.rawValue)
         let data = [register.rawValue, value]
         let result = i2c.write(data, to: address)
@@ -298,7 +299,7 @@ extension IS31FL3731 {
         selectPage(currentFrame)
     }
 
-    private func writeValue(_ data: [UInt8], count: Int) throws {
+    private func writeValue(_ data: [UInt8], count: Int) throws(Errno) {
         let result = i2c.write(data, count: count, to: address)
         if case .failure(let err) = result {
             throw err
@@ -307,7 +308,7 @@ extension IS31FL3731 {
     
     private func readRegister(
         _ register: FunctionRegister, into byte: inout UInt8
-    ) throws {
+    ) throws(Errno) {
         selectPage(PageRegister.functionPage.rawValue)
         
         var result = i2c.write(register.rawValue, to: address)
