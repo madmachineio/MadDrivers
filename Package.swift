@@ -22,7 +22,7 @@ let package = Package(
                 "BMP280",
                 "DHTxx",
                 "DS3231",
-                //"ESP32ATClient",
+                "ESP32ATClient",
                 "HCSR04",
                 "HTU21D",
                 "IS31FL3731",
@@ -62,7 +62,7 @@ let package = Package(
         .library(name: "BMP280", targets: ["BMP280"]),
         .library(name: "DHTxx", targets: ["DHTxx"]),
         .library(name: "DS3231", targets: ["DS3231"]),
-        //.library(name: "ESP32ATClient", targets: ["ESP32ATClient"]),
+        .library(name: "ESP32ATClient", targets: ["ESP32ATClient"]),
         .library(name: "HCSR04", targets: ["HCSR04"]),
         .library(name: "HTU21D", targets: ["HTU21D"]),
         .library(name: "IS31FL3731", targets: ["IS31FL3731"]),
@@ -139,9 +139,9 @@ let package = Package(
         .target(
             name: "DS3231",
             dependencies: ["SwiftIO"]),
-        // .target(
-        //     name: "ESP32ATClient",
-        //     dependencies: ["SwiftIO"]),
+        .target(
+            name: "ESP32ATClient",
+            dependencies: ["SwiftIO"]),
         .target(
             name: "HCSR04",
             dependencies: ["SwiftIO"]),

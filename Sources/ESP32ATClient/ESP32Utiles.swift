@@ -14,7 +14,15 @@ public enum ATCommand {
 }
 
 public enum ESP32ATClientError: Error {
+    case uartTransferFailed
     case joinAPFailed
+
+    case timeout
+    case passwordError
+    case cannotFindAP
+    case connectFailed
+    case unknownError
+
     case requestError
     case requestOverlength
     case responseTimeout
@@ -23,13 +31,13 @@ public enum ESP32ATClientError: Error {
     case resetError
 }
 
-public enum ESP32ATClientJoinWiFiError: Error {
-    case timeout
-    case passwordError
-    case cannotFindAP
-    case connectFailed
-    case unknownError
-}
+// public enum ESP32ATClientJoinWiFiError: Error {
+//     case timeout
+//     case passwordError
+//     case cannotFindAP
+//     case connectFailed
+//     case unknownError
+// }
 
 public struct ATResponse {
     public var content: [String] = []
@@ -44,7 +52,7 @@ public struct ATRequest {
         content = atCommand
     }
 
-    public func parse() throws(Errno) -> String {
+    public func parse() throws(ESP32ATClientError) -> String {
         let requestString: String
 
         switch self.content {
@@ -72,4 +80,6 @@ extension String {
             self.removeSubrange(self.startIndex...firstColon)
         }
     }
+
+
 }

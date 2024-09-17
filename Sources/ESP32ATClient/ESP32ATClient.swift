@@ -42,44 +42,44 @@ public final class ESP32ATClient {
     /// Current Wi-Fi connection status.
     public private(set) var connectionStatus: ConnectionStatus = .closed
 
-    lazy var readyCallback: URCCallback = { [unowned self] (str: String) -> Void in
+    lazy var readyCallback: URCCallback = { [unowned(unsafe) self] (str: String) -> Void in
         esp32Status = .ready
         wifiStatus = .disconnected
         connectionStatus = .closed
     }
 
-    lazy var busyCallback: URCCallback = { [unowned self] (str: String) in
+    lazy var busyCallback: URCCallback = { [unowned(unsafe) self] (str: String) in
         sleep(ms: 10)
     }
 
-    lazy var wifiConnectedCallback: URCCallback = { [unowned self] (str: String) in
+    lazy var wifiConnectedCallback: URCCallback = { [unowned(unsafe) self] (str: String) in
         wifiStatus = .connected
         connectionStatus = .closed
     }
 
-    lazy var wifiReadyCallback: URCCallback = { [unowned self] (str: String) in
+    lazy var wifiReadyCallback: URCCallback = { [unowned(unsafe) self] (str: String) in
         wifiStatus = .ready
         connectionStatus = .closed
     }
 
-    lazy var wifiDisconnectedCallback: URCCallback = { [unowned self] (str: String) in
+    lazy var wifiDisconnectedCallback: URCCallback = { [unowned(unsafe) self] (str: String) in
         wifiStatus = .disconnected
         connectionStatus = .closed
     }
 
-    lazy var connectionOKCallback: URCCallback = { [unowned self] (str: String) in
+    lazy var connectionOKCallback: URCCallback = { [unowned(unsafe) self] (str: String) in
         connectionStatus = .established
     }
 
-    lazy var sendOKCallback: URCCallback = { [unowned self] (str: String) in
+    lazy var sendOKCallback: URCCallback = { [unowned(unsafe) self] (str: String) in
         connectionStatus = .sendOK
     }
 
-    lazy var sendFailCallback: URCCallback = { [unowned self] (str: String) in
+    lazy var sendFailCallback: URCCallback = { [unowned(unsafe) self] (str: String) in
         connectionStatus = .error
     }
 
-    lazy var connectionCloseCallback: URCCallback = { [unowned self] (str: String) in
+    lazy var connectionCloseCallback: URCCallback = { [unowned(unsafe) self] (str: String) in
         connectionStatus = .closed
     }
     
@@ -109,7 +109,7 @@ public final class ESP32ATClient {
         ]
     }
 
-    private func readByte(timeout: Int) throws(Errno) -> UInt8 {
+    private func readByte(timeout: Int) throws(ESP32ATClientError) -> UInt8 {
         var value: UInt8 = 0
 
         let result = uart.read(into: &value, timeout: timeout)
@@ -118,22 +118,22 @@ public final class ESP32ATClient {
             if count == 1 {
                 return value
             } else {
-                throw ESP32ATClientError.responseTimeout
+                throw .responseTimeout
             }
-            case .failure(let err):
-            throw err
+            case .failure(_):
+            throw .uartTransferFailed
         }
     }
 
-    private func writeString(_ str: String) throws(Errno) {
+    private func writeString(_ str: String) throws(ESP32ATClientError) {
         let result = uart.write(str, addNullTerminator: false)
-        if case .failure(let err) = result {
-            throw err
+        if case .failure(_) = result {
+            throw .uartTransferFailed
         }
     }
 
     @discardableResult
-    public func readLine(timeout: Int = -1, removeNLCR: Bool = true) throws(Errno) -> String {
+    public func readLine(timeout: Int = -1, removeNLCR: Bool = true) throws(ESP32ATClientError) -> String {
         var receivedOneLine = false
 
         while true {
@@ -166,7 +166,7 @@ public final class ESP32ATClient {
         return line
     }
 
-    public func waitPrompt(timeout: Int = 2000) throws(Errno) {
+    public func waitPrompt(timeout: Int = 2000) throws(ESP32ATClientError) {
         lock.lock()
         defer { lock.unlock() }
 
@@ -184,7 +184,7 @@ public final class ESP32ATClient {
         }
     }
 
-    public func executeRequest(_ rst: ATRequest, timeout: Int = 5000) throws(Errno) -> ATResponse {
+    public func executeRequest(_ rst: ATRequest, timeout: Int = 5000) throws(ESP32ATClientError) -> ATResponse {
         var response = ATResponse()
 
         lock.lock()
@@ -211,14 +211,14 @@ public final class ESP32ATClient {
 extension ESP32ATClient {
     /// Test the communication between your board and ESP32.
     /// - Returns: True if the communication is successful.
-    public func heartBeat() throws(Errno) -> Bool {
+    public func heartBeat() throws(ESP32ATClientError) -> Bool {
         let request = ATRequest(ATCommand.execute(command: ""))
         return try executeRequest(request).ok
     }
     
     /// Trigger ESP32 software reset.
     /// - Returns: A boolean value indicating whether the setting was successful.
-    public func softReset() throws(Errno) -> Bool {
+    public func softReset() throws(ESP32ATClientError) -> Bool {
         let request = ATRequest(ATCommand.execute(command: "+RST"))
         return try executeRequest(request).ok
     }
@@ -226,7 +226,7 @@ extension ESP32ATClient {
     /// Turn on/off AT command echoing.
     /// - Parameter enable: Enable or disable echoing.
     /// - Returns: A boolean value indicating whether the setting was successful.
-    public func setEcho(to enable: Bool) throws(Errno) -> Bool {
+    public func setEcho(to enable: Bool) throws(ESP32ATClientError) -> Bool {
         let command = enable ? "E1" : "E0"
 
         let request = ATRequest(ATCommand.execute(command: command))
@@ -236,7 +236,7 @@ extension ESP32ATClient {
     }
     
     /// Reset the ESP32.
-    public func reset() throws(Errno) {
+    public func reset() throws(ESP32ATClientError) {
         rst.low()
         sleep(ms: 40)
         uart.clearBuffer()
@@ -261,7 +261,7 @@ extension ESP32ATClient {
     }
     
     /// Restore factory default settings.
-    public func restore() throws(Errno) {
+    public func restore() throws(ESP32ATClientError) {
         let request = ATRequest(ATCommand.execute(command: "+RESTORE"))
         let response = try executeRequest(request)
 
@@ -294,7 +294,7 @@ extension ESP32ATClient {
     ///   - speed: UART baud rate.
     ///   - storage: Whether to save the current UART configuration as the default configuration.
     /// - Returns: A boolean value indicating whether the setting was successful.
-    public func setBaudRate(to speed: Int = 115200, storage: Bool = false) throws(Errno) -> Bool {
+    public func setBaudRate(to speed: Int = 115200, storage: Bool = false) throws(ESP32ATClientError) -> Bool {
         let command = storage ? "+UART_DEF" : "+UART_CUR"
         let parameter = "\(String(speed)),8,1,0,0"
 
@@ -306,7 +306,7 @@ extension ESP32ATClient {
     
     /// Get firmware version infomation.
     /// - Returns: AT version, SDK version, compile time and Bin version.
-    public func getVersion() throws(Errno) -> String {
+    public func getVersion() throws(ESP32ATClientError) -> String {
         let command = "+GMR"
 
         let request = ATRequest(ATCommand.execute(command: command))
@@ -328,7 +328,7 @@ extension ESP32ATClient {
     
     /// Get current Wi-Fi mode.
     /// - Returns: A Wi-Fi mode Indicating whether the ESP32 works as a station, an AP, both, or neither.
-    public func getWiFiMode() throws(Errno) -> WiFiMode {
+    public func getWiFiMode() throws(ESP32ATClientError) -> WiFiMode {
         let command = "+CWMODE"
         let request = ATRequest(ATCommand.query(command: command))
         var response = try executeRequest(request)
@@ -362,7 +362,7 @@ extension ESP32ATClient {
     ///   - newMode: The Wi-Fi Mode: `station`, `softAP`, `stationSoftAP`or `none`.
     ///   - autoConnect: Wheter to enable automatic connection to an AP if ESP32 is set to station or stationSoftAP mode, defaulted to true.
     /// - Returns: A boolean value indicating whether the setting was successful.
-    public func setWiFiMode(_ newMode: WiFiMode, autoConnect: Bool = true) throws(Errno) -> Bool {
+    public func setWiFiMode(_ newMode: WiFiMode, autoConnect: Bool = true) throws(ESP32ATClientError) -> Bool {
         let command = "+CWMODE"
         let parameter = newMode.rawValue + (autoConnect ? ",1" : ",0")
         
@@ -381,7 +381,7 @@ extension ESP32ATClient {
     ///   - password: The Wi-Fi password.
     ///   - timeout: Time in millisecond to wait for the connection.
     ///   - autoConnect: Whether to enable Wi-Fi reconnection.
-    public func joinAP(ssid: String? = nil, password: String = "", timeout: Int = 20000, autoConnect: Bool = true) throws(Errno) {
+    public func joinAP(ssid: String? = nil, password: String = "", timeout: Int = 20000, autoConnect: Bool = true) throws(ESP32ATClientError) {
         let command = "+CWJAP"
         let request: ATRequest
 
@@ -405,15 +405,15 @@ extension ESP32ATClient {
                 response.content[0].removeCommand()
                 switch response.content[0] {
                     case "1":
-                    throw ESP32ATClientJoinWiFiError.timeout
+                    throw ESP32ATClientError.timeout
                     case "2":
-                    throw ESP32ATClientJoinWiFiError.passwordError
+                    throw ESP32ATClientError.passwordError
                     case "3":
-                    throw ESP32ATClientJoinWiFiError.cannotFindAP
+                    throw ESP32ATClientError.cannotFindAP
                     case "4":
-                    throw ESP32ATClientJoinWiFiError.connectFailed
+                    throw ESP32ATClientError.connectFailed
                     default:
-                    throw ESP32ATClientJoinWiFiError.unknownError
+                    throw ESP32ATClientError.unknownError
                 }
             }
         }
@@ -421,7 +421,7 @@ extension ESP32ATClient {
     
     /// Disconnect from the AP.
     /// - Returns: A boolean value indicating whether the disconnection was successful.
-    public func leaveAP() throws(Errno) -> Bool {
+    public func leaveAP() throws(ESP32ATClientError) -> Bool {
         let command = "+CWQAP"
         let request = ATRequest(ATCommand.execute(command: command))
 
@@ -431,7 +431,7 @@ extension ESP32ATClient {
     
     /// Get the IP address of the ESP32 Station.
     /// - Returns: The IP address, gateway and netmask.
-    public func getStationIP() throws(Errno) -> [String] {
+    public func getStationIP() throws(ESP32ATClientError) -> [String] {
         let command = "+CIPSTA"
         let request = ATRequest(ATCommand.query(command: command))
 
@@ -453,7 +453,7 @@ extension ESP32ATClient {
     /// Enable/disable Wi-Fi connection configuration via Web server.
     /// - Parameter enable: Enable or disable the configuration.
     /// - Returns: A boolean value indicating whether the setting was successful.
-    public func setWebServer(to enable: Bool) throws(Errno) -> Bool {
+    public func setWebServer(to enable: Bool) throws(ESP32ATClientError) -> Bool {
         let command = "+WEBSERVER"
         let parameter = (enable ? "1" : "0") + ",80" + ",60"
 
@@ -468,7 +468,7 @@ extension ESP32ATClient {
 extension ESP32ATClient {
     /// Get HTTP request header.
     /// - Returns: HTTP request header.
-    public func getHttpHead() throws(Errno) -> String {
+    public func getHttpHead() throws(ESP32ATClientError) -> String {
         let command = "+HTTPCHEAD"
         let request = ATRequest(ATCommand.query(command: command))
 
@@ -497,7 +497,7 @@ extension ESP32ATClient {
     ///   - headers: Additional HTTP headers to include in the request.
     ///   - timeout: Time in millisecond to wait for the response.
     /// - Returns: The response from the server.
-    public func httpGet(url: String, headers: [String], timeout: Int = 5000) throws(Errno) -> String {
+    public func httpGet(url: String, headers: [String], timeout: Int = 5000) throws(ESP32ATClientError) -> String {
         let command = "+HTTPCLIENT"
         var parameter = "2,0,\"" + url + "\",,,"
 
@@ -540,7 +540,7 @@ extension ESP32ATClient {
     ///   - url: The URL of the server to which the request will be sent.
     ///   - timeout: Time in millisecond to wait for the response.
     /// - Returns: The response from the server.
-    public func httpGet(url: String, timeout: Int = 5000) throws(Errno) -> String {
+    public func httpGet(url: String, timeout: Int = 5000) throws(ESP32ATClientError) -> String {
         let command = "+HTTPCGET"
         let parameter = "\"" + url + "\",,," + String(timeout)
 
@@ -571,7 +571,7 @@ extension ESP32ATClient {
     ///   - headers: Additional HTTP headers to include in the request.
     ///   - timeout: Time in millisecond to wait for the response.
     /// - Returns: The response from the server.
-    public func httpPost(url: String, data: String = "\r\n", headers: [String] = [], timeout: Int = 5000) throws(Errno) -> String {
+    public func httpPost(url: String, data: String = "\r\n", headers: [String] = [], timeout: Int = 5000) throws(ESP32ATClientError) -> String {
         let command = "+HTTPCPOST"
         var parameter = "\"" + url + "\"," + String(data.utf8.count)
 
@@ -616,18 +616,18 @@ extension ESP32ATClient {
 }
 
 public extension ESP32ATClient {
-    enum ESP32Status {
+    enum ESP32Status: String {
         case initialization
         case ready
     }
 
-    enum WiFiStatus {
+    enum WiFiStatus: String {
         case disconnected
         case connected
         case ready
     }
 
-    enum ConnectionStatus {
+    enum ConnectionStatus: String {
         case closed
         case established
         case ready
