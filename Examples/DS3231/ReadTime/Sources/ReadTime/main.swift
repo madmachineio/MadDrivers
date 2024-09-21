@@ -17,6 +17,11 @@ sensor.setTime(current)
 
 while true {
     // Read current time. It returns a optional value and you need to unwrap it.
-    print(sensor.readTime())
+    printTime(sensor.readTime())
     sleep(ms: 2000)
+}
+
+func printTime(_ time: PCF8523.Time) {
+    print("MM/DD/YYYY: \(time.month)/\(time.day)/\(time.year)")
+    print("Time: \(time.hour):\(time.minute):\(time.second)")
 }
