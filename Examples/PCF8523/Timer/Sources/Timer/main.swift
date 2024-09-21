@@ -23,7 +23,12 @@ while true {
 
     // When the interrupt happens, print the current time.
     if value {
-        print(rtc.readTime())
+        printTime(rtc.readTime())
         value = false
     }
+}
+
+func printTime(_ time: PCF8523.Time) {
+    print("MM/DD/YYYY: \(time.month)/\(time.day)/\(time.year)")
+    print("Time: \(time.hour):\(time.minute):\(time.second)
 }
