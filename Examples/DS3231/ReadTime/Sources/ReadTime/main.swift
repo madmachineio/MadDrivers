@@ -21,7 +21,7 @@ while true {
     sleep(ms: 2000)
 }
 
-func printTime(_ time: PCF8523.Time) {
+func printTime(_ time: DS3231.Time) {
     print("MM/DD/YYYY: \(time.month)/\(time.day)/\(time.year)")
     print("Time: \(time.hour):\(time.minute):\(time.second)")
 }
