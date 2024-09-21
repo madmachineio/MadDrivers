@@ -21,5 +21,5 @@ while true {
 
 func printTime(_ time: PCF8523.Time) {
     print("MM/DD/YYYY: \(time.month)/\(time.day)/\(time.year)")
-    print("Time: \(time.hour):\(time.minute):\(time.second)
+    print("Time: \(time.hour):\(time.minute):\(time.second)")
 }
