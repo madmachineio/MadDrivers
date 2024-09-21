@@ -13,3 +13,17 @@ while true {
 }
 
 
+func printChannels(_ sensor: AS7341) {
+    let channels = sensor.readChannels()
+
+    print("f1 = \(channels.f1)")
+    print("f2 = \(channels.f2)")
+    print("f3 = \(channels.f3)")
+    print("f4 = \(channels.f4)")
+    print("f5 = \(channels.f5)")
+    print("f6 = \(channels.f6)")
+    print("f7 = \(channels.f7)")
+    print("f8 = \(channels.f8)")
+    print("clear = \(channels.clear)")
+    print("nir = \(channels.nir)")
+}
