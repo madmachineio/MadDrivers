@@ -17,8 +17,15 @@ public struct SPIReadPressure {
         // let sensor = MS5611(spi)
         
         while true {
-            print(sensor.read())
+            let value = sensor.read()
+            print(getFloatString(value))
             sleep(ms: 1000)
         }
     }
+}
+
+func getFloatString(_ num: Float) -> String {
+    let int = Int(num)
+    let frac = Int((num - Float(int)) * 100)
+    return "\(int).\(frac)"
 }
