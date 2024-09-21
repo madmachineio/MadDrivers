@@ -25,7 +25,13 @@ public struct HttpPost {
             print("ESP32 WiFi status: \(esp.wifiStatus)")
 
             let ipInfo = try esp.getStationIP()
-            print(ipInfo)
+            for index in 0..<ipInfo.count {
+                if index != 0 {
+                    print(".\(ipInfo[index])")
+                } else {
+                    print(ipInfo[index])
+                }
+            }
 
         } catch {
             print("Error: \(error)")
