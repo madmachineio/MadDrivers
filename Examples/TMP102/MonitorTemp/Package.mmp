@@ -5,7 +5,7 @@
 
 # Specify the board name below
 # There are "SwiftIOBoard" and "SwiftIOMicro" now
-board = "SwiftIOBoard"
+board = "SwiftIOMicro"
 
 # Specifiy the target triple below
 # There are "thumbv7em-unknown-none-eabi" and "thumbv7em-unknown-none-eabihf" now
