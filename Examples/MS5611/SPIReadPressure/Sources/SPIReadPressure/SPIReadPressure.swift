@@ -17,8 +17,11 @@ public struct SPIReadPressure {
         // let sensor = MS5611(spi)
         
         while true {
-            let value = sensor.read()
-            print(getFloatString(value))
+            let (temperature, pressure) = sensor.read()
+
+            print("Temperature: " + getFloatString(temperature))
+            print("Pressure: " + getFloatString(pressure))
+            print(" ")
             sleep(ms: 1000)
         }
     }
