@@ -8,7 +8,7 @@ let i2c = I2C(Id.I2C0)
 let sensor = AS7341(i2c)
 
 while true {
-    print(sensor.readChannels())
+    printChannels(sensor)
     sleep(ms: 1000)
 }
 
