@@ -18,7 +18,7 @@ while true {
     }
 }
 
-func printGesture(_ gesture: Gesture) {
+func printGesture(_ gesture: APDS9960.Gesture) {
     let string: String
 
     switch gesture {
