@@ -3,7 +3,7 @@ import MadBoard
 import ADT7410
 
 
-let i2c = I2C(Id.I2C1)
+let i2c = I2C(Id.I2C0)
 let sensor = ADT7410(i2c)
 
 
