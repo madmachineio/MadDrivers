@@ -164,7 +164,7 @@ extension MCP4725 {
         return high | low
     }
 
-    private func readValue(into buffer: inout [UInt8]) throws {
+    private func readValue(into buffer: inout [UInt8]) throws(Errno) {
         for i in 0..<buffer.count {
             buffer[i] = 0
         }
@@ -175,7 +175,7 @@ extension MCP4725 {
         }
     }
 
-    private func writeValue(_ data: [UInt8]) throws {
+    private func writeValue(_ data: [UInt8]) throws(Errno) {
         let result = i2c.write(data, to: address)
         if case .failure(let err) = result {
             throw err

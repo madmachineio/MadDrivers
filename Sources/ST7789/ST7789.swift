@@ -98,7 +98,8 @@ public final class ST7789 {
                 || (width == 172 && height == 320)
                 || (width == 320 && height == 172)
                 else {
-                    fatalError("Not support this resolution!")
+                    print("Not support this resolution!")
+                    fatalError()
                 }
         
         self.spi = spi

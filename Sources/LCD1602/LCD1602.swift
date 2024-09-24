@@ -99,7 +99,8 @@ final public class LCD1602 {
         
         guard (columns > 0) && (rows == 1 || rows == 2)
                 && (dotSize == 8 || dotSize == 10) else {
-            fatalError("LCD1602 parameter error, init failed")
+            print("LCD1602 parameter error, init failed")
+            fatalError()
         }
         
         self.i2c = i2c
@@ -303,10 +304,17 @@ final public class LCD1602 {
             for _ in 0..<decimal {
                 mul *= 10
             }
-            let expandValue = Int(num * Float(mul))
-            write(x: x, y: y, String(Float(expandValue) / Float(mul)))
+            //let expandValue = Int(num * Float(mul))
+            let integerNumber = Int(num)
+            let decimalNumber = Int((num - Float(integerNumber)) * Float(mul))
+            let str = "\(integerNumber).\(decimalNumber)"
+            //write(x: x, y: y, String(Float(expandValue) / Float(mul)))
+            write(x: x, y: y, str)
         } else {
-            write(x: x, y: y, String(num))
+            let integerNumber = Int(num)
+            let decimalNumber = Int((num - Float(integerNumber)) * Float(10000))
+            let str = "\(integerNumber).\(decimalNumber)"
+            write(x: x, y: y, str)
         }
     }
 }

@@ -14,6 +14,23 @@ while true {
     let gesture = sensor.readGesture()
     
     if gesture != .noGesture {
-        print(gesture) 
+        printGesture(gesture) 
+    }
+}
+
+func printGesture(_ gesture: APDS9960.Gesture) {
+    let string: String
+
+    switch gesture {
+        case .noGesture:
+        string = "No Gesture"
+        case .up:
+        string = "Up"
+        case .down:
+        string = "Down"
+        case .left:
+        string = "Left"
+        case .right:
+        string = "Right"
     }
 }

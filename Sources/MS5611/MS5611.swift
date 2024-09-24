@@ -61,15 +61,18 @@ final public class MS5611 {
 
         guard (spi.cs == false && csPin != nil && csPin!.getMode() == .pushPull)
                 || (spi.cs == true && csPin == nil) else {
-                    fatalError(#function + ": csPin isn't correctly configured")
+                    print(#function + ": csPin isn't correctly configured")
+                    fatalError()
         }
 
         guard spi.getSpeed() <= 20_000_000 else {
-            fatalError(#function + ": MS5611 cannot support SPI speed faster than 20MHz")
+            print(#function + ": MS5611 cannot support SPI speed faster than 20MHz")
+            fatalError()
         }
 
         guard spi.getMode() == (true, true, .MSB) || spi.getMode() == (false, false, .MSB) else {
-            fatalError(#function + ": SPI mode doesn't match for MS5611. CPOL and CPHA should be both true or both false and bitOrder should be .MSB")
+            print(#function + ": SPI mode doesn't match for MS5611. CPOL and CPHA should be both true or both false and bitOrder should be .MSB")
+            fatalError()
         }
 
         resolution = .osr4096
@@ -148,7 +151,7 @@ extension MS5611 {
         }
     }
 
-    private func writeCommand(_ command: UInt8) throws {
+    private func writeCommand(_ command: UInt8) throws(Errno) {
         var result: Result<(), Errno>
         if let i2c {
             result = i2c.write(command, to: address!)
@@ -162,7 +165,7 @@ extension MS5611 {
         }
     }
 
-    func readCommand(_ command: UInt8, into buffer: inout [UInt8], count: Int) throws {
+    func readCommand(_ command: UInt8, into buffer: inout [UInt8], count: Int) throws(Errno) {
         var result: Result<(), Errno>
 
         for i in buffer.indices {
@@ -191,7 +194,7 @@ extension MS5611 {
         }
     }
 
-    private func reset() throws {
+    private func reset() throws(Errno) {
         try writeCommand(Command.reset.rawValue)
         sleep(ms: 3)
     }

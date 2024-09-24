@@ -29,7 +29,8 @@ final public class PCF8563 {
     public init(_ i2c: I2C, _ address: UInt8 = 0x51) {
         let speed = i2c.getSpeed()
         guard speed == .standard || speed == .fast else {
-            fatalError(#function + ": PCF8563 only supports 100kHz (standard) and 400kHz (fast) I2C speed")
+            print(#function + ": PCF8563 only supports 100kHz (standard) and 400kHz (fast) I2C speed")
+            fatalError()
         }
 
         self.i2c = i2c
@@ -166,7 +167,7 @@ extension PCF8563 {
         return vl == 1
     }
 
-    private func writeRegister(_ reg: Register, _ data: [UInt8]) throws {
+    private func writeRegister(_ reg: Register, _ data: [UInt8]) throws(Errno) {
         var data = data
         data.insert(reg.rawValue, at: 0)
         let result = i2c.write(data, to: address)
@@ -175,7 +176,7 @@ extension PCF8563 {
         }
     }
 
-    private func writeRegister(_ reg: Register, _ value: UInt8) throws {
+    private func writeRegister(_ reg: Register, _ value: UInt8) throws(Errno) {
         let result = i2c.write([reg.rawValue, value], to: address)
         if case .failure(let err) = result {
             throw err
@@ -184,7 +185,7 @@ extension PCF8563 {
 
     private func readRegister(
         _ register: Register, into byte: inout UInt8
-    ) throws {
+    ) throws(Errno) {
         var result = i2c.write(register.rawValue, to: address)
         if case .failure(let err) = result {
             throw err
@@ -198,7 +199,7 @@ extension PCF8563 {
 
     private func readRegister(
         _ register: Register, into buffer: inout [UInt8], count: Int
-    ) throws {
+    ) throws(Errno) {
         for i in 0..<buffer.count {
             buffer[i] = 0
         }

@@ -10,8 +10,15 @@ let sensor = MAG3110(i2c)
 sensor.calibrate()
 
 while true {
-    print(sensor.readRawValues())
+    let rawValue = sensor.readRawValues()
+    print("x = \(rawValue.x), y = \(rawValue.y), z = \(rawValue.z)")
     sleep(ms: 1000)
-    print(sensor.readHeading())
+    print("Heading: \(getFloatString(sensor.readHeading()))")
     sleep(ms: 1000)
+}
+
+func getFloatString(_ num: Float) -> String {
+    let int = Int(num)
+    let frac = Int((num - Float(int)) * 100)
+    return "\(int).\(frac)"
 }

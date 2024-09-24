@@ -11,8 +11,18 @@ public struct I2CReadPressure {
         let sensor = MS5611(i2c)
         
         while true {
-            print(sensor.read())
+            let (temperature, pressure) = sensor.read()
+
+            print("Temperature: " + getFloatString(temperature))
+            print("Pressure: " + getFloatString(pressure))
+            print(" ")
             sleep(ms: 1000)
         }
     }
+}
+
+func getFloatString(_ num: Float) -> String {
+    let int = Int(num)
+    let frac = Int((num - Float(int)) * 100)
+    return "\(int).\(frac)"
 }

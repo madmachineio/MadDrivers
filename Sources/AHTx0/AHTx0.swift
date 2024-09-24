@@ -63,28 +63,28 @@ extension AHTx0 {
         case triggerMeasurement = 0xAC
     }
 
-    func writeValue(_ command: UInt8) throws {
+    func writeValue(_ command: UInt8) throws(Errno) {
         let result = i2c.write(command, to: address)
         if case .failure(let err) = result {
             throw err
         }
     }
 
-    func writeValues(_ data: [UInt8]) throws {
+    func writeValues(_ data: [UInt8]) throws(Errno) {
         let result = i2c.write(data, to: address)
         if case .failure(let err) = result {
             throw err
         }
     }
 
-    func readValue(into byte: inout UInt8) throws {
+    func readValue(into byte: inout UInt8) throws(Errno) {
         let result = i2c.read(into: &byte, from: address)
         if case .failure(let err) = result {
             throw err
         }
     }
 
-    func readValues(into buffer: inout [UInt8]) throws {
+    func readValues(into buffer: inout [UInt8]) throws(Errno) {
         for i in 0..<buffer.count {
             buffer[i] = 0
         }
@@ -111,7 +111,8 @@ extension AHTx0 {
         } while status & 0x80 != 0
 
         if status & 0x08 == 0 {
-            fatalError(#function + ": calibration for AHTx0 failed")
+            print(#function + ": calibration for AHTx0 failed")
+            fatalError()
         }
     }
 
@@ -121,7 +122,7 @@ extension AHTx0 {
         return byte
     }
 
-    func readSensorData(into buffer: inout [UInt8]) throws {
+    func readSensorData(into buffer: inout [UInt8]) throws(Errno) {
         let data = [Command.triggerMeasurement.rawValue, 0x33, 0x00]
         try? writeValues(data)
 

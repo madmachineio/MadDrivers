@@ -10,6 +10,7 @@ let sensor = APDS9960(i2c)
 sensor.enableColor()
 
 while true {
-    print(sensor.readColor())
+    let rawValue = sensor.readColor()
+    print("Rawvalue: red = \(rawValue.red), green = \(rawValue.green), blue = \(rawValue.blue), clear = \(rawValue.clear)")
     sleep(ms: 1000)
 }

@@ -81,7 +81,8 @@ final public class BMI160 {
         gyroRange = .dps250
 
         guard getChipID() == 0xD1 else {
-            fatalError(#function + ": Fail to find BMI160 at address \(address)")
+            print(#function + ": Fail to find BMI160 at address \(address)")
+            fatalError()
         }
 
         reset()
@@ -117,16 +118,19 @@ final public class BMI160 {
 
         guard (spi.cs == false && csPin != nil && csPin!.getMode() == .pushPull)
                 || (spi.cs == true && csPin == nil) else {
-                    fatalError(#function + ": csPin isn't correctly configured")
+                    print(#function + ": csPin isn't correctly configured")
+                    fatalError()
         }
 
         guard spi.getMode() == (true, true, .MSB) ||
                 spi.getMode() == (false, false, .MSB) else {
-            fatalError(#function + ": SPI mode doesn't match for BMI160. CPOL and CPHA should be both true or both false and bitOrder should be .MSB")
+            print(#function + ": SPI mode doesn't match for BMI160. CPOL and CPHA should be both true or both false and bitOrder should be .MSB")
+            fatalError()
         }
 
         guard spi.getSpeed() <= 10_000_000 else {
-            fatalError(#function + ": BMI160 cannot support spi speed faster than 10MHz")
+            print(#function + ": BMI160 cannot support spi speed faster than 10MHz")
+            fatalError()
         }
 
         accelRange = .g2
@@ -137,7 +141,8 @@ final public class BMI160 {
         spiDummyRead()
 
         guard getChipID() == 0xD1 else {
-            fatalError(#function + ": Fail to find BMI160 with default ID via SPI")
+            print(#function + ": Fail to find BMI160 with default ID via SPI")
+            fatalError()
         }
 
         powerUp()
@@ -268,7 +273,7 @@ extension BMI160 {
 
     private func readRegister(
         _ register: Register, into byte: inout UInt8
-    ) throws {
+    ) throws(Errno) {
         var result: Result<(), Errno>
 
         if i2c != nil {
@@ -293,7 +298,7 @@ extension BMI160 {
 
     private func readRegister(
         _ register: Register, into buffer: inout [UInt8], count: Int
-    ) throws {
+    ) throws(Errno) {
         for i in 0..<buffer.count {
             buffer[i] = 0
         }
@@ -322,7 +327,7 @@ extension BMI160 {
 
     }
 
-    private func writeRegister(_ register: Register, _ value: UInt8) throws {
+    private func writeRegister(_ register: Register, _ value: UInt8) throws(Errno) {
         var result: Result<(), Errno>
 
         if i2c != nil {
@@ -339,7 +344,7 @@ extension BMI160 {
 
     }
 
-    private func writeCommand(_ command: Command) throws {
+    private func writeCommand(_ command: Command) throws(Errno) {
         try writeRegister(.CMD, command.rawValue)
     }
 

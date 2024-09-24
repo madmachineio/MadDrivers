@@ -16,5 +16,10 @@ rtc.setTime(time)
 // Read the current time and print it every 3s.
 while true {
     sleep(ms: 3000)
-    print(rtc.readTime())
+    printTime(rtc.readTime())
+}
+
+func printTime(_ time: PCF8523.Time) {
+    print("MM/DD/YYYY: \(time.month)/\(time.day)/\(time.year)")
+    print("Time: \(time.hour):\(time.minute):\(time.second)")
 }

@@ -25,7 +25,8 @@ final public class HTU21D {
     public init(_ i2c: I2C, address: UInt8 = 0x40) {
         let speed = i2c.getSpeed()
         guard speed == .standard || speed == .fast else {
-            fatalError(#function + ": HTU21D only supports 100kHz (standard) and 400kHz (fast) I2C speed")
+            print(#function + ": HTU21D only supports 100kHz (standard) and 400kHz (fast) I2C speed")
+            fatalError()
         }
 
         self.i2c = i2c
@@ -35,21 +36,21 @@ final public class HTU21D {
 
     /// Read the relative humidity.
     /// - Returns: A float from 0 to 100 representing the humidity.
-    public func readHumidity() throws -> Float {
+    public func readHumidity() throws(HTU21DError) -> Float {
         let value = try readRawValue(.humidity)
         return Float(value) * 125.0 / 65536.0 - 6.0
     }
 
     /// Read the temperature in Celcius.
     /// - Returns: A float representing the current temperature.
-    public func readTemperature() throws -> Float {
+    public func readTemperature() throws(HTU21DError) -> Float {
         let value = try readRawValue(.temperature)
         return Float(value) * 175.72 / 65536.0 - 46.85
     }
 
     /// Set the resolution for temperature and humidity measurement.
     /// - Parameter resolution: A measurement resolution for temperature and humidity.
-    public func setResolution(_ resolution: Resolution) throws {
+    public func setResolution(_ resolution: Resolution) throws(HTU21DError) {
         var byte: UInt8 = 0
         try readRegister(.readUserRegister, into: &byte)
 
@@ -59,7 +60,7 @@ final public class HTU21D {
 
     /// Get the resolution for temperature and humidity measurement.
     /// - Returns: The current measurement resolution.
-    public func getResolution() throws -> Resolution {
+    public func getResolution() throws(HTU21DError) -> Resolution {
         var byte: UInt8 = 0
         try readRegister(.readUserRegister, into: &byte)
         return Resolution(rawValue: byte & 0b1000_0001)!
@@ -87,45 +88,45 @@ extension HTU21D {
         case readUserRegister = 0xE7
     }
 
-    func readRegister(_ register: Command, into byte: inout UInt8) throws {
+    func readRegister(_ register: Command, into byte: inout UInt8) throws(HTU21DError) {
         let result = i2c.writeRead(register.rawValue, into: &byte, address: address)
-        if case .failure(let err) = result {
-            throw err
+        if case .failure(_) = result {
+            throw HTU21DError.readError
         }
     }
 
-    func writeRegister(_ value: UInt8, to register: Command) throws {
+    func writeRegister(_ value: UInt8, to register: Command) throws(HTU21DError) {
         let result = i2c.write([register.rawValue, value], to: address)
-        if case .failure(let err) = result {
-            throw err
+        if case .failure(_) = result {
+            throw HTU21DError.writeError
         }
     }
 
-    func writeValue(_ command: Command) throws {
+    func writeValue(_ command: Command) throws(HTU21DError) {
         let result = i2c.write([command.rawValue], to: address)
-        if case .failure(let err) = result {
-            throw err
+        if case .failure(_) = result {
+            throw HTU21DError.writeError
         }
     }
 
     /// Reboot the sensor switching the power off and on again
-    func reset() throws {
+    func reset() throws(HTU21DError) {
         try writeValue(.reset)
         /// The soft reset takes less than 15ms.
         sleep(ms: 15)
     }
 
-    private func readValue(into buffer: inout [UInt8]) throws {
+    private func readValue(into buffer: inout [UInt8]) throws(HTU21DError) {
         for i in 0..<buffer.count {
             buffer[i] = 0
         }
         let result = i2c.read(into: &buffer, from: address)
-        if case .failure(let err) = result {
-            throw err
+        if case .failure(_) = result {
+            throw HTU21DError.readError
         }
     }
 
-    func readRawValue(_ command: Command) throws -> UInt16 {
+    func readRawValue(_ command: Command) throws(HTU21DError) -> UInt16 {
         try writeValue(command)
         if command == .humidity {
             /// Max humidity maeasuring time.
@@ -162,7 +163,11 @@ extension HTU21D {
         return UInt8(crc)
     }
 
-    enum HTU21DError: Error {
-        case crcError
-    }
+}
+
+
+public enum HTU21DError: Error {
+    case readError
+    case writeError
+    case crcError
 }

@@ -25,8 +25,12 @@ while true {
     // Clear the alarm. The alarm will continue to be activated when the time is up.
     if value {
         sensor.clearAlarm(1)
-        print(sensor.readTime())
+        printTime(sensor.readTime())
         value = false
     }
+}
 
+func printTime(_ time: DS3231.Time) {
+    print("MM/DD/YYYY: \(time.month)/\(time.day)/\(time.year)")
+    print("Time: \(time.hour):\(time.minute):\(time.second)")
 }

@@ -1,4 +1,4 @@
-// swift-tools-version:5.5
+// swift-tools-version: 5.9
 // The swift-tools-version declares the minimum version of Swift required to build this package.
 
 import PackageDescription
@@ -95,8 +95,8 @@ let package = Package(
     dependencies: [
         // Dependencies declare other packages that this package depends on.
         // .package(url: /* package url */, from: "1.0.0"),
-        .package(url: "https://github.com/madmachineio/SwiftIO.git", .branch("main")),
-        .package(url: "https://github.com/apple/swift-numerics", from: "1.0.0"),
+        .package(url: "https://github.com/madmachineio/SwiftIO.git", branch: "main"),
+        //.package(url: "https://github.com/apple/swift-numerics", from: "1.0.0"),
     ],
     targets: [
         // Targets are the basic building blocks of a package. A target can define a module or a test suite.
@@ -124,15 +124,15 @@ let package = Package(
             dependencies: ["SwiftIO"]),
         .target(
             name: "BME680",
-            dependencies: ["SwiftIO",
-                            .product(name: "RealModule", package: "swift-numerics")]),
+            dependencies: ["SwiftIO"]),
+                            //.product(name: "RealModule", package: "swift-numerics")]),
         .target(
             name: "BMI160",
             dependencies: ["SwiftIO"]),
         .target(
             name: "BMP280",
-            dependencies: ["SwiftIO",
-                            .product(name: "RealModule", package: "swift-numerics")]),
+            dependencies: ["SwiftIO"]),
+                            //.product(name: "RealModule", package: "swift-numerics")]),
         .target(
             name: "DHTxx",
             dependencies: ["SwiftIO"]),
@@ -159,12 +159,12 @@ let package = Package(
             dependencies: ["SwiftIO"]),
         .target(
             name: "LTR390",
-            dependencies: ["SwiftIO",
-                           .product(name: "RealModule", package: "swift-numerics")]),
+            dependencies: ["SwiftIO"]),
+                           //.product(name: "RealModule", package: "swift-numerics")]),
         .target(
             name: "MAG3110",
-            dependencies: ["SwiftIO",
-                           .product(name: "RealModule", package: "swift-numerics")]),
+            dependencies: ["SwiftIO"]),
+                           //.product(name: "RealModule", package: "swift-numerics")]),
         .target(
             name: "MAX6675",
             dependencies: ["SwiftIO"]),
@@ -197,8 +197,8 @@ let package = Package(
             dependencies: ["SwiftIO"]),
         .target(
             name: "SGP30",
-            dependencies: ["SwiftIO",
-                           .product(name: "RealModule", package: "swift-numerics")]),
+            dependencies: ["SwiftIO"]),
+                           //.product(name: "RealModule", package: "swift-numerics")]),
         .target(
             name: "SHT3x",
             dependencies: ["SwiftIO"]),
@@ -210,8 +210,8 @@ let package = Package(
             dependencies: ["SwiftIO"]),
         .target(
             name: "TCS34725",
-            dependencies: ["SwiftIO",
-                           .product(name: "RealModule", package: "swift-numerics")]),
+            dependencies: ["SwiftIO"]),
+                           //.product(name: "RealModule", package: "swift-numerics")]),
         .target(
             name: "TMP102",
             dependencies: ["SwiftIO"]),

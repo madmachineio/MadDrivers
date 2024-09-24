@@ -49,7 +49,8 @@ final public class ADXL345 {
     public init(_ i2c: I2C, address: UInt8 = 0x53) {
         let speed = i2c.getSpeed()
         guard speed == .standard || speed == .fast else {
-            fatalError(#function + ": ADXL345 only supports 100kHz (standard) and 400kHz (fast) I2C speed")
+            print(#function + ": ADXL345 only supports 100kHz (standard) and 400kHz (fast) I2C speed")
+            fatalError()
         }
 
         self.i2c = i2c
@@ -61,7 +62,8 @@ final public class ADXL345 {
         gRange = .g2
 
         guard getDeviceID() == 0xE5 else {
-            fatalError(#function + ": Fail to find ADXL345 at address \(address)")
+            print(#function + ": Fail to find ADXL345 at address \(address)")
+            fatalError()
         }
 
         setDataRate(dataRate)
@@ -99,19 +101,23 @@ final public class ADXL345 {
 
         guard (spi.cs == false && csPin != nil && csPin!.getMode() == .pushPull)
                 || (spi.cs == true && csPin == nil) else {
-                    fatalError(#function + ": csPin isn't correctly configured")
+            print(#function + ": csPin isn't correctly configured")
+            fatalError()
         }
 
         guard spi.getMode() == (true, true, .MSB) else {
-            fatalError(#function + ": SPI mode doesn't match for ADXL345. CPOL and CPHA should be true and bitOrder should be .MSB")
+            print(#function + ": SPI mode doesn't match for ADXL345. CPOL and CPHA should be true and bitOrder should be .MSB")
+            fatalError()
         }
 
         guard spi.getSpeed() <= 5_000_000 else {
-            fatalError(#function + ": ADXL345 cannot support SPI speed faster than 5MHz")
+            print(#function + ": ADXL345 cannot support SPI speed faster than 5MHz")
+            fatalError()
         }
 
         guard getDeviceID() == 0xE5 else {
-            fatalError(#function + ": Fail to find ADXL345 with default ID via SPI")
+            print(#function + ": Fail to find ADXL345 with default ID via SPI")
+            fatalError()
         }
 
         setDataRate(dataRate)
@@ -246,7 +252,7 @@ final public class ADXL345 {
 }
 
 extension ADXL345 {
-    private func writeRegister(_ register: Register, _ value: UInt8) throws {
+    private func writeRegister(_ register: Register, _ value: UInt8) throws(Errno) {
         var result: Result<(), Errno>
 
         if i2c != nil {
@@ -264,7 +270,7 @@ extension ADXL345 {
 
     private func readRegister(
     _ register: Register, into byte: inout UInt8
-    ) throws {
+    ) throws(Errno) {
         var result: Result<(), Errno>
 
         if i2c != nil {
@@ -291,7 +297,7 @@ extension ADXL345 {
 
     private func readRegister(
         _ register: Register, into buffer: inout [UInt8], count: Int
-    ) throws {
+    ) throws(Errno) {
         var result: Result<(), Errno>
         for i in 0..<buffer.count {
             buffer[i] = 0

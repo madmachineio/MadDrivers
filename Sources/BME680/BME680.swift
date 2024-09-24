@@ -10,7 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 import SwiftIO
-import RealModule
+// import RealModule
 
 /// This is the library for BME680 gas, humidity, pressure and temperature sensor.
 ///
@@ -78,7 +78,8 @@ final public class BME680 {
         reset()
 
         guard getDeviceID() == 0x61 else {
-            fatalError(#function + ": Fail to find BME680 at address \(address)")
+            print(#function + ": Fail to find BME680 at address \(address)")
+            fatalError()
         }
 
         readCalibration()
@@ -119,22 +120,26 @@ final public class BME680 {
 
         guard (spi.cs == false && csPin != nil && csPin!.getMode() == .pushPull)
                 || (spi.cs == true && csPin == nil) else {
-                    fatalError(#function + ": csPin isn't correctly configured")
+                    print(#function + ": csPin isn't correctly configured")
+                    fatalError()
         }
 
         guard spi.getMode() == (true, true, .MSB) ||
                 spi.getMode() == (false, false, .MSB) else {
-            fatalError(#function + ": SPI mode doesn't match for BME680. CPOL and CPHA should be both true or both false and bitOrder should be .MSB")
+            print(#function + ": SPI mode doesn't match for BME680. CPOL and CPHA should be both true or both false and bitOrder should be .MSB")
+            fatalError()
         }
 
         guard spi.getSpeed() <= 10_000_000 else {
-            fatalError(#function + ": BME680 cannot support spi speed faster than 10MHz")
+            print(#function + ": BME680 cannot support spi speed faster than 10MHz")
+            fatalError()
         }
 
         reset()
 
         guard getDeviceID() == 0x61 else {
-            fatalError(#function + ": Fail to find BME680 with default ID via SPI")
+            print(#function + ": Fail to find BME680 with default ID via SPI")
+            fatalError()
         }
 
         readCalibration()
@@ -196,7 +201,7 @@ final public class BME680 {
     /// - Returns: The altitude in meter.
     public func readAltitude(_ seaLevelPressure: Double) -> Double {
         let pressure = readPressure()
-        let altitude = 44330 * (1.0 - Double.pow(pressure / seaLevelPressure, 0.1903))
+        let altitude = 44330 * (1.0 - Double.mathPow(pressure / seaLevelPressure, 0.1903))
         return altitude
     }
 
@@ -366,7 +371,7 @@ extension BME680 {
         try? writeRegister(.status, page)
     }
 
-    private func writeRegister(_ register: Register, _ value: UInt8) throws {
+    private func writeRegister(_ register: Register, _ value: UInt8) throws(Errno) {
         var result: Result<(), Errno>
 
         if i2c != nil {
@@ -389,7 +394,7 @@ extension BME680 {
 
     private func readRegister(
         _ register: Register, into byte: inout UInt8
-    ) throws {
+    ) throws(Errno) {
         var result: Result<(), Errno>
 
         if i2c != nil {
@@ -415,7 +420,7 @@ extension BME680 {
 
     private func readRegister(
         _ register: Register, into buffer: inout [UInt8], count: Int
-    ) throws {
+    ) throws(Errno) {
         for i in 0..<buffer.count {
             buffer[i] = 0
         }
@@ -626,4 +631,26 @@ private extension Array where Element == UInt8 {
     func calInt8(_ index: Int) -> Double {
         return Double(Int8(truncatingIfNeeded: self[index]))
     }
+}
+
+@_extern(c, "atan2f")
+func atan2f(_: Float, _: Float) -> Float
+
+extension Float {
+  @_transparent
+  static func atan2(y: Float, x: Float) -> Float {
+    atan2f(y, x)
+  }
+}
+
+@_extern(c, "pow")
+func pow(_: Double, _ : Double) -> Double
+
+extension Double {
+  @_transparent
+  static func mathPow(_ x: Double, _ y: Double) -> Double {
+    guard x >= 0 else { return .nan }
+    if x == 0 && y == 0 { return .nan }
+    return pow(x, y)
+  }
 }

@@ -21,11 +21,11 @@ alertPin.setInterrupt(.bothEdge, callback: ({ () in
     
     if(alertPin.read()){
         led.write(false)
-        print("Warning: Hit critical Tempetur of \(config.hightTemp) C. Warning is reseted when the tempeature drops below \(config.lowTemp) C")
+        // print("Warning: Hit critical Tempetur of \(config.hightTemp) C. Warning is reseted when the tempeature drops below \(config.lowTemp) C")
     }
     else {
         led.write(true)
-        print("Info: Warning is reseted. Tempeature drops below \(config.lowTemp) C")
+        // print("Info: Warning is reseted. Tempeature drops below \(config.lowTemp) C")
     }
 }))
 
@@ -33,5 +33,12 @@ led.write(!sensor.isAlert())
 
 while (true) {
     sleep(ms: 2000)
-    print("Tempature is \(sensor.readCelcius()) C.")
+    print("Tempature is \(getDoubleString(sensor.readCelcius())) C.")
+}
+
+
+func getDoubleString(_ num: Double) -> String {
+    let int = Int(num)
+    let frac = Int((num - Double(int)) * 100)
+    return "\(int).\(frac)"
 }

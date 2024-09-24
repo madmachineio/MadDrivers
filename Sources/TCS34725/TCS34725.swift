@@ -10,7 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 import SwiftIO
-import RealModule
+// import RealModule
 
 /// This is the library for TCS34725 color sensor. It supports I2C communication.
 ///
@@ -36,7 +36,8 @@ final public class TCS34725 {
     public init(_ i2c: I2C, address: UInt8 = 0x29) {
         let speed = i2c.getSpeed()
         guard speed == .standard || speed == .fast else {
-            fatalError(#function + ": TCS34725 only supports 100kHz (standard) and 400kHz (fast) I2C speed")
+            print(#function + ": TCS34725 only supports 100kHz (standard) and 400kHz (fast) I2C speed")
+            fatalError()
         }
 
         self.i2c = i2c
@@ -46,7 +47,8 @@ final public class TCS34725 {
         gain = .x1
 
         guard getID() == 0x44 || getID() == 0x10 else {
-            fatalError(#function + ": Fail to find TCS34725 at address \(address)")
+            print(#function + ": Fail to find TCS34725 at address \(address)")
+            fatalError()
         }
 
         setIntegrationTime(integrationTime)
@@ -182,7 +184,7 @@ extension TCS34725 {
 
     private func readRegister(
         _ register: Register, into byte: inout UInt8
-    ) throws {
+    ) throws(Errno) {
         var result = i2c.write(register.rawValue | commandBit, to: address)
         if case .failure(let err) = result {
             throw err
@@ -196,7 +198,7 @@ extension TCS34725 {
 
     private func readRegister(
         _ register: Register, into buffer: inout [UInt8], count: Int
-    ) throws {
+    ) throws(Errno) {
         for i in 0..<buffer.count {
             buffer[i] = 0
         }
@@ -212,14 +214,14 @@ extension TCS34725 {
         }
     }
 
-    private func writeRegister(_ register: Register, _ value: UInt8) throws {
+    private func writeRegister(_ register: Register, _ value: UInt8) throws(Errno) {
         let result = i2c.write([register.rawValue | commandBit, value], to: address)
         if case .failure(let err) = result {
             throw err
         }
     }
 
-    private func writeRegister(_ register: Register, _ data: [UInt8]) throws {
+    private func writeRegister(_ register: Register, _ data: [UInt8]) throws(Errno) {
         var data = data
         data.insert(register.rawValue | commandBit, at: 0)
         let result = i2c.write(data, to: address)
@@ -344,4 +346,16 @@ extension TCS34725 {
         return (ct, lux)
     }
 
+}
+
+@_extern(c, "pow")
+func powf(_: Float, _ : Float) -> Float
+
+extension Float {
+  @_transparent
+  static func pow(_ x: Float, _ y: Float) -> Float {
+    guard x >= 0 else { return .nan }
+    if x == 0 && y == 0 { return .nan }
+    return powf(x, y)
+  }
 }

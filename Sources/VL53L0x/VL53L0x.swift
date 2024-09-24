@@ -41,7 +41,8 @@ final public class VL53L0x {
     public init(_ i2c: I2C, address: UInt8 = 0x29, ioTimeout: Int = 0, mode: Mode = .continuous) {
         let speed = i2c.getSpeed()
         guard speed == .standard || speed == .fast else {
-            fatalError(#function + ": VL53L0x only supports 100kHz (standard) and 400kHz (fast) I2C speed")
+            print(#function + ": VL53L0x only supports 100kHz (standard) and 400kHz (fast) I2C speed")
+            fatalError()
         }
 
         self.i2c = i2c
@@ -52,7 +53,8 @@ final public class VL53L0x {
         var byte: UInt8 = 0
         try? readRegister(.IDENTIFICATION_MODEL_ID, into: &byte)
         guard byte == 0xEE else {
-            fatalError(#function + ": Fail to find VL53L0x at address \(address)")
+            print(#function + ": Fail to find VL53L0x at address \(address)")
+            fatalError()
         }
 
         dataInit()
@@ -265,21 +267,21 @@ extension VL53L0x {
         case finalRange
     }
 
-    func writeRegister(_ reg: UInt8, _ value: UInt8) throws {
+    func writeRegister(_ reg: UInt8, _ value: UInt8) throws(Errno) {
         let result = i2c.write([reg, value], to: address)
         if case .failure(let err) = result {
             throw err
         }
     }
 
-    func writeRegister(_ reg: Register, _ value: UInt8) throws {
+    func writeRegister(_ reg: Register, _ value: UInt8) throws(Errno) {
         let result = i2c.write([reg.rawValue, value], to: address)
         if case .failure(let err) = result {
             throw err
         }
     }
 
-    func writeRegister(_ reg: Register, _ data: [UInt8]) throws {
+    func writeRegister(_ reg: Register, _ data: [UInt8]) throws(Errno) {
         var data = data
         data.insert(reg.rawValue, at: 0)
         let result = i2c.write(data, to: address)
@@ -290,7 +292,7 @@ extension VL53L0x {
 
     func readRegister(
         _ reg: Register, into byte: inout UInt8
-    ) throws {
+    ) throws(Errno) {
         var result = i2c.write(reg.rawValue, to: address)
         if case .failure(let err) = result {
             throw err
@@ -304,7 +306,7 @@ extension VL53L0x {
 
     func readRegister(
         _ reg: Register, into buffer: inout [UInt8], count: Int
-    ) throws {
+    ) throws(Errno) {
         for i in 0..<buffer.count {
             buffer[i] = 0
         }
@@ -322,7 +324,7 @@ extension VL53L0x {
 
     func readRegister(
         _ reg: UInt8, into buffer: inout [UInt8], count: Int
-    ) throws {
+    ) throws(Errno) {
         for i in 0..<buffer.count {
             buffer[i] = 0
         }
@@ -340,7 +342,7 @@ extension VL53L0x {
 
     func readRegister(
         _ reg: UInt8, into byte: inout UInt8
-    ) throws {
+    ) throws(Errno) {
         var result = i2c.write(reg, to: address)
         if case .failure(let err) = result {
             throw err

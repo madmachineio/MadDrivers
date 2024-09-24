@@ -42,7 +42,8 @@ final public class MPR121 {
     public init(_ i2c: I2C, address: UInt8 = 0x5A) {
         let speed = i2c.getSpeed()
         guard speed == .standard || speed == .fast else {
-            fatalError(#function + ": MPR121 only supports 100kHz (standard) and 400kHz (fast) I2C speed")
+            print(#function + ": MPR121 only supports 100kHz (standard) and 400kHz (fast) I2C speed")
+            fatalError()
         }
         
         self.i2c = i2c
@@ -154,14 +155,14 @@ extension MPR121 {
         case SRST = 0x80
     }
 
-    private func i2cWriteRegister(_ register: UInt8, _ value: UInt8) throws {
+    private func i2cWriteRegister(_ register: UInt8, _ value: UInt8) throws(Errno) {
         let result = i2c.write([register, value], to: address)
         if case .failure(let err) = result {
             throw err
         }
     }
 
-    private func writeRegister(_ register: Register, offset: UInt8 = 0, _ value: UInt8) throws {
+    private func writeRegister(_ register: Register, offset: UInt8 = 0, _ value: UInt8) throws(Errno) {
         // Most registers can be written when the sensor is in Stop Mode.
         let stopRequired: Bool = !(register.rawValue == Register.ECR.rawValue || (register.rawValue >= 0x73 && register.rawValue <= 0x7A))
 
@@ -178,7 +179,7 @@ extension MPR121 {
         }
     }
 
-    private func readRegister(_ register: Register, offset: UInt8 = 0, into buffer: inout [UInt8]) throws {
+    private func readRegister(_ register: Register, offset: UInt8 = 0, into buffer: inout [UInt8]) throws(Errno) {
         for i in buffer.indices {
             buffer[i] = 0
         }
@@ -189,14 +190,14 @@ extension MPR121 {
         }
     }
 
-    private func readRegister(_ register: Register, offset: UInt8 = 0, into byte: inout UInt8) throws {
+    private func readRegister(_ register: Register, offset: UInt8 = 0, into byte: inout UInt8) throws(Errno) {
         let result = i2c.writeRead(register.rawValue + offset, into: &byte, address: address)
         if case .failure(let err) = result {
             throw err
         }
     }
 
-    private func reset() throws {
+    private func reset() throws(Errno) {
         try writeRegister(.SRST, 0x63)
         sleep(ms: 1)
 
@@ -207,7 +208,8 @@ extension MPR121 {
         try readRegister(.CDTCONFIG, into: &configValue)
 
         if configValue != 0x24 {
-            fatalError(#function + ": Fail to find MPR121 with expected configurations.")
+            print(#function + ": Fail to find MPR121 with expected configurations.")
+            fatalError()
         }
 
         // Set touch and release threshold

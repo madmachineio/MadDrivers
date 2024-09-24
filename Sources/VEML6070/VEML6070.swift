@@ -161,7 +161,7 @@ extension VEML6070 {
         case ara = 0x0C
     }
 
-    private func writeCommand(_ command: UInt8) throws {
+    private func writeCommand(_ command: UInt8) throws(Errno) {
         let result = i2c.write(command, to: Address.cmdLsb.rawValue)
         if case .failure(let err) = result {
             throw err

@@ -93,7 +93,8 @@ public final class ST7796 {
         guard (width == 480 && height == 320)
                 || (width == 320 && height == 480)
                 else {
-                    fatalError("Not support this resolution!")
+                    print("Not support this resolution!")
+                    fatalError()
                 }
         
         self.spi = spi

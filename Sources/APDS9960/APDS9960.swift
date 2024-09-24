@@ -43,11 +43,13 @@ final public class APDS9960 {
         self.rotation = rotation
 
         guard (i2c.getSpeed() == .standard) || (i2c.getSpeed() == .fast) else {
-            fatalError(#function + ": APDS9960 only supports 100kHz (standard) and 400kHz (fast) I2C speed")
+            print(#function + ": APDS9960 only supports 100kHz (standard) and 400kHz (fast) I2C speed")
+            fatalError()
         }
 
         guard getDeviceID() == 0xAB else {
-            fatalError(#function + ": Fail to find APDS9960 at address \(address)")
+            print(#function + ": Fail to find APDS9960 at address \(address)")
+            fatalError()
         }
         
         setColorGain(.x4)
@@ -239,21 +241,21 @@ extension APDS9960 {
     }
 
 
-    private func writeValue(_ register: Register) throws {
+    private func writeValue(_ register: Register) throws(Errno) {
         let result = i2c.write(register.rawValue, to: address)
         if case .failure(let err) = result {
             throw err
         }
     }
 
-    private func writeRegister(_ register: Register, _ value: UInt8) throws {
+    private func writeRegister(_ register: Register, _ value: UInt8) throws(Errno) {
         let result = i2c.write([register.rawValue, value], to: address)
         if case .failure(let err) = result {
             throw err
         }
     }
 
-    private func readRegister(_ register: Register, into byte: inout UInt8) throws {
+    private func readRegister(_ register: Register, into byte: inout UInt8) throws(Errno) {
         var result = i2c.write(register.rawValue, to: address)
         if case .failure(let err) = result {
             throw err
@@ -265,7 +267,7 @@ extension APDS9960 {
         }
     }
 
-    private func readRegister(_ register: Register, into buffer: inout [UInt8], count: Int) throws {
+    private func readRegister(_ register: Register, into buffer: inout [UInt8], count: Int) throws(Errno) {
         for i in 0..<buffer.count {
             buffer[i] = 0
         }
