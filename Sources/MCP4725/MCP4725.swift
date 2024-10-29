@@ -106,8 +106,14 @@ final public class MCP4725 {
     ///     By default, it won't.
     public func setOutputVoltage(_ voltage: Double,
                                  writeToEEROM: Bool = false) {
+            func getDoubleString(_ num: Double) -> String {
+                let int = Int(num)
+                let frac = Int((num - Double(int)) * 100)
+                return "\(int).\(frac)"
+            }
         guard voltage >= 0.0 && voltage <= referenceVoltage else {
-            print("voltage \(voltage) is not acceptable!")
+
+            print("voltage \(getDoubleString(voltage)) is not acceptable!")
             return
         }
         

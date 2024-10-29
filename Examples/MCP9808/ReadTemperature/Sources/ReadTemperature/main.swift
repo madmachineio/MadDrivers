@@ -11,6 +11,12 @@ let sensor = MCP9808(i2c)
 
 // Read the temperature and print it every second
 while true {
-    print("Temperature: \(sensor.readCelsius()) C")
+    print("Temperature: \(getFloatString(sensor.readCelsius()))°C")
     sleep(ms: 1000)
+}
+
+func getFloatString(_ num: Float) -> String {
+    let int = Int(num)
+    let frac = Int((num - Float(int)) * 100)
+    return "\(int).\(frac)"
 }

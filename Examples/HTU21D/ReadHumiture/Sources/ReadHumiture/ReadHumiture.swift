@@ -11,13 +11,19 @@ public struct ReadHumiture {
 
         while true {
             if let temp = try? sensor.readTemperature() {
-                print("Temperature: \(temp)C")
+                print("Temperature: \(getFloatString(temp))C")
             }
             if let humi = try? sensor.readHumidity() {
-                print("Humidity: \(humi)%")
+                print("Humidity: \(getFloatString(humi))%")
             }
             
             sleep(ms: 1000)
         }
     }
+}
+
+func getFloatString(_ num: Float) -> String {
+    let int = Int(num)
+    let frac = Int((num - Float(int)) * 100)
+    return "\(int).\(frac)"
 }
