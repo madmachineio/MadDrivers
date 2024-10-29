@@ -10,7 +10,13 @@ let sensor = HCSR04(trig: trig, echo: echo)
 while true {
     let distance = sensor.measure()
     if let distance = distance {
-        print("Distance: \(distance)m")  
+        print("Distance: \(getFloatString(distance))m")  
     }
     sleep(ms: 1000)
+}
+
+func getFloatString(_ num: Float) -> String {
+    let int = Int(num)
+    let frac = Int((num - Float(int)) * 100)
+    return "\(int).\(frac)"
 }

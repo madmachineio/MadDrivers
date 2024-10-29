@@ -11,5 +11,12 @@ while (true) {
     sleep(ms: 2000)
     sensor.setNumberOfFaults(.ONE)
     
-    print("Tempature is \(sensor.readCelcius()) C")
+    let temp = getDoubleString(sensor.readCelcius())
+    print("Temperature is " + temp + "°C")
+}
+
+func getDoubleString(_ num: Double) -> String {
+    let int = Int(num)
+    let frac = Int((num - Double(int)) * 100)
+    return "\(int).\(frac)"
 }

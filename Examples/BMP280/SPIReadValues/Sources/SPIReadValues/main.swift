@@ -15,9 +15,15 @@ while true {
     // Set the current sea level pressure to get a accurate altitude.
     let altitude = sensor.readAltitude(1020)
     
-    print("tmeperature: \(temp)")
-    print("pressure: \(pressure)")
-    print("altitude: \(altitude)")
+    print("tmeperature: \(getDoubleString(temp))")
+    print("pressure: \(getDoubleString(pressure))")
+    print("altitude: \(getDoubleString(altitude))")
 
     sleep(ms: 2000)
+}
+
+func getDoubleString(_ num: Double) -> String {
+    let int = Int(num)
+    let frac = Int((num - Double(int)) * 100)
+    return "\(int).\(frac)"
 }
