@@ -356,8 +356,6 @@ private extension Float {
   static func pow(_ x: Float, _ y: Float) -> Float {
     guard x >= 0 else { return .nan }
     if x == 0 && y == 0 { return .nan }
-    let result = powf(x, y)
-    print("powf(\(x), \(y)) result = \(result)")
     return powf(x, y)
   }
 }

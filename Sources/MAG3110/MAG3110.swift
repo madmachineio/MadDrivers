@@ -297,7 +297,7 @@ extension MAG3110 {
 @_extern(c, "atan2f")
 func atan2f(_: Float, _: Float) -> Float
 
-extension Float {
+private extension Float {
   @_transparent
   static func atan2(y: Float, x: Float) -> Float {
     atan2f(y, x)

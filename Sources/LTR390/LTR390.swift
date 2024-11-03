@@ -361,7 +361,7 @@ extension LTR390 {
 @_extern(c, "exp2f")
 func exp2f(_: Float) -> Float
 
-extension Float {
+private extension Float {
   @_transparent
   static func exp2(_ x: Float) -> Float {
     exp2f(x)

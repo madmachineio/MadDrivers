@@ -272,7 +272,7 @@ extension SGP30 {
 @_extern(c, "expf")
 func expf(_: Float) -> Float
 
-extension Float {
+private extension Float {
   @_transparent
   static func exp(_ x: Float) -> Float {
     expf(x)

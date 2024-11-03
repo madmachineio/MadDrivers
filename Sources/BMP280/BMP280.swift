@@ -457,7 +457,7 @@ extension BMP280 {
 @_extern(c, "pow")
 func pow(_: Double, _ : Double) -> Double
 
-extension Double {
+private extension Double {
   @_transparent
   static func mathPow(_ x: Double, _ y: Double) -> Double {
     guard x >= 0 else { return .nan }
