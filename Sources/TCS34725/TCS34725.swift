@@ -348,7 +348,7 @@ extension TCS34725 {
 
 }
 
-@_extern(c, "pow")
+@_extern(c, "powf")
 func powf(_: Float, _ : Float) -> Float
 
 private extension Float {
