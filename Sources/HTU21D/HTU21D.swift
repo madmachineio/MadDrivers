@@ -165,9 +165,10 @@ extension HTU21D {
 
 }
 
-
-public enum HTU21DError: Error {
-    case readError
-    case writeError
-    case crcError
+public extension HTU21D {
+    enum HTU21DError: Error {
+        case readError
+        case writeError
+        case crcError
+    }
 }
