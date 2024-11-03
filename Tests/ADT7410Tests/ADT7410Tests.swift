@@ -6,31 +6,31 @@ import SwiftIO
 final class ADT7410Tests: XCTestCase {
     
     func testToTemp13Bit(){
-        let resulution = ADT7410.Resulution.r_13Bit
-        XCTAssertEqual(-55,ADT7410.toTemp(resulution,[0b1110_0100,0b1000_0000]))
-        XCTAssertEqual(-50,ADT7410.toTemp(resulution, [0b1110_0111,0b0000_0000]))
-        XCTAssertEqual(-25,ADT7410.toTemp(resulution, [0b1111_0011,0b1000_0000]))
-        XCTAssertEqual(-0.0625,ADT7410.toTemp(resulution, [0b1111_1111,0b1111_1000]))
-        XCTAssertEqual(0,ADT7410.toTemp(resulution, [0b0000_0000,0b0000_0000]))
-        XCTAssertEqual(0.0625,ADT7410.toTemp(resulution, [0b0000_0000,0b0000_1000]))
-        XCTAssertEqual(25,ADT7410.toTemp(resulution, [0b0000_1100,0b1000_0000]))
-        XCTAssertEqual(50,ADT7410.toTemp(resulution, [0b0001_1001,0b0000_0000]))
-        XCTAssertEqual(125,ADT7410.toTemp(resulution, [0b0011_1110,0b1000_0000]))
-        XCTAssertEqual(150,ADT7410.toTemp(resulution, [0b0100_1011,0b0000_0000]))
+        let resolution = ADT7410.Resolution.r_13Bit
+        XCTAssertEqual(-55,ADT7410.toTemp(resolution,[0b1110_0100,0b1000_0000]))
+        XCTAssertEqual(-50,ADT7410.toTemp(resolution, [0b1110_0111,0b0000_0000]))
+        XCTAssertEqual(-25,ADT7410.toTemp(resolution, [0b1111_0011,0b1000_0000]))
+        XCTAssertEqual(-0.0625,ADT7410.toTemp(resolution, [0b1111_1111,0b1111_1000]))
+        XCTAssertEqual(0,ADT7410.toTemp(resolution, [0b0000_0000,0b0000_0000]))
+        XCTAssertEqual(0.0625,ADT7410.toTemp(resolution, [0b0000_0000,0b0000_1000]))
+        XCTAssertEqual(25,ADT7410.toTemp(resolution, [0b0000_1100,0b1000_0000]))
+        XCTAssertEqual(50,ADT7410.toTemp(resolution, [0b0001_1001,0b0000_0000]))
+        XCTAssertEqual(125,ADT7410.toTemp(resolution, [0b0011_1110,0b1000_0000]))
+        XCTAssertEqual(150,ADT7410.toTemp(resolution, [0b0100_1011,0b0000_0000]))
     }
     
     func testToData13Bit(){
-        let resulution = ADT7410.Resulution.r_13Bit
-        XCTAssertEqual([0b1110_0100,0b1000_0000],ADT7410.toData(resulution,-55))
-        XCTAssertEqual([0b1110_0111,0b0000_0000],ADT7410.toData(resulution,-50))
-        XCTAssertEqual([0b1111_0011,0b1000_0000],ADT7410.toData(resulution,-25))
-        XCTAssertEqual([0b1111_1111,0b1111_1000],ADT7410.toData(resulution,-0.0625))
-        XCTAssertEqual([0b0000_0000,0b0000_0000],ADT7410.toData(resulution,0))
-        XCTAssertEqual([0b0000_0000,0b0000_1000],ADT7410.toData(resulution,0.0625))
-        XCTAssertEqual([0b0000_1100,0b1000_0000],ADT7410.toData(resulution,25))
-        XCTAssertEqual([0b0001_1001,0b0000_0000],ADT7410.toData(resulution,50))
-        XCTAssertEqual([0b0011_1110,0b1000_0000],ADT7410.toData(resulution,125))
-        XCTAssertEqual([0b0100_1011,0b0000_0000],ADT7410.toData(resulution,150))
+        let resolution = ADT7410.Resolution.r_13Bit
+        XCTAssertEqual([0b1110_0100,0b1000_0000],ADT7410.toData(resolution,-55))
+        XCTAssertEqual([0b1110_0111,0b0000_0000],ADT7410.toData(resolution,-50))
+        XCTAssertEqual([0b1111_0011,0b1000_0000],ADT7410.toData(resolution,-25))
+        XCTAssertEqual([0b1111_1111,0b1111_1000],ADT7410.toData(resolution,-0.0625))
+        XCTAssertEqual([0b0000_0000,0b0000_0000],ADT7410.toData(resolution,0))
+        XCTAssertEqual([0b0000_0000,0b0000_1000],ADT7410.toData(resolution,0.0625))
+        XCTAssertEqual([0b0000_1100,0b1000_0000],ADT7410.toData(resolution,25))
+        XCTAssertEqual([0b0001_1001,0b0000_0000],ADT7410.toData(resolution,50))
+        XCTAssertEqual([0b0011_1110,0b1000_0000],ADT7410.toData(resolution,125))
+        XCTAssertEqual([0b0100_1011,0b0000_0000],ADT7410.toData(resolution,150))
     }
         
     func testDefaultConfiguration(){
@@ -117,11 +117,11 @@ final class ADT7410Tests: XCTestCase {
     func testConfigurationResolution(){
         var config = ADT7410.Configuration()
         
-        config.resulution = .r_13Bit
+        config.resolution = .r_13Bit
         XCTAssertEqual(0b0, config.getByte())
         XCTAssertEqual(config, ADT7410.Configuration(config.getByte()))
         
-        config.resulution = .r_16Bit
+        config.resolution = .r_16Bit
         XCTAssertEqual(0b1 << 7, config.getByte())
         XCTAssertEqual(config, ADT7410.Configuration(config.getByte()))
     }

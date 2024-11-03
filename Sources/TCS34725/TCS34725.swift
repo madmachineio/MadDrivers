@@ -351,11 +351,13 @@ extension TCS34725 {
 @_extern(c, "pow")
 func powf(_: Float, _ : Float) -> Float
 
-extension Float {
+private extension Float {
   @_transparent
   static func pow(_ x: Float, _ y: Float) -> Float {
     guard x >= 0 else { return .nan }
     if x == 0 && y == 0 { return .nan }
+    let result = powf(x, y)
+    print("powf(\(x), \(y)) result = \(result)")
     return powf(x, y)
   }
 }

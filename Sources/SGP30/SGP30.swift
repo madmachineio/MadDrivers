@@ -269,12 +269,12 @@ extension SGP30 {
 
 }
 
-@_extern(c, "exp2f")
-func exp2f(_: Float) -> Float
+@_extern(c, "expf")
+func expf(_: Float) -> Float
 
 extension Float {
   @_transparent
   static func exp(_ x: Float) -> Float {
-    exp2f(x)
+    expf(x)
   }
 }
