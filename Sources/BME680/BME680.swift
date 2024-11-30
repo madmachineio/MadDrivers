@@ -636,7 +636,7 @@ private extension Array where Element == UInt8 {
 @_extern(c, "atan2f")
 func atan2f(_: Float, _: Float) -> Float
 
-extension Float {
+private extension Float {
   @_transparent
   static func atan2(y: Float, x: Float) -> Float {
     atan2f(y, x)
@@ -646,7 +646,7 @@ extension Float {
 @_extern(c, "pow")
 func pow(_: Double, _ : Double) -> Double
 
-extension Double {
+private extension Double {
   @_transparent
   static func mathPow(_ x: Double, _ y: Double) -> Double {
     guard x >= 0 else { return .nan }

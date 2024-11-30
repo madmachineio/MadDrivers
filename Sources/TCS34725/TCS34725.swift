@@ -348,10 +348,10 @@ extension TCS34725 {
 
 }
 
-@_extern(c, "pow")
+@_extern(c, "powf")
 func powf(_: Float, _ : Float) -> Float
 
-extension Float {
+private extension Float {
   @_transparent
   static func pow(_ x: Float, _ y: Float) -> Float {
     guard x >= 0 else { return .nan }
