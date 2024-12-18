@@ -1,0 +1,19 @@
+name: release
+
+
+on:
+  push:
+    branches:
+      - develop
+      - main
+      - 'release/**'
+  pull_request:
+    branches:
+      - main
+  schedule:
+    - cron: '35 17 * * 5'
+
+
+jobs:
+  build:
+    uses: madmachineio/actions/.github/workflows/release.yml@main

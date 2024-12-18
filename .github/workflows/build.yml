@@ -6,18 +6,10 @@ on:
     branches:
       - 'feature/**'
       - 'fix/**'
-      - develop
-      - main
-      - 'release/**'
     paths:
       - 'Sources/**'
       - 'Examples/**'
       - 'Tests/**'
-  pull_request:
-    branches:
-      - main
-  schedule:
-    - cron: '35 17 * * 5'
 
 
 jobs:
