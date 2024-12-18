@@ -4,6 +4,7 @@ name: build
 on:
   push:
     branches:
+      - develop
       - 'feature/**'
       - 'fix/**'
     paths:

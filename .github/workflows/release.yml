@@ -4,7 +4,6 @@ name: release
 on:
   push:
     branches:
-      - develop
       - main
       - 'release/**'
   pull_request:
