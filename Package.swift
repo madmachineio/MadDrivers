@@ -23,6 +23,7 @@ let package = Package(
                 "DHTxx",
                 "DS3231",
                 "ESP32ATClient",
+                "GT911",
                 "HCSR04",
                 "HTU21D",
                 "IS31FL3731",
@@ -63,6 +64,7 @@ let package = Package(
         .library(name: "DHTxx", targets: ["DHTxx"]),
         .library(name: "DS3231", targets: ["DS3231"]),
         .library(name: "ESP32ATClient", targets: ["ESP32ATClient"]),
+        .library(name: "GT911", targets: ["GT911"]),
         .library(name: "HCSR04", targets: ["HCSR04"]),
         .library(name: "HTU21D", targets: ["HTU21D"]),
         .library(name: "IS31FL3731", targets: ["IS31FL3731"]),
@@ -141,6 +143,9 @@ let package = Package(
             dependencies: ["SwiftIO"]),
         .target(
             name: "ESP32ATClient",
+            dependencies: ["SwiftIO"]),
+        .target(
+            name: "GT911",
             dependencies: ["SwiftIO"]),
         .target(
             name: "HCSR04",
