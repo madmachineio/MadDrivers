@@ -20,8 +20,5 @@ let package = Package(
                 // use specific library would speed up the compile procedure
                 .product(name: "IS31FL3731", package: "MadDrivers")
             ]),
-        .testTarget(
-            name: "FrameTests",
-            dependencies: ["Frame"]),
     ]
 )
