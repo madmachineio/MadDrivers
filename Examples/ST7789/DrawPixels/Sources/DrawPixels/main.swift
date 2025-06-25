@@ -3,7 +3,7 @@ import SwiftIO
 import MadBoard
 import ST7789
 
-let spi = SPI(Id.SPI0, speed: 50_000_000)
+let spi = SPI(Id.SPI0, speed: 30_000_000)
 let cs = DigitalOut(Id.D9)
 let dc = DigitalOut(Id.D10)
 let rst = DigitalOut(Id.D14)
