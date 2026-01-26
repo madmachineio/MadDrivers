@@ -1,13 +1,13 @@
-# DrawUsingMadDisplay
+# DrawUsingMadGraphics
 
-Use another library `MadDisplay` to draw graphics on the LCD. You'll fill the screen with yellow, draw an orange square on the middle and display the text "Hello world!".
+Use another library `MadGraphics` to draw graphics on the LCD. You'll fill the screen with yellow, draw an orange square in the middle and display the text "Hello world!".
 
 ## Library reference
 
 * [SwiftIO](https://github.com/madmachineio/SwiftIO)
 * [MadBoard](https://github.com/madmachineio/MadBoards)
 * [ST7789](https://github.com/madmachineio/MadDrivers/tree/main/Sources/ST7789/ST7789.swift)
-* [MadDisplay](https://github.com/madmachineio/MadDisplay)
+* [MadGraphics](https://madmachineio.github.io/MadGraphicsDocs/documentation/madgraphics/)
 
 
 ## How to use
