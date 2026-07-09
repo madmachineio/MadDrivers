@@ -16,12 +16,14 @@ let package = Package(
                 "AMG88xx",
                 "APDS9960",
                 "AS7341",
+                "AXS15231B",
                 "BH1750",
                 "BME680",
                 "BMI160",
                 "BMP280",
                 "DHTxx",
                 "DS3231",
+                "EPD1in54G",
                 "ESP32ATClient",
                 "GT911",
                 "HCSR04",
@@ -58,12 +60,14 @@ let package = Package(
         .library(name: "AMG88xx", targets: ["AMG88xx"]),
         .library(name: "APDS9960", targets: ["APDS9960"]),
         .library(name: "AS7341", targets: ["AS7341"]),
+        .library(name: "AXS15231B", targets: ["AXS15231B"]),
         .library(name: "BH1750", targets: ["BH1750"]),
         .library(name: "BME680", targets: ["BME680"]),
         .library(name: "BMI160", targets: ["BMI160"]),
         .library(name: "BMP280", targets: ["BMP280"]),
         .library(name: "DHTxx", targets: ["DHTxx"]),
         .library(name: "DS3231", targets: ["DS3231"]),
+        .library(name: "EPD1in54G", targets: ["EPD1in54G"]),
         .library(name: "ESP32ATClient", targets: ["ESP32ATClient"]),
         .library(name: "GT911", targets: ["GT911"]),
         .library(name: "HCSR04", targets: ["HCSR04"]),
@@ -124,6 +128,9 @@ let package = Package(
             name: "AS7341",
             dependencies: ["SwiftIO"]),
         .target(
+            name: "AXS15231B",
+            dependencies: ["SwiftIO"]),
+        .target(
             name: "BH1750",
             dependencies: ["SwiftIO"]),
         .target(
@@ -142,6 +149,9 @@ let package = Package(
             dependencies: ["SwiftIO"]),
         .target(
             name: "DS3231",
+            dependencies: ["SwiftIO"]),
+        .target(
+            name: "EPD1in54G",
             dependencies: ["SwiftIO"]),
         .target(
             name: "ESP32ATClient",

@@ -1,0 +1,89 @@
+useless
+
+// let rootLayer = Layer(width: logicWidth, height: logicHeight, backgroundColor: Pixel.white)
+// rootLayer.render(into: &frameBuffer, output: &screenBuffer, transform: Pixel.toRGB565LE) { dirty, data in
+//     for y in 0..<dirty.height {
+//         for x in 0..<dirty.width {
+//             let newX = dirty.height - 1 - y
+//             let newY = x
+//             let index = newY * dirty.height + newX
+//             sendBuffer[index] = data[y * dirty.width + x]
+
+//             if index >= (dirty.height * dirty.width) {
+//                 print("Index out of bounds: \(index), max: \(dirty.height * dirty.width)")
+//                 print("from (\(x), \(y)) to (\(newX), \(newY)), index: \(index)")
+//             }
+//         }
+//     }
+//     //let transformedRect = Rect(Point(x: dirty.y, y: logicHeight - 1 - (dirty.x + dirty.height - 1)), width: dirty.height, height: dirty.width)
+//     //let transformedRect = Rect(Point(x: dirty.y, y: logicHeight - (dirty.x + dirty.height)), width: dirty.height, height: dirty.width)
+//     let transformedRect = Rect(Point(x: logicHeight - (dirty.y + dirty.height), y: dirty.x), width: dirty.height, height: dirty.width)
+//     print(" ")
+//     print("dirty: \(dirty.x), \(dirty.y), \(dirty.width), \(dirty.height)")
+//     print("transformedRect: \(transformedRect.x), \(transformedRect.y), \(transformedRect.width), \(transformedRect.height)")
+//     screen.writeBitmap(x: transformedRect.x, y: transformedRect.y, width: transformedRect.width, height: transformedRect.height, data: sendBuffer)
+// }
+// sleep(ms: 1000)
+
+// let rgbRect = Layer(at: Point(x: 1, y: 3), anchorPoint: UnitPoint.topLeading, width: 5, height: 8)
+// rgbRect.draw { canvas in
+//     canvas.fillRectangle(at: Point(x: 0, y: 0), width: canvas.width, height: canvas.height / 2, data: Pixel.black)
+//     canvas.fillRectangle(at: Point(x: 0, y: canvas.height / 2), width: canvas.width, height: canvas.height / 2, data: Pixel.red)
+// }
+// rootLayer.append(rgbRect)
+// rootLayer.render(into: &frameBuffer, output: &screenBuffer, transform: Pixel.toRGB565LE) { dirty, data in
+//     for y in 0..<dirty.height {
+//         for x in 0..<dirty.width {
+//             let newX = dirty.height - 1 - y
+//             let newY = x
+//             let index = newY * dirty.height + newX
+//             sendBuffer[index] = data[y * dirty.width + x]
+
+//             print("data[\(y * dirty.width + x)], \(sendBuffer[index]), from (\(x) \(y)), to (\(newX) \(newY)), index = \(1000 + index)")
+//         }
+//     }
+//     let transformedRect = Rect(Point(x: logicHeight - (dirty.y + dirty.height), y: dirty.x), width: dirty.height, height: dirty.width)
+//     print(" ")
+//     print("dirty: \(dirty.x), \(dirty.y), \(dirty.width), \(dirty.height)")
+//     print("transformedRect: \(transformedRect.x), \(transformedRect.y), \(transformedRect.width), \(transformedRect.height)")
+//     screen.writeBitmap(x: transformedRect.x, y: transformedRect.y, width: transformedRect.width, height: transformedRect.height, data: sendBuffer)
+// }
+// sleep(ms: 5000)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// let rootLayer = Layer(width: screen.width, height: screen.height, backgroundColor: Pixel.white)
+// rootLayer.render(into: &frameBuffer, output: &screenBuffer, transform: Pixel.toRGB565LE) { dirty, data in
+//     screen.writeBitmap(x: dirty.x, y: dirty.y, width: dirty.width, height: dirty.height, data: screenBuffer)
+// }
+// sleep(ms: 1000)
+
+
+// let rgbRect = Layer(at: Point(x: 1, y: 3), anchorPoint: UnitPoint.topLeading, width: 5, height: 8)
+// rgbRect.draw { canvas in
+//     canvas.fillRectangle(at: Point(x: 0, y: 0), width: canvas.width, height: canvas.height / 2, data: Pixel.black)
+//     canvas.fillRectangle(at: Point(x: 0, y: canvas.height / 2), width: canvas.width, height: canvas.height / 2, data: Pixel.red)
+// }
+// rootLayer.append(rgbRect)
+// rootLayer.render(into: &frameBuffer, output: &screenBuffer, transform: Pixel.toRGB565LE) { dirty, data in
+//     print("rgbRect dirty: \(dirty.x), \(dirty.y), \(dirty.width), \(dirty.height)")
+//     screen.writeBitmap(x: dirty.x, y: dirty.y, width: dirty.width, height: dirty.height, data: screenBuffer)
+// }
